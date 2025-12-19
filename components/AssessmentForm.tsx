@@ -68,12 +68,13 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     }));
   };
 
-  const renderRatingSelect = (currentRating: Rating | undefined, onChange: (r: Rating) => void, isManager: boolean = false) => (
+  const renderRatingSelect = (currentRating: Rating | undefined, onChange: (r: Rating) => void, isDisabled: boolean = false) => (
     <div className="space-y-2">
       <select 
         value={currentRating || ''} 
         onChange={(e) => onChange(e.target.value as Rating)}
-        className={`w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none ${isManager ? 'bg-slate-50/50' : ''}`}
+        disabled={isDisabled}
+        className={`w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none ${isDisabled ? 'bg-slate-100 text-slate-500 cursor-not-allowed opacity-70' : 'bg-white'}`}
       >
         <option value="" disabled>Select Rating</option>
         {Object.values(Rating).map(r => (
@@ -84,6 +85,14 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         <p className="text-[10px] text-slate-500 italic mt-1 leading-tight">{RATING_DESCRIPTIONS[currentRating]}</p>
       )}
     </div>
+  );
+
+  const SectionBadge = ({ text, type = 'self' }: { text: string, type?: 'self' | 'manager' }) => (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider mb-2 ${
+      type === 'self' ? 'bg-brand-100 text-brand-700' : 'bg-slate-200 text-slate-600'
+    }`}>
+      {text}
+    </span>
   );
 
   return (
@@ -177,7 +186,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Mid-Year Review</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Self-Assessment Comments</label>
+                      <SectionBadge text="Self-Assessment" />
                       <textarea 
                         value={kpi.midYearSelfComments || ''}
                         onChange={(e) => updateKPI(kpi.id, { midYearSelfComments: e.target.value })}
@@ -186,12 +195,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Manager Comments</label>
+                      <SectionBadge text="Assessor Only" type="manager" />
                       <textarea 
                         value={kpi.midYearManagerComments || ''}
-                        onChange={(e) => updateKPI(kpi.id, { midYearManagerComments: e.target.value })}
-                        className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-24 bg-slate-50/50"
-                        placeholder="Manager mid-year feedback..."
+                        readOnly
+                        className="w-full border border-slate-200 rounded-md p-2 text-sm bg-slate-100 text-slate-500 cursor-not-allowed outline-none h-24 resize-none"
+                        placeholder="Feedback will be provided by manager after review..."
                       />
                     </div>
                   </div>
@@ -199,14 +208,14 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
                 {/* Annual Review Section */}
                 <div>
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Annual Review</h4>
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2 text-brand-700">Annual Review</h4>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="space-y-4">
-                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Self Rating</label>
+                      <SectionBadge text="Self Rating" />
                       {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }))}
                     </div>
                     <div className="space-y-4">
-                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Achievement Comments</label>
+                      <SectionBadge text="Achievement Comments" />
                       <textarea 
                         value={kpi.selfComments || ''}
                         onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
@@ -214,13 +223,13 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                         placeholder="Detail your results and achievements for this period..."
                       />
                     </div>
-                    <div className="space-y-4">
-                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Manager Comments</label>
+                    <div className="space-y-4 opacity-75">
+                      <SectionBadge text="Assessor Feedback" type="manager" />
                       <textarea 
                         value={kpi.managerComments || ''}
-                        onChange={(e) => updateKPI(kpi.id, { managerComments: e.target.value })}
-                        className="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 bg-slate-50/50"
-                        placeholder="Feedback from manager..."
+                        readOnly
+                        className="w-full border border-slate-200 rounded-md p-3 text-sm h-32 bg-slate-100 text-slate-500 cursor-not-allowed outline-none resize-none"
+                        placeholder="Manager feedback will appear here once reviewed."
                       />
                     </div>
                   </div>
@@ -234,7 +243,8 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
               }))}
               className="text-sm font-bold text-brand-600 hover:text-brand-700 flex items-center gap-2"
             >
-              + Add Another KPI
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+              Add Another KPI
             </button>
           </div>
         )}
@@ -247,7 +257,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
             
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="block text-sm font-bold text-slate-700">Staff Self-Assessment</label>
+                <SectionBadge text="Staff Self-Assessment" />
                 <textarea 
                   value={formData.developmentPlan.selfComments}
                   onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: e.target.value } }))}
@@ -257,12 +267,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-bold text-slate-700">Manager Comments</label>
+                <SectionBadge text="Assessor Development Feedback" type="manager" />
                 <textarea 
                   value={formData.developmentPlan.managerComments || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, managerComments: e.target.value } }))}
-                  className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48 bg-slate-50/50"
-                  placeholder="Manager's evaluation of the development progress..."
+                  readOnly
+                  className="w-full border border-slate-200 rounded-lg p-4 text-sm bg-slate-100 text-slate-500 cursor-not-allowed outline-none h-48 resize-none"
+                  placeholder="Feedback from your manager regarding development will be provided here."
                 />
               </div>
             </div>
@@ -272,20 +282,23 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         {/* Stage 4: Core Competencies */}
         {currentStage === 3 && (
           <div className="space-y-8">
+            <div className="bg-brand-50 border border-brand-100 p-4 rounded-lg text-sm text-brand-800 mb-4">
+              Rate yourself against the core competencies defined for your role.
+            </div>
             {formData.coreCompetencies.map((comp, idx) => (
               <div key={comp.id} className="p-6 bg-white rounded-lg border border-slate-200 shadow-sm">
                 <h4 className="text-lg font-bold text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
                 <p className="text-sm text-slate-500 mb-4">{comp.description}</p>
                 
-                <div className="bg-slate-50 p-4 rounded mb-6">
-                  <span className="text-xs font-bold text-slate-400 uppercase mb-2 block">Behavioural Indicators</span>
-                  <ul className="list-disc list-inside text-xs text-slate-600 space-y-1">
+                <div className="bg-slate-50 p-4 rounded mb-6 border border-slate-100">
+                  <span className="text-xs font-black text-slate-400 uppercase mb-2 block tracking-widest">Behavioural Indicators</span>
+                  <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-1">
                     {comp.indicators.map((ind, i) => <li key={i}>{ind}</li>)}
                   </ul>
                 </div>
 
                 <div className="max-w-md">
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Self Assessment Rating</label>
+                  <SectionBadge text="Self-Rating" />
                   {renderRatingSelect(comp.selfRating, (r) => updateCompetency(comp.id, { selfRating: r }))}
                 </div>
               </div>
@@ -298,13 +311,13 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           <div className="space-y-10">
              <div className="bg-brand-50 border border-brand-100 p-6 rounded-lg text-brand-800">
                <h3 className="text-lg font-bold mb-2">Annual Final Review</h3>
-               <p className="text-sm">Provide a comprehensive summary of the performance for this review cycle. The final rating should reflect the overall achievements against objectives and competencies.</p>
+               <p className="text-sm">Provide a comprehensive summary of your performance for this review cycle. The final rating will be determined by your assessor after review.</p>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-tight">Overall Self-Appraisal Summary</label>
+                    <SectionBadge text="Overall Self-Appraisal Summary" />
                     <textarea 
                       value={formData.overallPerformance.selfComments}
                       onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
@@ -314,27 +327,27 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-tight">Suggested Overall Self-Rating</label>
+                    <SectionBadge text="Suggested Overall Self-Rating" />
                     {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
                   </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
                   <div className="space-y-2">
-                    <label className="block text-sm font-bold text-brand-700 uppercase tracking-tight">Overall Manager Feedback</label>
+                    <SectionBadge text="Overall Manager Feedback (Assessor Only)" type="manager" />
                     <textarea 
                       value={formData.overallPerformance.managerComments || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, managerComments: e.target.value } }))}
-                      className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48 bg-slate-50/50"
-                      placeholder="Manager's overall performance assessment and final feedback..."
+                      readOnly
+                      className="w-full border border-slate-200 rounded-lg p-4 text-sm bg-white text-slate-400 cursor-not-allowed outline-none h-48 resize-none"
+                      placeholder="To be completed by assessor..."
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-bold text-brand-700 uppercase tracking-tight">Final Performance Rating (Manager)</label>
+                    <SectionBadge text="Final Performance Rating (Assessor Only)" type="manager" />
                     {renderRatingSelect(
                       formData.overallPerformance.managerRating, 
-                      (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, managerRating: r } })),
+                      () => {},
                       true
                     )}
                   </div>
