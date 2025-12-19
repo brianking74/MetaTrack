@@ -4,6 +4,7 @@ import Layout from './components/Layout.tsx';
 import AssessmentForm from './components/AssessmentForm.tsx';
 import AdminDashboard from './components/AdminDashboard.tsx';
 import { Assessment, Role } from './types.ts';
+import confetti from 'canvas-confetti';
 
 const ADMIN_PASSWORD = "metabevadmin"; // Simple demonstration password
 
@@ -54,6 +55,26 @@ const App: React.FC = () => {
     }
   };
 
+  const fireConfetti = () => {
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+    const interval = window.setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+    }, 250);
+  };
+
   const handleSaveDraft = (data: Assessment) => {
     setAssessments(prev => {
       const existing = prev.find(a => a.id === data.id);
@@ -79,7 +100,9 @@ const App: React.FC = () => {
       return [...prev, submittedData];
     });
     setActiveDraft(undefined);
-    alert("Assessment submitted successfully for review!");
+    
+    // Trigger celebration
+    fireConfetti();
   };
 
   const handleAdminReviewComplete = (updated: Assessment) => {
@@ -114,27 +137,39 @@ const App: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="max-w-2xl mx-auto text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-slate-800 mb-2">Form Submitted</h3>
-                <p className="text-slate-500 mb-8">Your performance appraisal has been successfully submitted.<br/> An assessor will review your input and finalize the evaluation.</p>
-                <div className="inline-flex gap-4">
-                   <button 
-                    onClick={() => {
-                      const ok = confirm("Are you sure you want to clear your submission and start a fresh form? This action cannot be undone.");
-                      if(ok) {
-                        setAssessments([]);
-                        setActiveDraft(undefined);
-                      }
-                    }}
-                    className="px-6 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200 transition-colors"
-                   >
-                     Start New Form
-                   </button>
+              <div className="max-w-2xl mx-auto text-center py-24 bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden relative">
+                {/* Decorative background circle */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-brand-50 rounded-full blur-3xl opacity-50"></div>
+                
+                <div className="relative z-10">
+                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner animate-bounce">
+                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">Thanks for submitting your assessment.</h3>
+                  <p className="text-slate-500 mb-10 text-lg leading-relaxed max-w-md mx-auto">Your performance appraisal has been successfully logged. An assessor will review your input shortly.</p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button 
+                      onClick={() => {
+                        const ok = confirm("Are you sure you want to clear your submission and start a fresh form? This action cannot be undone.");
+                        if(ok) {
+                          setAssessments([]);
+                          setActiveDraft(undefined);
+                        }
+                      }}
+                      className="px-8 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all border border-slate-200"
+                    >
+                      Start Fresh Form
+                    </button>
+                    <button 
+                      disabled
+                      className="px-8 py-3 bg-brand-50 text-brand-400 rounded-xl font-bold cursor-not-allowed border border-brand-100"
+                    >
+                      View Receipt
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
