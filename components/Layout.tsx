@@ -39,7 +39,7 @@ const Logo: React.FC = () => (
 const Layout: React.FC<LayoutProps> = ({ children, title, role, onRoleSwitch }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 py-6 shadow-sm">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 py-6 shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center">
             {/* Logo is placed exactly in the top-left section */}
@@ -66,7 +66,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title, role, onRoleSwitch }) 
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-12">
-        <div className="mb-12">
+        <div className="mb-12 print:hidden">
           <h2 className="text-4xl font-black text-slate-900 tracking-tight">{title}</h2>
           <div className="h-2 w-24 bg-brand-600 mt-4 rounded-full"></div>
         </div>
@@ -74,17 +74,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title, role, onRoleSwitch }) 
       </main>
 
       <footer className="bg-white border-t border-slate-200 py-10">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="text-sm text-slate-500 font-medium">
-            &copy; 2025 <a href="https://www.barkhamsdigital.com/" target="_blank" rel="noopener noreferrer" className="hover:text-brand-600 transition-colors underline decoration-slate-200 underline-offset-4">Barkhams Digital</a>
-          </div>
-          <div className="flex gap-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            <a 
-              href="mailto:barkhams.digital@gmail.com" 
-              className="hover:text-brand-600 transition-colors cursor-pointer border-b border-transparent hover:border-brand-600 pb-0.5"
-            >
-              Technical Support
-            </a>
+        <div className="max-w-7xl mx-auto px-4 flex justify-center">
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">
+            METABEV Staff Performance Review
           </div>
         </div>
       </footer>
