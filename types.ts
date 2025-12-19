@@ -1,13 +1,11 @@
 
 export enum Rating {
+  NA = 'N/A - Not Applicable',
   OUTSTANDING = '1 - Outstanding',
-  EXCEEDED = '2 - Exceeded requirements',
-  MODERATELY_EXCEEDED = '3M - Moderately exceeded requirements',
-  MET = '3 - Met requirements',
-  PARTIALLY_MET = '3P - Partially met requirements',
-  MARGINAL = '4 - Marginal',
-  UNACCEPTABLE = '5 - Unacceptable',
-  NA = 'N/A'
+  EXCEEDS = '2 - Exceeds requirements',
+  MEETS = '3 - Meets requirements',
+  PARTIALLY_MEETS = '4 - Partially meets requirements',
+  NOT_MET = '5 - Requirements not met'
 }
 
 export type Role = 'employee' | 'admin';

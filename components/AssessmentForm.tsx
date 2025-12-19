@@ -81,7 +81,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         ))}
       </select>
       {currentRating && (
-        <p className="text-xs text-slate-500 italic">{RATING_DESCRIPTIONS[currentRating]}</p>
+        <p className="text-[10px] text-slate-500 italic mt-1 leading-tight">{RATING_DESCRIPTIONS[currentRating]}</p>
       )}
     </div>
   );
@@ -130,10 +130,31 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         {/* Stage 2: KPIs */}
         {currentStage === 1 && (
           <div className="space-y-10">
+            {/* Rating Scale Summary Table */}
+            <div className="mb-12 overflow-hidden border border-slate-200 rounded-lg">
+              <div className="bg-slate-800 text-white px-4 py-2 font-bold text-sm">Rating scale</div>
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-500 text-white">
+                  <tr>
+                    <th className="px-4 py-2 text-xs font-bold uppercase border-r border-white/20">Rating</th>
+                    <th className="px-4 py-2 text-xs font-bold uppercase">Description</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  {Object.values(Rating).map((r, i) => (
+                    <tr key={r} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                      <td className="px-4 py-3 font-bold text-slate-700 border-r border-slate-200 whitespace-nowrap">{r.split(' - ')[0]}</td>
+                      <td className="px-4 py-3 text-slate-600">{RATING_DESCRIPTIONS[r]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
             {formData.kpis.map((kpi, idx) => (
               <div key={kpi.id} className="p-6 bg-slate-50 rounded-lg border border-slate-100">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1 mr-4">
+                  <div className="flex-1 mr-4 border-b border-slate-200 pb-2">
                     <input 
                       type="text"
                       value={kpi.title}
@@ -153,10 +174,10 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 
                 {/* Mid-Year Review Section */}
                 <div className="mb-8 p-4 bg-white rounded-lg border border-slate-200">
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Mid-Year Review</h4>
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Mid-Year Review</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-700">Self-Assessment Comments</label>
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Self-Assessment Comments</label>
                       <textarea 
                         value={kpi.midYearSelfComments || ''}
                         onChange={(e) => updateKPI(kpi.id, { midYearSelfComments: e.target.value })}
@@ -165,7 +186,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-700">Manager Comments</label>
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Manager Comments</label>
                       <textarea 
                         value={kpi.midYearManagerComments || ''}
                         onChange={(e) => updateKPI(kpi.id, { midYearManagerComments: e.target.value })}
@@ -178,14 +199,14 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
                 {/* Annual Review Section */}
                 <div>
-                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Annual Review</h4>
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Annual Review</h4>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="space-y-4">
-                      <label className="block text-xs font-bold text-slate-700">Self Rating</label>
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Self Rating</label>
                       {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }))}
                     </div>
                     <div className="space-y-4">
-                      <label className="block text-xs font-bold text-slate-700">Achievement & Progress Comments</label>
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Achievement Comments</label>
                       <textarea 
                         value={kpi.selfComments || ''}
                         onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
@@ -194,12 +215,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                       />
                     </div>
                     <div className="space-y-4">
-                      <label className="block text-xs font-bold text-slate-700">Manager Comments</label>
+                      <label className="block text-[10px] font-bold text-slate-700 uppercase">Manager Comments</label>
                       <textarea 
                         value={kpi.managerComments || ''}
                         onChange={(e) => updateKPI(kpi.id, { managerComments: e.target.value })}
                         className="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 bg-slate-50/50"
-                        placeholder="Feedback from manager will be displayed here..."
+                        placeholder="Feedback from manager..."
                       />
                     </div>
                   </div>

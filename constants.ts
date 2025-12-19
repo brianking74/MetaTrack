@@ -2,14 +2,12 @@
 import { Rating, Competency, KPI } from './types.ts';
 
 export const RATING_DESCRIPTIONS: Record<Rating, string> = {
-  [Rating.NA]: 'Not Applicable',
-  [Rating.OUTSTANDING]: 'The performance far exceeded the requirements of all acknowledged KPIs.',
-  [Rating.EXCEEDED]: 'The performance exceeded the requirements of all acknowledged KPIs.',
-  [Rating.MODERATELY_EXCEEDED]: 'The performance met the requirements and even exceeded some of them.',
-  [Rating.MET]: 'The performance met the requirements of all acknowledged KPIs.',
-  [Rating.PARTIALLY_MET]: 'The performance met the requirements of some acknowledged KPIs.',
-  [Rating.MARGINAL]: 'The performance was below requirements.',
-  [Rating.UNACCEPTABLE]: 'The performance was significantly below requirements.'
+  [Rating.NA]: 'Not Applicable to the current review cycle or role requirements.',
+  [Rating.OUTSTANDING]: 'The actual performance far exceeded the requirements of all acknowledged KPIs.',
+  [Rating.EXCEEDS]: 'The actual performance exceeded the requirements of all acknowledged KPIs.',
+  [Rating.MEETS]: 'The actual performance met the requirements of all acknowledged KPIs.',
+  [Rating.PARTIALLY_MEETS]: 'The actual performance met the requirements of some of the acknowledged KPIs.',
+  [Rating.NOT_MET]: 'The actual performance was significantly below the requirements of the acknowledged KPIs.'
 };
 
 export const INITIAL_KPIS: KPI[] = [
