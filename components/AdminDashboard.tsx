@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Assessment, Rating } from '../types';
-import { analyzeAssessment } from '../services/geminiService';
-import { RATING_DESCRIPTIONS } from '../constants';
+import { Assessment, Rating } from '../types.ts';
+import { analyzeAssessment } from '../services/geminiService.ts';
+import { RATING_DESCRIPTIONS } from '../constants.ts';
 
 interface AdminDashboardProps {
   assessments: Assessment[];

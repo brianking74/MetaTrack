@@ -11,6 +11,13 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
     <script>
+      // Shim for process.env to prevent crashes in the browser
+      window.process = {
+        env: {
+          API_KEY: "" 
+        }
+      };
+
       tailwind.config = {
         theme: {
           extend: {
@@ -45,5 +52,7 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
+    <!-- Entry point for the application -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>

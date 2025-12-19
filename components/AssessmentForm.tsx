@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Assessment, Rating, KPI, Competency } from '../types';
-import { RATING_DESCRIPTIONS, INITIAL_KPIS, CORE_COMPETENCIES } from '../constants';
+import { Assessment, Rating, KPI, Competency } from '../types.ts';
+import { RATING_DESCRIPTIONS, INITIAL_KPIS, CORE_COMPETENCIES } from '../constants.ts';
 
 interface AssessmentFormProps {
   initialData?: Assessment;

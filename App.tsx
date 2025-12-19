@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import Layout from './components/Layout';
-import AssessmentForm from './components/AssessmentForm';
-import AdminDashboard from './components/AdminDashboard';
-import { Assessment, Role } from './types';
+import Layout from './components/Layout.tsx';
+import AssessmentForm from './components/AssessmentForm.tsx';
+import AdminDashboard from './components/AdminDashboard.tsx';
+import { Assessment, Role } from './types.ts';
 
 const App: React.FC = () => {
   const [role, setRole] = useState<Role>('employee');
