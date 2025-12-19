@@ -330,10 +330,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                       {selectedAssessment.overallPerformance.selfRating || 'No self-rating given'}
                     </div>
                   </div>
+                  
                   {isReviewed && (
-                    <div className="pt-4 border-t border-slate-100">
+                    <div className="pt-4 border-t border-slate-100 space-y-6">
+                       <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Final Agreed Rating</span>
+                          <div className="text-sm font-bold text-brand-900 bg-brand-200 px-3 py-2 rounded-lg border border-brand-300 inline-block">
+                            {selectedAssessment.overallPerformance.managerRating || 'Pending finalization'}
+                          </div>
+                       </div>
+                       
                        <div className="p-4 bg-green-50 border border-green-100 rounded-lg text-green-700">
-                         <div className="text-[10px] font-black uppercase tracking-widest mb-1">Status</div>
+                         <div className="text-[10px] font-black uppercase tracking-widest mb-1 text-green-600">Status</div>
                          <div className="text-sm font-bold">Review Finalized</div>
                          <p className="text-[10px] mt-2 leading-tight">This assessment is now archived. You can export it as a PDF for the employee's HR records.</p>
                        </div>
