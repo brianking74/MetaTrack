@@ -13,17 +13,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleReviewClick = (assessment: Assessment) => {
     setSelectedAssessment(assessment);
     setAiAnalysis('');
+    setError(null);
   };
 
   const runAiAnalysis = async (assessment: Assessment) => {
     setIsAnalyzing(true);
-    const analysis = await analyzeAssessment(assessment);
-    setAiAnalysis(analysis);
-    setIsAnalyzing(false);
+    setError(null);
+    try {
+      const analysis = await analyzeAssessment(assessment);
+      setAiAnalysis(analysis);
+    } catch (err: any) {
+      setError(err.message || "Failed to generate analysis.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const updateSelectedKPI = (kpiId: string, updates: Partial<KPI>) => {
@@ -58,12 +66,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
   if (selectedAssessment) {
     return (
       <div className="space-y-6">
-        <button 
-          onClick={() => setSelectedAssessment(null)}
-          className="text-sm font-bold text-brand-600 flex items-center gap-1 hover:underline"
-        >
-          &larr; Back to Submissions
-        </button>
+        <div className="flex justify-between items-center">
+          <button 
+            onClick={() => setSelectedAssessment(null)}
+            className="text-sm font-bold text-brand-600 flex items-center gap-1 hover:underline"
+          >
+            &larr; Back to Submissions
+          </button>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Reviewing: {selectedAssessment.employeeDetails.fullName}
+          </span>
+        </div>
+
+        {/* AI Tools Header Section - REDESIGNED TO MATCH SCREENSHOT */}
+        <div className="bg-brand-900 text-white p-10 rounded-2xl shadow-xl max-w-2xl">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <svg className="w-8 h-8 text-brand-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <h4 className="font-bold text-2xl tracking-tight">AI Performance Analyst</h4>
+            </div>
+            
+            <p className="text-brand-100/80 text-base leading-relaxed">
+              Get an instant AI-powered summary and rating suggestion based on the employee's self-assessment data.
+            </p>
+            
+            <button 
+              onClick={() => runAiAnalysis(selectedAssessment)}
+              disabled={isAnalyzing}
+              className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-md flex items-center justify-center gap-2 ${
+                isAnalyzing 
+                  ? 'bg-brand-800 text-brand-400 cursor-not-allowed' 
+                  : 'bg-brand-600 text-white hover:bg-brand-500 active:scale-95'
+              }`}
+            >
+              {isAnalyzing ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Analyzing...
+                </>
+              ) : 'Analyze Submission'}
+            </button>
+
+            {error && (
+              <div className="p-6 border border-brand-800 rounded-lg bg-brand-950/20 text-brand-100 text-sm">
+                AI Analysis is unavailable: {error}
+              </div>
+            )}
+
+            {aiAnalysis && (
+              <div className="mt-6 p-6 bg-brand-950/30 rounded-xl border border-brand-800 text-brand-50 text-sm leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-center gap-2 mb-4 text-brand-300 font-bold uppercase text-[10px] tracking-widest border-b border-brand-800 pb-2">
+                  Analysis Results
+                </div>
+                {aiAnalysis}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Review Panel */}
@@ -83,7 +147,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                       <h5 className="font-bold text-slate-700">{idx + 1}. {kpi.title}</h5>
                     </div>
                     
-                    {/* Mid-Year Section in Admin */}
                     <div className="mb-6 p-3 bg-white border border-slate-200 rounded-md">
                       <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Mid-Year Review</h6>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -105,7 +168,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                       </div>
                     </div>
 
-                    {/* Annual Section in Admin */}
                     <div className="p-3 bg-brand-50/30 border border-brand-100 rounded-md">
                       <h6 className="text-[10px] font-black uppercase tracking-widest text-brand-400 mb-3">Annual Review</h6>
                       <div className="flex justify-between items-start mb-3">
@@ -140,8 +202,50 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                 ))}
               </div>
 
+              {/* Core Competencies Comparison */}
+              <div className="mt-12 space-y-6">
+                <h4 className="text-[16px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-4 mb-8">
+                  Core Competencies Comparison
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                  {selectedAssessment.coreCompetencies.map(comp => (
+                    <div key={comp.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-bold text-slate-700 block truncate">{comp.name}</span>
+                      </div>
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                         <div className="whitespace-nowrap">
+                            <span className="text-sm font-bold text-brand-700">Self: {comp.selfRating || 'N/A'}</span>
+                         </div>
+                         <div className="w-32 relative">
+                            <select 
+                              value={comp.managerRating || ''}
+                              onChange={(e) => {
+                                const updated = {
+                                  ...selectedAssessment,
+                                  coreCompetencies: selectedAssessment.coreCompetencies.map(c => c.id === comp.id ? { ...c, managerRating: e.target.value as Rating } : c)
+                                };
+                                setSelectedAssessment(updated);
+                              }}
+                              className="w-full h-10 pl-4 pr-10 text-sm font-medium border border-slate-300 rounded-lg bg-white hover:border-brand-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer text-slate-700"
+                            >
+                               <option value="">Rate</option>
+                               {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                               </svg>
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Individual Development Review */}
-              <div className="mt-12 space-y-4">
+              <div className="mt-16 space-y-4">
                 <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2">Individual Development Review</h4>
                 <div className="p-6 bg-white rounded-lg border border-slate-200">
                   <div className="mb-4">
@@ -162,37 +266,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                       placeholder="Provide feedback on development and growth..."
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* Competency Overview (Summary View for Admin) */}
-              <div className="mt-12 space-y-4">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2">Core Competencies Comparison</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedAssessment.coreCompetencies.map(comp => (
-                    <div key={comp.id} className="text-xs flex justify-between p-2 border-b border-slate-50">
-                      <span className="text-slate-600 font-medium">{comp.name}</span>
-                      <div className="flex gap-4">
-                         <span className="text-brand-600 font-bold">Self: {comp.selfRating || 'N/A'}</span>
-                         <div className="w-24">
-                            <select 
-                              value={comp.managerRating || ''}
-                              onChange={(e) => {
-                                const updated = {
-                                  ...selectedAssessment,
-                                  coreCompetencies: selectedAssessment.coreCompetencies.map(c => c.id === comp.id ? { ...c, managerRating: e.target.value as Rating } : c)
-                                };
-                                setSelectedAssessment(updated);
-                              }}
-                              className="w-full border rounded p-0.5 outline-none focus:ring-1 focus:ring-brand-500"
-                            >
-                               <option value="">Rate</option>
-                               {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                         </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -230,42 +303,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
             </div>
           </div>
 
-          {/* AI Tools Sidebar */}
+          {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-brand-900 text-white p-6 rounded-xl shadow-lg">
-              <div className="flex items-center gap-2 mb-4">
-                <svg className="w-6 h-6 text-brand-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <h4 className="font-bold text-lg">AI Performance Analyst</h4>
-              </div>
-              <p className="text-xs text-brand-200 mb-6">Get an instant AI-powered summary and rating suggestion based on the employee's self-assessment data.</p>
-              
-              <button 
-                onClick={() => runAiAnalysis(selectedAssessment)}
-                disabled={isAnalyzing}
-                className={`w-full py-2.5 rounded-lg font-bold text-sm transition-all border border-brand-500 ${isAnalyzing ? 'bg-brand-800 opacity-50' : 'bg-brand-600 hover:bg-brand-500'}`}
-              >
-                {isAnalyzing ? 'Analyzing Data...' : 'Analyze Submission'}
-              </button>
-
-              {aiAnalysis && (
-                <div className="mt-6 p-4 bg-brand-950 rounded border border-brand-800 text-brand-50 text-xs leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-top-2 duration-500">
-                  {aiAnalysis}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white p-6 rounded-xl border border-slate-200">
-               <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">Employee Self-Reflection</h4>
-               <div className="space-y-4">
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm sticky top-28">
+               <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider flex items-center gap-2">
+                 <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                 </svg>
+                 Employee Self-Reflection
+               </h4>
+               <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Development Goals</span>
-                    <p className="text-xs text-slate-600 mt-1 italic">{selectedAssessment.developmentPlan.selfComments || 'No comments provided.'}</p>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Development Focus</span>
+                    <div className="text-xs text-slate-600 bg-slate-50 p-4 rounded-lg border border-slate-100 italic leading-relaxed">
+                      {selectedAssessment.developmentPlan.selfComments || 'No development comments provided.'}
+                    </div>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Overall Summary</span>
-                    <p className="text-xs text-slate-600 mt-1 italic">{selectedAssessment.overallPerformance.selfComments || 'No summary provided.'}</p>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Performance Summary</span>
+                    <div className="text-xs text-slate-600 bg-slate-50 p-4 rounded-lg border border-slate-100 italic leading-relaxed">
+                      {selectedAssessment.overallPerformance.selfComments || 'No overall summary provided.'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Self Rating</span>
+                    <div className="text-sm font-bold text-brand-700 bg-brand-50 px-3 py-2 rounded-lg border border-brand-100">
+                      {selectedAssessment.overallPerformance.selfRating || 'No self-rating given'}
+                    </div>
                   </div>
                </div>
             </div>

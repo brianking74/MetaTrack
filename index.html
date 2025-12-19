@@ -11,13 +11,9 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
     <script>
-      // Shim for process.env to prevent crashes in the browser
-      window.process = {
-        env: {
-          API_KEY: "" 
-        }
-      };
-
+      // Safer shim for process.env that doesn't overwrite injected values
+      window.process = window.process || { env: {} };
+      
       tailwind.config = {
         theme: {
           extend: {
@@ -32,7 +28,8 @@
                 600: '#a76d3a',
                 700: '#8b5830',
                 800: '#71482a',
-                900: '#5c3b25',
+                900: '#5c3b25', // The deep brown from the screenshot
+                950: '#4a2f1e',
               },
             }
           }
@@ -53,7 +50,6 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <!-- Entry point for the application -->
     <script type="module" src="./index.tsx"></script>
 </body>
 </html>
