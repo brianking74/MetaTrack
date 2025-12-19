@@ -23,16 +23,10 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     id: Math.random().toString(36).substr(2, 9),
     employeeId: '',
     employeeDetails: {
-      userId: '',
       fullName: '',
       position: '',
-      grade: '',
-      businessLine: '',
       division: '',
-      location: '',
-      lastHireDate: ''
     },
-    reviewPeriod: '',
     kpis: INITIAL_KPIS,
     developmentPlan: { competencies: [], selfComments: '' },
     coreCompetencies: CORE_COMPETENCIES,
@@ -129,16 +123,6 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   />
                 </div>
               ))}
-              <div className="flex flex-col border-b border-slate-50 pb-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Review Period</label>
-                <input
-                  type="text"
-                  value={formData.reviewPeriod}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reviewPeriod: e.target.value }))}
-                  placeholder="e.g. 01/01/2023 - 31/12/2023"
-                  className="text-slate-700 font-medium bg-transparent border-none focus:ring-0 p-0 outline-none"
-                />
-              </div>
             </div>
           </div>
         )}
@@ -158,16 +142,6 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                       placeholder="Goal Title"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-400">Weight:</span>
-                    <input 
-                      type="number"
-                      value={kpi.weight}
-                      onChange={(e) => updateKPI(kpi.id, { weight: parseInt(e.target.value) || 0 })}
-                      className="w-12 text-center text-xs font-bold bg-white border border-slate-200 rounded p-1"
-                    />
-                    <span className="text-xs font-bold text-slate-400">%</span>
-                  </div>
                 </div>
                 <textarea 
                   value={kpi.description}
@@ -176,19 +150,58 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   placeholder="Describe the objective and target results..."
                   rows={2}
                 />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <label className="block text-sm font-bold text-slate-700">Self Rating</label>
-                    {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }))}
+                
+                {/* Mid-Year Review Section */}
+                <div className="mb-8 p-4 bg-white rounded-lg border border-slate-200">
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Mid-Year Review</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-700">Self-Assessment Comments</label>
+                      <textarea 
+                        value={kpi.midYearSelfComments || ''}
+                        onChange={(e) => updateKPI(kpi.id, { midYearSelfComments: e.target.value })}
+                        className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-24"
+                        placeholder="Your mid-year progress comments..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-700">Manager Comments</label>
+                      <textarea 
+                        value={kpi.midYearManagerComments || ''}
+                        onChange={(e) => updateKPI(kpi.id, { midYearManagerComments: e.target.value })}
+                        className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-24 bg-slate-50/50"
+                        placeholder="Manager mid-year feedback..."
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-4">
-                    <label className="block text-sm font-bold text-slate-700">Achievement & Progress Comments</label>
-                    <textarea 
-                      value={kpi.selfComments || ''}
-                      onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
-                      className="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32"
-                      placeholder="Detail your results and achievements for this period..."
-                    />
+                </div>
+
+                {/* Annual Review Section */}
+                <div>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Annual Review</h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="space-y-4">
+                      <label className="block text-xs font-bold text-slate-700">Self Rating</label>
+                      {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }))}
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block text-xs font-bold text-slate-700">Achievement & Progress Comments</label>
+                      <textarea 
+                        value={kpi.selfComments || ''}
+                        onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
+                        className="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32"
+                        placeholder="Detail your results and achievements for this period..."
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block text-xs font-bold text-slate-700">Manager Comments</label>
+                      <textarea 
+                        value={kpi.managerComments || ''}
+                        onChange={(e) => updateKPI(kpi.id, { managerComments: e.target.value })}
+                        className="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 bg-slate-50/50"
+                        placeholder="Feedback from manager will be displayed here..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -196,7 +209,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
             <button 
               onClick={() => setFormData(prev => ({
                 ...prev,
-                kpis: [...prev.kpis, { id: Math.random().toString(36).substr(2, 9), title: `KPI ${prev.kpis.length + 1}`, description: '', weight: 0, status: '', startDate: '', targetDate: '' }]
+                kpis: [...prev.kpis, { id: Math.random().toString(36).substr(2, 9), title: `KPI ${prev.kpis.length + 1}`, description: '', status: '', startDate: '', targetDate: '', midYearSelfComments: '', midYearManagerComments: '' }]
               }))}
               className="text-sm font-bold text-brand-600 hover:text-brand-700 flex items-center gap-2"
             >

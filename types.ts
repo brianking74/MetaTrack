@@ -18,12 +18,13 @@ export interface KPI {
   description: string;
   startDate: string;
   targetDate: string;
-  weight: number;
   status: string;
   selfRating?: Rating;
   selfComments?: string;
   managerRating?: Rating;
   managerComments?: string;
+  midYearSelfComments?: string;
+  midYearManagerComments?: string;
 }
 
 export interface Competency {
@@ -36,21 +37,15 @@ export interface Competency {
 }
 
 export interface EmployeeDetails {
-  userId: string;
   fullName: string;
   position: string;
-  grade: string;
-  businessLine: string;
   division: string;
-  location: string;
-  lastHireDate: string;
 }
 
 export interface Assessment {
   id: string;
   employeeId: string;
   employeeDetails: EmployeeDetails;
-  reviewPeriod: string;
   kpis: KPI[];
   developmentPlan: {
     competencies: string[];

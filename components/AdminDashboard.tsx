@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Assessment, Rating } from '../types.ts';
+import { Assessment, Rating, KPI } from '../types.ts';
 import { analyzeAssessment } from '../services/geminiService.ts';
 import { RATING_DESCRIPTIONS } from '../constants.ts';
 
@@ -26,22 +26,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
     setIsAnalyzing(false);
   };
 
+  const updateSelectedKPI = (kpiId: string, updates: Partial<KPI>) => {
+    if (!selectedAssessment) return;
+    const updated = {
+      ...selectedAssessment,
+      kpis: selectedAssessment.kpis.map(k => k.id === kpiId ? { ...k, ...updates } : k)
+    };
+    setSelectedAssessment(updated);
+  };
+
   const handleManagerRatingChange = (field: 'managerRating' | 'overallRating', value: Rating, kpiId?: string) => {
     if (!selectedAssessment) return;
 
-    let updated: Assessment;
     if (kpiId) {
-      updated = {
-        ...selectedAssessment,
-        kpis: selectedAssessment.kpis.map(k => k.id === kpiId ? { ...k, managerRating: value } : k)
-      };
+      updateSelectedKPI(kpiId, { managerRating: value });
     } else {
-      updated = {
+      const updated = {
         ...selectedAssessment,
         overallPerformance: { ...selectedAssessment.overallPerformance, managerRating: value }
       };
+      setSelectedAssessment(updated);
     }
-    setSelectedAssessment(updated);
   };
 
   const handleFinalSubmit = () => {
@@ -66,7 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
             <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-slate-800">{selectedAssessment.employeeDetails.fullName}</h3>
-                <span className="text-sm font-medium text-slate-500">ID: {selectedAssessment.employeeDetails.userId}</span>
+                <span className="text-sm font-medium text-slate-500">{selectedAssessment.employeeDetails.position}</span>
               </div>
 
               {/* KPI Review */}
@@ -75,21 +80,61 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                 {selectedAssessment.kpis.map((kpi, idx) => (
                   <div key={kpi.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                     <div className="flex justify-between items-start mb-3">
-                      <h5 className="font-bold text-slate-700">{idx + 1}. {kpi.title} ({kpi.weight}%)</h5>
-                      <span className="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded font-medium">Self: {kpi.selfRating || 'N/A'}</span>
+                      <h5 className="font-bold text-slate-700">{idx + 1}. {kpi.title}</h5>
                     </div>
-                    <p className="text-xs text-slate-500 italic mb-4">Employee comments: {kpi.selfComments || 'None'}</p>
                     
-                    <div className="max-w-xs">
-                      <label className="text-xs font-bold text-slate-600 block mb-1 uppercase">Manager Rating</label>
-                      <select 
-                        value={kpi.managerRating || ''}
-                        onChange={(e) => handleManagerRatingChange('managerRating', e.target.value as Rating, kpi.id)}
-                        className="w-full text-xs border border-slate-300 rounded p-1.5 focus:ring-1 focus:ring-brand-500 outline-none"
-                      >
-                        <option value="">Select Rating</option>
-                        {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
+                    {/* Mid-Year Section in Admin */}
+                    <div className="mb-6 p-3 bg-white border border-slate-200 rounded-md">
+                      <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Mid-Year Review Review</h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Staff Mid-Year Comments</label>
+                          <p className="text-xs text-slate-700 italic bg-slate-50 p-2 rounded min-h-[40px]">
+                            {kpi.midYearSelfComments || 'No comments provided.'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Manager Mid-Year Comments</label>
+                          <textarea 
+                            value={kpi.midYearManagerComments || ''}
+                            onChange={(e) => updateSelectedKPI(kpi.id, { midYearManagerComments: e.target.value })}
+                            className="w-full text-xs border border-slate-300 rounded p-1.5 focus:ring-1 focus:ring-brand-500 outline-none h-16 resize-none"
+                            placeholder="Add mid-year feedback..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Annual Section in Admin */}
+                    <div className="p-3 bg-brand-50/30 border border-brand-100 rounded-md">
+                      <h6 className="text-[10px] font-black uppercase tracking-widest text-brand-400 mb-3">Annual Review Review</h6>
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded font-medium">Self Rating: {kpi.selfRating || 'N/A'}</span>
+                      </div>
+                      <p className="text-xs text-slate-500 italic mb-4">Staff Year-End comments: {kpi.selfComments || 'None'}</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-600 block mb-1 uppercase">Manager Annual Rating</label>
+                          <select 
+                            value={kpi.managerRating || ''}
+                            onChange={(e) => handleManagerRatingChange('managerRating', e.target.value as Rating, kpi.id)}
+                            className="w-full text-xs border border-slate-300 rounded p-1.5 focus:ring-1 focus:ring-brand-500 outline-none"
+                          >
+                            <option value="">Select Rating</option>
+                            {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-600 block mb-1 uppercase">Manager Annual Comments</label>
+                          <textarea 
+                            value={kpi.managerComments || ''}
+                            onChange={(e) => updateSelectedKPI(kpi.id, { managerComments: e.target.value })}
+                            className="w-full text-xs border border-slate-300 rounded p-1.5 focus:ring-1 focus:ring-brand-500 outline-none h-16 resize-none"
+                            placeholder="Provide final feedback..."
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -220,7 +265,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Employee</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Department</th>
+              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Division</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
             </tr>

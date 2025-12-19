@@ -1,5 +1,5 @@
 
-import { Rating, Competency, KPI } from './types';
+import { Rating, Competency, KPI } from './types.ts';
 
 export const RATING_DESCRIPTIONS: Record<Rating, string> = {
   [Rating.NA]: 'Not Applicable',
@@ -19,8 +19,9 @@ export const INITIAL_KPIS: KPI[] = [
     description: 'Enter your first strategic objective here...',
     startDate: '',
     targetDate: '',
-    weight: 0,
-    status: ''
+    status: '',
+    midYearSelfComments: '',
+    midYearManagerComments: ''
   },
   {
     id: 'kpi-2',
@@ -28,8 +29,9 @@ export const INITIAL_KPIS: KPI[] = [
     description: 'Enter your second operational objective here...',
     startDate: '',
     targetDate: '',
-    weight: 0,
-    status: ''
+    status: '',
+    midYearSelfComments: '',
+    midYearManagerComments: ''
   }
 ];
 
