@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Assessment, Rating, KPI } from '../types.ts';
-import { analyzeAssessment } from '../services/geminiService.ts';
 import { RATING_DESCRIPTIONS } from '../constants.ts';
 
 interface AdminDashboardProps {
@@ -11,27 +10,9 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewComplete }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
-  const [aiAnalysis, setAiAnalysis] = useState<string>('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleReviewClick = (assessment: Assessment) => {
     setSelectedAssessment(assessment);
-    setAiAnalysis('');
-    setError(null);
-  };
-
-  const runAiAnalysis = async (assessment: Assessment) => {
-    setIsAnalyzing(true);
-    setError(null);
-    try {
-      const analysis = await analyzeAssessment(assessment);
-      setAiAnalysis(analysis);
-    } catch (err: any) {
-      setError(err.message || "Failed to generate analysis.");
-    } finally {
-      setIsAnalyzing(false);
-    }
   };
 
   const updateSelectedKPI = (kpiId: string, updates: Partial<KPI>) => {
@@ -76,57 +57,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             Reviewing: {selectedAssessment.employeeDetails.fullName}
           </span>
-        </div>
-
-        {/* AI Tools Header Section - REDESIGNED TO MATCH SCREENSHOT */}
-        <div className="bg-brand-900 text-white p-10 rounded-2xl shadow-xl max-w-2xl">
-          <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <svg className="w-8 h-8 text-brand-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <h4 className="font-bold text-2xl tracking-tight">AI Performance Analyst</h4>
-            </div>
-            
-            <p className="text-brand-100/80 text-base leading-relaxed">
-              Get an instant AI-powered summary and rating suggestion based on the employee's self-assessment data.
-            </p>
-            
-            <button 
-              onClick={() => runAiAnalysis(selectedAssessment)}
-              disabled={isAnalyzing}
-              className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-md flex items-center justify-center gap-2 ${
-                isAnalyzing 
-                  ? 'bg-brand-800 text-brand-400 cursor-not-allowed' 
-                  : 'bg-brand-600 text-white hover:bg-brand-500 active:scale-95'
-              }`}
-            >
-              {isAnalyzing ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Analyzing...
-                </>
-              ) : 'Analyze Submission'}
-            </button>
-
-            {error && (
-              <div className="p-6 border border-brand-800 rounded-lg bg-brand-950/20 text-brand-100 text-sm">
-                AI Analysis is unavailable: {error}
-              </div>
-            )}
-
-            {aiAnalysis && (
-              <div className="mt-6 p-6 bg-brand-950/30 rounded-xl border border-brand-800 text-brand-50 text-sm leading-relaxed whitespace-pre-wrap animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex items-center gap-2 mb-4 text-brand-300 font-bold uppercase text-[10px] tracking-widest border-b border-brand-800 pb-2">
-                  Analysis Results
-                </div>
-                {aiAnalysis}
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -202,22 +132,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                 ))}
               </div>
 
-              {/* Core Competencies Comparison */}
+              {/* Core Competencies Comparison - Reformatted to Single Column for Tidiness */}
               <div className="mt-12 space-y-6">
-                <h4 className="text-[16px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-4 mb-8">
+                <h4 className="text-[16px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-4 mb-4">
                   Core Competencies Comparison
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                <div className="divide-y divide-slate-50">
                   {selectedAssessment.coreCompetencies.map(comp => (
-                    <div key={comp.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-bold text-slate-700 block truncate">{comp.name}</span>
+                    <div key={comp.id} className="flex items-center justify-between py-5 gap-6">
+                      <div className="flex-1">
+                        <span className="text-sm font-bold text-slate-700 block">{comp.name}</span>
                       </div>
-                      <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="flex items-center gap-10">
                          <div className="whitespace-nowrap">
                             <span className="text-sm font-bold text-brand-700">Self: {comp.selfRating || 'N/A'}</span>
                          </div>
-                         <div className="w-32 relative">
+                         <div className="w-40 relative">
                             <select 
                               value={comp.managerRating || ''}
                               onChange={(e) => {
@@ -227,7 +157,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                                 };
                                 setSelectedAssessment(updated);
                               }}
-                              className="w-full h-10 pl-4 pr-10 text-sm font-medium border border-slate-300 rounded-lg bg-white hover:border-brand-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer text-slate-700"
+                              className="w-full h-11 pl-4 pr-10 text-sm font-medium border border-slate-200 rounded-lg bg-white hover:border-brand-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer text-slate-700 shadow-sm"
                             >
                                <option value="">Rate</option>
                                {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
