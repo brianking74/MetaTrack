@@ -93,7 +93,7 @@ const App: React.FC = () => {
   return (
     <>
       <Layout 
-        title={role === 'employee' ? 'Staff Assessment Form' : 'Assessor Review Hub'} 
+        title={role === 'employee' ? 'Staff Performance Review' : 'Assessor Review Hub'} 
         role={role} 
         onRoleSwitch={handleRoleSwitchRequest}
       >

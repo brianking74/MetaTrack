@@ -85,7 +85,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                     
                     {/* Mid-Year Section in Admin */}
                     <div className="mb-6 p-3 bg-white border border-slate-200 rounded-md">
-                      <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Mid-Year Review Review</h6>
+                      <h6 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Mid-Year Review</h6>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Staff Mid-Year Comments</label>
@@ -107,7 +107,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
 
                     {/* Annual Section in Admin */}
                     <div className="p-3 bg-brand-50/30 border border-brand-100 rounded-md">
-                      <h6 className="text-[10px] font-black uppercase tracking-widest text-brand-400 mb-3">Annual Review Review</h6>
+                      <h6 className="text-[10px] font-black uppercase tracking-widest text-brand-400 mb-3">Annual Review</h6>
                       <div className="flex justify-between items-start mb-3">
                         <span className="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded font-medium">Self Rating: {kpi.selfRating || 'N/A'}</span>
                       </div>
@@ -138,6 +138,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Individual Development Review */}
+              <div className="mt-12 space-y-4">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2">Individual Development Review</h4>
+                <div className="p-6 bg-white rounded-lg border border-slate-200">
+                  <div className="mb-4">
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Staff Development Reflection</label>
+                    <p className="text-sm text-slate-700 italic bg-slate-50 p-4 rounded min-h-[60px]">
+                      {selectedAssessment.developmentPlan.selfComments || 'No comments provided.'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Assessor Development Feedback</label>
+                    <textarea 
+                      value={selectedAssessment.developmentPlan.managerComments || ''}
+                      onChange={(e) => setSelectedAssessment({
+                        ...selectedAssessment,
+                        developmentPlan: { ...selectedAssessment.developmentPlan, managerComments: e.target.value }
+                      })}
+                      className="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-1 focus:ring-brand-500 outline-none h-32 resize-none"
+                      placeholder="Provide feedback on development and growth..."
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Competency Overview (Summary View for Admin) */}

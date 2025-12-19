@@ -50,6 +50,7 @@ export interface Assessment {
   developmentPlan: {
     competencies: string[];
     selfComments: string;
+    managerComments?: string;
   };
   coreCompetencies: Competency[];
   overallPerformance: {

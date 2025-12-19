@@ -28,7 +28,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
       division: '',
     },
     kpis: INITIAL_KPIS,
-    developmentPlan: { competencies: [], selfComments: '' },
+    developmentPlan: { competencies: [], selfComments: '', managerComments: '' },
     coreCompetencies: CORE_COMPETENCIES,
     overallPerformance: { selfComments: '', managerComments: '' },
     status: 'draft'
@@ -68,12 +68,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     }));
   };
 
-  const renderRatingSelect = (currentRating: Rating | undefined, onChange: (r: Rating) => void) => (
+  const renderRatingSelect = (currentRating: Rating | undefined, onChange: (r: Rating) => void, isManager: boolean = false) => (
     <div className="space-y-2">
       <select 
         value={currentRating || ''} 
         onChange={(e) => onChange(e.target.value as Rating)}
-        className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+        className={`w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none ${isManager ? 'bg-slate-50/50' : ''}`}
       >
         <option value="" disabled>Select Rating</option>
         {Object.values(Rating).map(r => (
@@ -220,15 +220,31 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
         {/* Stage 3: Development Plan */}
         {currentStage === 2 && (
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-slate-800">Self-Individual Development</h3>
+          <div className="space-y-8">
+            <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Self-Individual Development</h3>
             <p className="text-sm text-slate-500">Reflect on your growth and key competencies you've worked on (e.g., People Management, Customer Focus).</p>
-            <textarea 
-              value={formData.developmentPlan.selfComments}
-              onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: e.target.value } }))}
-              className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64"
-              placeholder="What specific skills or knowledge did you focus on developing this year? How did you apply them?"
-            />
+            
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700">Staff Self-Assessment</label>
+                <textarea 
+                  value={formData.developmentPlan.selfComments}
+                  onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: e.target.value } }))}
+                  className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48"
+                  placeholder="What specific skills or knowledge did you focus on developing this year? How did you apply them?"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700">Manager Comments</label>
+                <textarea 
+                  value={formData.developmentPlan.managerComments || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, managerComments: e.target.value } }))}
+                  className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48 bg-slate-50/50"
+                  placeholder="Manager's evaluation of the development progress..."
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -258,25 +274,50 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
         {/* Stage 5: Final Review */}
         {currentStage === 4 && (
-          <div className="space-y-8">
+          <div className="space-y-10">
              <div className="bg-brand-50 border border-brand-100 p-6 rounded-lg text-brand-800">
-               <h3 className="text-lg font-bold mb-2">Ready to Submit?</h3>
-               <p className="text-sm">Please provide a summary of your overall performance for the review period. Once submitted, your manager will review your self-assessment and provide the final evaluation.</p>
+               <h3 className="text-lg font-bold mb-2">Annual Final Review</h3>
+               <p className="text-sm">Provide a comprehensive summary of the performance for this review cycle. The final rating should reflect the overall achievements against objectives and competencies.</p>
              </div>
 
-             <div className="space-y-4">
-                <label className="block text-sm font-bold text-slate-700">Overall Self-Appraisal Summary</label>
-                <textarea 
-                  value={formData.overallPerformance.selfComments}
-                  onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
-                  className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48"
-                  placeholder="Summarize your key highlights, challenges overcome, and vision for the next review period..."
-                />
-             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-tight">Overall Self-Appraisal Summary</label>
+                    <textarea 
+                      value={formData.overallPerformance.selfComments}
+                      onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
+                      className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48"
+                      placeholder="Summarize your key highlights, challenges overcome, and vision for the next review period..."
+                    />
+                  </div>
 
-             <div className="max-w-md">
-                <label className="block text-sm font-bold text-slate-700 mb-2">Suggested Overall Performance Rating</label>
-                {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-tight">Suggested Overall Self-Rating</label>
+                    {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-brand-700 uppercase tracking-tight">Overall Manager Feedback</label>
+                    <textarea 
+                      value={formData.overallPerformance.managerComments || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, managerComments: e.target.value } }))}
+                      className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48 bg-slate-50/50"
+                      placeholder="Manager's overall performance assessment and final feedback..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-brand-700 uppercase tracking-tight">Final Performance Rating (Manager)</label>
+                    {renderRatingSelect(
+                      formData.overallPerformance.managerRating, 
+                      (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, managerRating: r } })),
+                      true
+                    )}
+                  </div>
+                </div>
              </div>
           </div>
         )}

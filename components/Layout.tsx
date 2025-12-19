@@ -76,11 +76,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title, role, onRoleSwitch }) 
       <footer className="bg-white border-t border-slate-200 py-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-sm text-slate-500 font-medium">
-            &copy; 2024 MetaBev Ltd. Performance Appraisal Management System.
+            &copy; 2025 Barkhams Digital
           </div>
           <div className="flex gap-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            <span className="hover:text-brand-600 transition-colors cursor-help">Strictly Confidential</span>
-            <span className="hover:text-brand-600 transition-colors cursor-help">Proprietary Assets</span>
             <span className="hover:text-brand-600 transition-colors cursor-help">Technical Support</span>
           </div>
         </div>
