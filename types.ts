@@ -8,7 +8,7 @@ export enum Rating {
   NOT_MET = '5 - Requirements not met'
 }
 
-export type Role = 'employee' | 'admin';
+export type RoleType = 'staff' | 'manager' | 'admin';
 
 export interface KPI {
   id: string;
@@ -38,12 +38,15 @@ export interface EmployeeDetails {
   fullName: string;
   position: string;
   division: string;
+  email: string;
 }
 
 export interface Assessment {
   id: string;
   employeeId: string;
   employeeDetails: EmployeeDetails;
+  managerName: string;
+  managerEmail: string;
   kpis: KPI[];
   developmentPlan: {
     competencies: string[];

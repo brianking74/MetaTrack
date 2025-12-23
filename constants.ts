@@ -1,5 +1,5 @@
 
-import { Rating, Competency, KPI } from './types.ts';
+import { Rating, Competency, KPI, Assessment } from './types.ts';
 
 export const RATING_DESCRIPTIONS: Record<Rating, string> = {
   [Rating.NA]: 'Not Applicable to the current review cycle or role requirements.',
@@ -10,94 +10,52 @@ export const RATING_DESCRIPTIONS: Record<Rating, string> = {
   [Rating.NOT_MET]: 'The actual performance was significantly below the requirements of the acknowledged KPIs.'
 };
 
-export const INITIAL_KPIS: KPI[] = [
-  {
-    id: 'kpi-1',
-    title: 'KPI 1: Strategic Goal',
-    description: 'Enter your first strategic objective here...',
-    startDate: '',
-    targetDate: '',
-    status: '',
-    midYearSelfComments: '',
-    midYearManagerComments: ''
-  },
-  {
-    id: 'kpi-2',
-    title: 'KPI 2: Operational Goal',
-    description: 'Enter your second operational objective here...',
-    startDate: '',
-    targetDate: '',
-    status: '',
-    midYearSelfComments: '',
-    midYearManagerComments: ''
-  }
+export const CORE_COMPETENCIES: Competency[] = [
+  { id: 'comp-1', name: 'Work Effectiveness', description: 'Applies professional techniques and knowledge; plans work systematically; manages time effectively.', indicators: ['Applies job knowledge and technical skills effectively.', 'Observes deadlines and finishes tasks on time.', 'Completes assignments meeting quality and productivity standard.'] },
+  { id: 'comp-2', name: 'Innovation & Change', description: 'Thinks creatively; supports changes; is open-minded.', indicators: ['Contributes new ideas.', 'Willing to try new ways.', 'Adjusts to changes.'] },
+  { id: 'comp-3', name: 'Analysing & Decision Making', description: 'Analytical ability; understands root problems.', indicators: ['Analyses information.', 'Makes judgments with data.', 'Develops solutions.'] },
+  { id: 'comp-4', name: 'Customer Focused', description: 'Driven to provide quality service.', indicators: ['Provides quality service.', 'Adapts to customer needs.'] },
+  { id: 'comp-5', name: 'Results Orientation', description: 'Shows initiative; remains positive under pressure.', indicators: ['Sustains efforts.', 'Remains effective.', 'Seeks improvement.'] },
+  { id: 'comp-6', name: 'Ownership', description: 'Trustworthy and consistent; upholds Group core values.', indicators: ['Follows core values.', 'Demonstrates commitment.', 'Takes accountability.'] }
 ];
 
-export const CORE_COMPETENCIES: Competency[] = [
-  {
-    id: 'comp-1',
-    name: 'Work Effectiveness',
-    description: 'Applies professional techniques and knowledge; plans work systematically; manages time effectively.',
-    indicators: [
-      'Applies job knowledge and technical skills effectively.',
-      'Observes deadlines and finishes tasks on time.',
-      'Completes assignments meeting quality and productivity standard.',
-      'Serves as a source of technical reference for team members.'
-    ]
-  },
-  {
-    id: 'comp-2',
-    name: 'Innovation, Adapting & Responding to Change',
-    description: 'Thinks creatively; supports changes; is open-minded and willing to adjust.',
-    indicators: [
-      'Contributes new ideas to improve workflow.',
-      'Willing to try out new ways of handling issues.',
-      'Adjusts to comply with changes in policies or strategies.',
-      'Engages team members to implement solutions.'
-    ]
-  },
-  {
-    id: 'comp-3',
-    name: 'Analysing, Decision Making & Problem Solving',
-    description: 'Demonstrates analytical ability; understands root problems; makes thorough decisions.',
-    indicators: [
-      'Analyses numerical and verbal information.',
-      'Makes judgments with supporting data.',
-      'Develops solutions in own area.',
-      'Organises resources to solve problems.'
-    ]
-  },
-  {
-    id: 'comp-4',
-    name: 'Customer Focused',
-    description: 'Driven to provide quality service; understands and adapts to customer needs.',
-    indicators: [
-      'Provides quality service to internal/external customers.',
-      'Adapts to changing customer needs.',
-      'Communicates regularly and responds timely.',
-      'Facilitates team members to implement focused practices.'
-    ]
-  },
-  {
-    id: 'comp-5',
-    name: 'Drive & Results Orientation',
-    description: 'Shows initiative; remains positively minded under pressure; strives for excellence.',
-    indicators: [
-      'Sustains efforts to achieve assignments.',
-      'Remains effective in demanding situations.',
-      'Seeks continuous performance improvement.',
-      'Drives self and team to achieve work results.'
-    ]
-  },
-  {
-    id: 'comp-6',
-    name: 'Ownership & Commitment',
-    description: 'Is trustworthy and consistent; upholds professionalism and Group core values.',
-    indicators: [
-      'Follows core values and professional ethics.',
-      'Demonstrates commitment and positive attitudes.',
-      'Takes accountability for decisions.',
-      'Considers Group credibility in decisions.'
-    ]
-  }
+// Added missing INITIAL_KPIS export to fix import error in AssessmentForm.tsx
+export const INITIAL_KPIS: KPI[] = [
+  { id: 'kpi-1', title: 'Work Performance', description: 'Meet or exceed job performance standards.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' },
+  { id: 'kpi-2', title: 'Behavioral Standards', description: 'Uphold company core values and team ethics.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' }
 ];
+
+export const createBlankAssessment = (
+  name: string, 
+  email: string, 
+  managerName: string, 
+  managerEmail: string, 
+  kpiTitles: string[]
+): Assessment => {
+  return {
+    id: Math.random().toString(36).substr(2, 9),
+    employeeId: email,
+    employeeDetails: {
+      fullName: name,
+      position: 'Assigned Role',
+      division: 'Assigned Division',
+      email: email,
+    },
+    managerName,
+    managerEmail,
+    kpis: kpiTitles.filter(t => t.trim() !== "").map((title, idx) => ({
+      id: `kpi-${idx}`,
+      title: title || `KPI ${idx + 1}`,
+      description: 'Defined by management.',
+      startDate: '',
+      targetDate: '',
+      status: 'Active',
+      midYearSelfComments: '',
+      midYearManagerComments: ''
+    })),
+    developmentPlan: { competencies: [], selfComments: '', managerComments: '' },
+    coreCompetencies: CORE_COMPETENCIES.map(c => ({ ...c })),
+    overallPerformance: { selfComments: '', managerComments: '' },
+    status: 'draft'
+  };
+};

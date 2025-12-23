@@ -2,13 +2,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { Assessment } from "../types";
 
+// Refactored to follow @google/genai coding guidelines strictly
 export const analyzeAssessment = async (assessment: Assessment): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API Key not configured.");
-  }
-  
-  const ai = new GoogleGenAI({ apiKey });
+  // Always initialize with the apiKey from process.env.API_KEY directly
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
@@ -30,6 +27,7 @@ export const analyzeAssessment = async (assessment: Assessment): Promise<string>
       }
     });
 
+    // Correctly extracting text using the .text property
     return response.text || "No analysis generated.";
   } catch (error: any) {
     console.error("Gemini Analysis Error:", error);

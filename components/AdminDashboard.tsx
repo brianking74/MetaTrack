@@ -1,21 +1,69 @@
 
-import React, { useState } from 'react';
-import { Assessment, Rating, KPI } from '../types.ts';
-import { RATING_DESCRIPTIONS } from '../constants.ts';
+import React, { useState, useRef } from 'react';
+import { Assessment, Rating, KPI, RoleType } from '../types.ts';
+import { createBlankAssessment } from '../constants.ts';
 
 interface AdminDashboardProps {
   assessments: Assessment[];
+  currentUserEmail: string;
+  role: RoleType;
   onReviewComplete: (updated: Assessment) => void;
+  onBulkUpload: (newAssessments: Assessment[]) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewComplete }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+  assessments, 
+  currentUserEmail, 
+  role, 
+  onReviewComplete,
+  onBulkUpload
+}) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  
+  // Default to 'management' if no data exists and user is super-admin
+  const [activeTab, setActiveTab] = useState<'submissions' | 'management'>(
+    assessments.length === 0 && role === 'admin' ? 'management' : 'submissions'
+  );
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleReviewClick = (assessment: Assessment) => {
-    setSelectedAssessment(assessment);
-    setSendSuccess(false);
+  // Filter based on role
+  const filteredAssessments = role === 'admin' 
+    ? assessments 
+    : assessments.filter(a => a.managerEmail.toLowerCase() === currentUserEmail.toLowerCase());
+
+  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const rows = text.split('\n').filter(row => row.trim() !== "");
+      const newEntries: Assessment[] = [];
+
+      // Skip header row
+      rows.slice(1).forEach(row => {
+        const columns = row.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        if (columns.length < 9) return;
+
+        const [name, email, k1, k2, k3, k4, k5, mName, mEmail] = columns;
+        if (!email || !mEmail) return;
+
+        newEntries.push(createBlankAssessment(name, email, mName, mEmail, [k1, k2, k3, k4, k5]));
+      });
+
+      if (newEntries.length > 0) {
+        onBulkUpload(newEntries);
+        alert(`Successfully imported ${newEntries.length} staff records.`);
+        setActiveTab('submissions');
+      } else {
+        alert("Could not find any valid rows in the CSV. Please check the format.");
+      }
+    };
+    reader.readAsText(file);
   };
 
   const updateSelectedKPI = (kpiId: string, updates: Partial<KPI>) => {
@@ -27,17 +75,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
     setSelectedAssessment(updated);
   };
 
-  const handleManagerRatingChange = (field: 'managerRating' | 'overallRating', value: Rating, kpiId?: string) => {
+  const handleManagerRatingChange = (value: Rating, kpiId?: string) => {
     if (!selectedAssessment) return;
-
     if (kpiId) {
       updateSelectedKPI(kpiId, { managerRating: value });
     } else {
-      const updated = {
+      setSelectedAssessment({
         ...selectedAssessment,
         overallPerformance: { ...selectedAssessment.overallPerformance, managerRating: value }
-      };
-      setSelectedAssessment(updated);
+      });
     }
   };
 
@@ -48,108 +94,74 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
   };
 
   const handleSendToStaff = () => {
+    if (!selectedAssessment) return;
     setIsSending(true);
-    // Simulate API call to send email/PDF
+    const { fullName, email } = selectedAssessment.employeeDetails;
+    const rating = selectedAssessment.overallPerformance.managerRating || 'N/A';
+    const subject = encodeURIComponent(`Final Performance Review - ${fullName}`);
+    const body = encodeURIComponent(`Dear ${fullName},\n\nYour performance review is complete.\nFinal Rating: ${rating}\n\nPlease login to the METABEV Portal to view feedback.`);
+    
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    
     setTimeout(() => {
       setIsSending(false);
       setSendSuccess(true);
-      setTimeout(() => setSendSuccess(false), 5000);
-    }, 2000);
-  };
-
-  const handlePrint = () => {
-    window.print();
+      setTimeout(() => setSendSuccess(false), 3000);
+    }, 1000);
   };
 
   if (selectedAssessment) {
     const isReviewed = selectedAssessment.status === 'reviewed';
-
     return (
       <div className="space-y-6 print:m-0 print:p-0">
         <div className="flex justify-between items-center print:hidden">
-          <button 
-            onClick={() => setSelectedAssessment(null)}
-            className="text-sm font-bold text-brand-600 flex items-center gap-1 hover:underline"
-          >
-            &larr; Back to Submissions
+          <button onClick={() => setSelectedAssessment(null)} className="text-sm font-bold text-brand-600 flex items-center gap-1 hover:underline">
+            &larr; Back to Dashboard
           </button>
           <div className="flex items-center gap-4">
             {isReviewed && (
               <>
-                <button 
-                  onClick={handlePrint}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-200"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                <button onClick={() => window.print()} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold flex items-center gap-2">
                   Download PDF
                 </button>
-                <button 
-                  onClick={handleSendToStaff}
-                  disabled={isSending}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-all ${
-                    sendSuccess ? 'bg-green-600 text-white' : 'bg-brand-600 text-white hover:bg-brand-700'
-                  }`}
-                >
-                  {isSending ? (
-                    <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Sending...</>
-                  ) : sendSuccess ? (
-                    <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> Results Sent</>
-                  ) : (
-                    <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Send to Staff</>
-                  )}
+                <button onClick={handleSendToStaff} className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold">
+                  {sendSuccess ? 'Email Client Opened' : 'Send to Staff'}
                 </button>
               </>
             )}
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {isReviewed ? 'Archived Report' : 'In-Progress Review'}
-            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:block">
-          {/* Main Review Panel */}
-          <div className="lg:col-span-2 space-y-6 print:space-y-12">
-            <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm print:shadow-none print:border-none">
-              <div className="flex justify-between items-center mb-6 border-b pb-6">
-                <div>
-                   <h3 className="text-2xl font-bold text-slate-800">{selectedAssessment.employeeDetails.fullName}</h3>
-                   <span className="text-sm font-medium text-slate-500">{selectedAssessment.employeeDetails.position} • {selectedAssessment.employeeDetails.division}</span>
-                </div>
-                <div className="text-right hidden print:block">
-                   <div className="text-[12px] font-bold text-slate-900 tracking-[0.2em] mb-1">METABEV</div>
-                   <div className="text-[8px] text-slate-400 uppercase tracking-widest">Performance Review 2024</div>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm print:border-none">
+              <div className="border-b pb-6 mb-6">
+                <h3 className="text-2xl font-bold text-slate-800">{selectedAssessment.employeeDetails.fullName}</h3>
+                <p className="text-sm text-slate-500">{selectedAssessment.employeeDetails.email}</p>
+                <div className="mt-2 text-xs font-bold text-slate-400">Assigned Manager: {selectedAssessment.managerName}</div>
               </div>
 
-              {/* KPI Review */}
+              {/* KPI Review Section */}
               <div className="space-y-8">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2">KPI Assessment Summary</h4>
+                <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Personalized KPIs</h4>
                 {selectedAssessment.kpis.map((kpi, idx) => (
-                  <div key={kpi.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100 print:bg-white print:border-slate-200 mb-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <h5 className="font-bold text-slate-700">{idx + 1}. {kpi.title}</h5>
-                      {isReviewed && <span className="text-xs font-black bg-brand-600 text-white px-2 py-1 rounded">Final: {kpi.managerRating}</span>}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase">Staff Submission</label>
-                        <p className="text-xs text-slate-700 bg-white p-3 rounded border border-slate-200 min-h-[60px] italic">
-                          "{kpi.selfComments || 'No self-assessment provided.'}"
-                        </p>
+                  <div key={kpi.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100 mb-4">
+                    <h5 className="font-bold text-slate-700">{idx + 1}. {kpi.title}</h5>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="bg-white p-3 rounded border border-slate-200">
+                        <span className="text-[9px] font-bold text-slate-400 block mb-1">STAFF COMMENTS</span>
+                        <p className="text-xs italic text-slate-600">"{kpi.selfComments || 'Pending staff input...'}"</p>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase">Assessor Feedback</label>
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 block mb-1">ASSESSOR FEEDBACK</span>
                         {isReviewed ? (
-                          <p className="text-xs text-slate-800 bg-brand-50 p-3 rounded border border-brand-200 min-h-[60px]">
-                            {kpi.managerComments || 'No manager feedback provided.'}
-                          </p>
+                          <p className="text-xs text-slate-800 bg-brand-50 p-2 rounded">{kpi.managerComments}</p>
                         ) : (
                           <textarea 
-                            value={kpi.managerComments || ''}
+                            value={kpi.managerComments}
                             onChange={(e) => updateSelectedKPI(kpi.id, { managerComments: e.target.value })}
-                            className="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-brand-500 outline-none h-16 resize-none"
-                            placeholder="Provide final feedback..."
+                            className="w-full text-xs border rounded p-2 h-16 outline-none focus:ring-1 focus:ring-brand-500"
+                            placeholder="Add manager feedback..."
                           />
                         )}
                       </div>
@@ -158,196 +170,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
                 ))}
               </div>
 
-              {/* Core Competencies Comparison */}
-              <div className="mt-12 space-y-6 print:page-break-before">
-                <h4 className="text-[16px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-4 mb-4">
-                  Core Competencies Comparison
-                </h4>
-                <div className="divide-y divide-slate-100">
-                  {selectedAssessment.coreCompetencies.map(comp => (
-                    <div key={comp.id} className="flex items-center justify-between py-5 gap-6">
-                      <div className="flex-1">
-                        <span className="text-sm font-bold text-slate-700 block">{comp.name}</span>
-                        <span className="text-[10px] text-slate-400 italic block mt-1 leading-tight">{comp.description}</span>
-                      </div>
-                      <div className="flex items-center gap-10">
-                         <div className="whitespace-nowrap">
-                            <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase text-right">Self</span>
-                            <span className="text-sm font-bold text-brand-700">{comp.selfRating || 'N/A'}</span>
-                         </div>
-                         <div className="w-40 relative">
-                           <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase print:block hidden">Assessor</span>
-                            {isReviewed ? (
-                               <div className="text-sm font-black text-brand-900 border-l-2 border-brand-600 pl-4 py-1">
-                                 {comp.managerRating || 'Not Rated'}
-                               </div>
-                            ) : (
-                              <select 
-                                value={comp.managerRating || ''}
-                                onChange={(e) => {
-                                  const updated = {
-                                    ...selectedAssessment,
-                                    coreCompetencies: selectedAssessment.coreCompetencies.map(c => c.id === comp.id ? { ...c, managerRating: e.target.value as Rating } : c)
-                                  };
-                                  setSelectedAssessment(updated);
-                                }}
-                                className="w-full h-11 pl-4 pr-10 text-sm font-medium border border-slate-200 rounded-lg bg-white hover:border-brand-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all appearance-none cursor-pointer text-slate-700 shadow-sm"
-                              >
-                                 <option value="">Rate</option>
-                                 {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
-                              </select>
-                            )}
-                            {!isReviewed && (
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                 </svg>
-                              </div>
-                            )}
-                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Individual Development Review */}
-              <div className="mt-16 space-y-4 print:page-break-before">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2">Individual Development Summary</h4>
-                <div className="p-6 bg-white rounded-lg border border-slate-200">
-                  <div className="mb-6">
-                    <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Staff Reflection</label>
-                    <p className="text-sm text-slate-700 italic bg-slate-50 p-4 rounded min-h-[60px]">
-                      "{selectedAssessment.developmentPlan.selfComments || 'No development comments provided.'}"
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Manager Growth Recommendations</label>
-                    {isReviewed ? (
-                      <p className="text-sm text-slate-800 bg-brand-50 p-4 rounded border border-brand-200 leading-relaxed">
-                        {selectedAssessment.developmentPlan.managerComments || 'No growth recommendations provided.'}
-                      </p>
-                    ) : (
-                      <textarea 
-                        value={selectedAssessment.developmentPlan.managerComments || ''}
-                        onChange={(e) => setSelectedAssessment({
-                          ...selectedAssessment,
-                          developmentPlan: { ...selectedAssessment.developmentPlan, managerComments: e.target.value }
-                        })}
-                        className="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-1 focus:ring-brand-500 outline-none h-32 resize-none"
-                        placeholder="Provide feedback on development and growth..."
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm print:shadow-none print:border-none">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b pb-2 mb-6">Final Recommendation</h4>
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2 print:text-xs">Overall Performance Narrative</label>
-                    {isReviewed ? (
-                       <p className="text-sm text-slate-800 bg-brand-50 p-5 rounded-xl border border-brand-200 leading-relaxed italic">
-                         "{selectedAssessment.overallPerformance.managerComments}"
-                       </p>
-                    ) : (
-                      <textarea 
-                        value={selectedAssessment.overallPerformance.managerComments}
-                        onChange={(e) => setSelectedAssessment({ ...selectedAssessment, overallPerformance: { ...selectedAssessment.overallPerformance, managerComments: e.target.value } })}
-                        className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32"
-                        placeholder="Enter the final performance summary and manager's perspective..."
-                      />
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-col md:flex-row gap-8 items-start md:items-center justify-between pt-4 border-t border-slate-50">
-                    <div className="max-w-md w-full">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Final Agreed Rating</label>
-                      {isReviewed ? (
-                         <div className="text-2xl font-black text-brand-700 px-4 py-2 bg-brand-50 inline-block rounded-lg">
-                           {selectedAssessment.overallPerformance.managerRating}
-                         </div>
-                      ) : (
-                        <select 
-                            value={selectedAssessment.overallPerformance.managerRating || ''}
-                            onChange={(e) => handleManagerRatingChange('overallRating', e.target.value as Rating)}
-                            className="w-full text-sm border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-brand-500 outline-none"
-                        >
-                            <option value="">Select Final Rating</option>
-                            {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
-                      )}
-                    </div>
-                    
-                    {!isReviewed && (
-                      <button 
-                        onClick={handleFinalSubmit}
-                        className="px-8 py-3 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-colors shadow-lg self-end"
+              {/* Final Review Section */}
+              <div className="mt-12 pt-12 border-t">
+                <h4 className="text-xs font-black uppercase text-slate-400 mb-4">Final Recommendation</h4>
+                <div className="space-y-4">
+                  <textarea 
+                    value={selectedAssessment.overallPerformance.managerComments}
+                    readOnly={isReviewed}
+                    onChange={(e) => setSelectedAssessment({...selectedAssessment, overallPerformance: {...selectedAssessment.overallPerformance, managerComments: e.target.value}})}
+                    className={`w-full border rounded-lg p-4 text-sm h-32 outline-none ${isReviewed ? 'bg-slate-50' : 'focus:ring-2 focus:ring-brand-500'}`}
+                    placeholder="Enter final appraisal summary..."
+                  />
+                  {!isReviewed && (
+                    <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl">
+                      <select 
+                        value={selectedAssessment.overallPerformance.managerRating || ''}
+                        onChange={(e) => handleManagerRatingChange(e.target.value as Rating)}
+                        className="text-sm border rounded p-2 outline-none"
                       >
-                        Confirm & Complete Review
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Print Signatures */}
-                <div className="mt-16 hidden print:grid grid-cols-2 gap-20">
-                    <div className="border-t border-slate-300 pt-4">
-                       <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Assessor Signature</span>
-                       <div className="h-10"></div>
-                       <span className="text-xs font-bold text-slate-800">Date: ________________</span>
-                    </div>
-                    <div className="border-t border-slate-300 pt-4">
-                       <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Staff Signature</span>
-                       <div className="h-10"></div>
-                       <span className="text-xs font-bold text-slate-800">Date: ________________</span>
-                    </div>
-                </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6 print:hidden">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm sticky top-28">
-               <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider flex items-center gap-2">
-                 <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                 </svg>
-                 Employee Summary
-               </h4>
-               <div className="space-y-6">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Self-Appraisal Intro</span>
-                    <div className="text-xs text-slate-600 bg-slate-50 p-4 rounded-lg border border-slate-100 italic leading-relaxed">
-                      "{selectedAssessment.overallPerformance.selfComments || 'No overall summary provided.'}"
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Staff Self Rating</span>
-                    <div className="text-sm font-bold text-brand-700 bg-brand-50 px-3 py-2 rounded-lg border border-brand-100 inline-block">
-                      {selectedAssessment.overallPerformance.selfRating || 'No self-rating given'}
-                    </div>
-                  </div>
-                  
-                  {isReviewed && (
-                    <div className="pt-4 border-t border-slate-100 space-y-6">
-                       <div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Final Agreed Rating</span>
-                          <div className="text-sm font-bold text-brand-900 bg-brand-200 px-3 py-2 rounded-lg border border-brand-300 inline-block">
-                            {selectedAssessment.overallPerformance.managerRating || 'Pending finalization'}
-                          </div>
-                       </div>
-                       
-                       <div className="p-4 bg-green-50 border border-green-100 rounded-lg text-green-700">
-                         <div className="text-[10px] font-black uppercase tracking-widest mb-1 text-green-600">Status</div>
-                         <div className="text-sm font-bold">Review Finalized</div>
-                         <p className="text-[10px] mt-2 leading-tight">This assessment is now archived. You can export it as a PDF for the employee's HR records.</p>
-                       </div>
+                        <option value="">Select Final Rating</option>
+                        {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      <button onClick={handleFinalSubmit} className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold">Complete Review</button>
                     </div>
                   )}
-               </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+              <h4 className="text-xs font-bold text-slate-400 uppercase mb-4">Staff Submission Status</h4>
+              <div className={`p-4 rounded-lg text-sm font-bold border ${selectedAssessment.status === 'submitted' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
+                {selectedAssessment.status.toUpperCase()}
+              </div>
+              <div className="mt-4">
+                <span className="text-[10px] text-slate-400 font-bold block mb-1">STAFF SELF-RATING</span>
+                <span className="text-sm font-black text-brand-700">{selectedAssessment.overallPerformance.selfRating || 'N/A'}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -355,94 +216,142 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assessments, onReviewCo
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'submitted': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'reviewed': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-slate-100 text-slate-600 border-slate-200';
-    }
-  };
-
   return (
-    <div className="space-y-6">
-       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Employee</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Division</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {assessments.filter(a => a.status !== 'draft').map(a => (
-              <tr key={a.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-xs">
-                      {a.employeeDetails.fullName ? a.employeeDetails.fullName.split(' ').map(n => n[0]).join('') : 'EM'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName || 'Unnamed Staff'}</p>
-                      <p className="text-[10px] text-slate-400">{a.employeeDetails.position || 'No Position'}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-xs text-slate-600">{a.employeeDetails.division || 'Unassigned'}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(a.status)}`}>
-                    {a.status.toUpperCase()}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-3">
-                    {a.status === 'reviewed' && (
-                       <button 
-                        onClick={() => { handleReviewClick(a); setTimeout(() => window.print(), 100); }}
-                        className="p-1.5 text-slate-400 hover:text-brand-600 transition-colors"
-                        title="Download Final PDF"
-                       >
-                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                       </button>
-                    )}
-                    <button 
-                      onClick={() => handleReviewClick(a)}
-                      className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors"
-                    >
-                      {a.status === 'submitted' ? 'Review Submission' : 'View Full Report'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {assessments.filter(a => a.status !== 'draft').length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">
-                  No submissions pending review.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+    <div className="space-y-8">
+      {/* Header with Navigation and Quick Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+        <div className="flex gap-4">
+          <button 
+            onClick={() => setActiveTab('submissions')}
+            className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'submissions' ? 'text-brand-600' : 'text-slate-400'}`}
+          >
+            Submissions ({filteredAssessments.length})
+            {activeTab === 'submissions' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600 rounded-t-full"></div>}
+          </button>
+          
+          {role === 'admin' && (
+            <button 
+              onClick={() => setActiveTab('management')}
+              className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'management' ? 'text-brand-600' : 'text-slate-400'}`}
+            >
+              Staff Registry Management
+              {activeTab === 'management' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600 rounded-t-full"></div>}
+            </button>
+          )}
+        </div>
+
+        {role === 'admin' && activeTab === 'submissions' && (
+          <button 
+            onClick={() => setActiveTab('management')}
+            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            Import Staff (CSV)
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h5 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Pending Reviews</h5>
-            <p className="text-3xl font-black text-slate-800">{assessments.filter(a => a.status === 'submitted').length}</p>
-         </div>
-         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h5 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Completed Total</h5>
-            <p className="text-3xl font-black text-slate-800">{assessments.filter(a => a.status === 'reviewed').length}</p>
-         </div>
-         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h5 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Archived Records</h5>
-            <p className="text-3xl font-black text-slate-800">12</p>
-         </div>
-      </div>
+      {activeTab === 'submissions' ? (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Staff Member</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Assigned Manager</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {filteredAssessments.filter(a => a.status !== 'draft').map(a => (
+                <tr key={a.id} className="hover:bg-slate-50">
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
+                    <p className="text-[10px] text-slate-400">{a.employeeDetails.email}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-xs font-medium text-slate-600">{a.managerName}</p>
+                    <p className="text-[9px] text-slate-400">{a.managerEmail}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.status === 'reviewed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {a.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button onClick={() => setSelectedAssessment(a)} className="text-xs font-bold text-brand-600 hover:underline">
+                      {a.status === 'reviewed' ? 'View Report' : 'Review Now'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredAssessments.filter(a => a.status !== 'draft').length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-16 text-center">
+                    <div className="max-w-xs mx-auto space-y-4">
+                      <p className="text-slate-400 italic text-sm">No submissions have been made yet.</p>
+                      {role === 'admin' && (
+                        <button 
+                          onClick={() => setActiveTab('management')}
+                          className="text-brand-600 font-bold text-xs underline"
+                        >
+                          Go to Staff Registry to import employees &rarr;
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="max-w-2xl mx-auto py-12">
+          <div className="text-center bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 hover:border-brand-300 transition-colors">
+            <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            </div>
+            <h3 className="text-xl font-bold mb-2">Import Staff Registry</h3>
+            <p className="text-sm text-slate-500 mb-8">Upload a CSV file with Staff Name, Email, KPIs (1-5), and Manager details.</p>
+            
+            <input 
+              type="file" 
+              accept=".csv" 
+              ref={fileInputRef} 
+              onChange={handleCsvUpload} 
+              className="hidden" 
+            />
+            
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              className="px-10 py-4 bg-brand-600 text-white rounded-xl font-bold shadow-lg hover:bg-brand-700 transition-all flex items-center gap-3 mx-auto"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              Select CSV File
+            </button>
+            
+            <div className="mt-12 text-left">
+              <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Required CSV Format</h4>
+              <div className="bg-slate-50 p-4 rounded-lg font-mono text-[9px] text-slate-500 overflow-x-auto whitespace-nowrap border border-slate-200">
+                Staff Name, Staff Email Address, KPI1, KPI2, KPI3, KPI4, KPI5, Manager's Name, Manager's Email
+              </div>
+              <p className="mt-4 text-[10px] text-slate-400 italic">
+                * Personalized KPIs will be pre-filled for each staff member upon login.
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-8 p-6 bg-brand-50 rounded-2xl border border-brand-100 flex gap-4 items-center">
+             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                <svg className="w-5 h-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             </div>
+             <div>
+                <p className="text-xs font-bold text-brand-900">Multi-Manager Visibility</p>
+                <p className="text-[10px] text-brand-700 opacity-80 mt-0.5">Managers only see staff assigned to them via the 'Manager Email' column. Super Admins see everyone.</p>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

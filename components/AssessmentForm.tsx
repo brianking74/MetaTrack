@@ -26,6 +26,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
       fullName: '',
       position: '',
       division: '',
+      email: '',
     },
     kpis: INITIAL_KPIS,
     developmentPlan: { competencies: [], selfComments: '', managerComments: '' },
@@ -124,7 +125,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                     {key.replace(/([A-Z])/g, ' $1').trim()}
                   </label>
                   <input
-                    type="text"
+                    type={key === 'email' ? 'email' : 'text'}
                     value={value}
                     onChange={(e) => handleDetailChange(key, e.target.value)}
                     placeholder={`Enter ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
