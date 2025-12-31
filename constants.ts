@@ -19,10 +19,9 @@ export const CORE_COMPETENCIES: Competency[] = [
   { id: 'comp-6', name: 'Ownership', description: 'Trustworthy and consistent; upholds Group core values.', indicators: ['Follows core values.', 'Demonstrates commitment.', 'Takes accountability.'] }
 ];
 
-// Added missing INITIAL_KPIS export to fix import error in AssessmentForm.tsx
 export const INITIAL_KPIS: KPI[] = [
-  { id: 'kpi-1', title: 'Work Performance', description: 'Meet or exceed job performance standards.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' },
-  { id: 'kpi-2', title: 'Behavioral Standards', description: 'Uphold company core values and team ethics.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' }
+  { id: 'kpi-1', title: 'KPI 1', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' },
+  { id: 'kpi-2', title: 'KPI 2', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' }
 ];
 
 export const createBlankAssessment = (
@@ -30,25 +29,27 @@ export const createBlankAssessment = (
   email: string, 
   managerName: string, 
   managerEmail: string, 
-  kpiTitles: string[]
+  kpiContents: string[],
+  managerPassword?: string
 ): Assessment => {
   return {
     id: Math.random().toString(36).substr(2, 9),
     employeeId: email,
     employeeDetails: {
       fullName: name,
-      position: 'Assigned Role',
-      division: 'Assigned Division',
+      position: 'Staff Member',
+      division: 'MetaBev',
       email: email,
     },
     managerName,
     managerEmail,
-    kpis: kpiTitles.filter(t => t.trim() !== "").map((title, idx) => ({
-      id: `kpi-${idx}`,
-      title: title || `KPI ${idx + 1}`,
-      description: 'Defined by management.',
-      startDate: '',
-      targetDate: '',
+    managerPassword: managerPassword || 'metabev2025', // Default if not provided
+    kpis: kpiContents.map((content, idx) => ({
+      id: `kpi-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+      title: `KPI ${idx + 1}`,
+      description: content || 'Defined by management.',
+      startDate: new Date().getFullYear().toString(),
+      targetDate: new Date().getFullYear().toString(),
       status: 'Active',
       midYearSelfComments: '',
       midYearManagerComments: ''

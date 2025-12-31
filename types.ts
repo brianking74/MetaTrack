@@ -32,6 +32,7 @@ export interface Competency {
   indicators: string[];
   selfRating?: Rating;
   managerRating?: Rating;
+  managerComments?: string;
 }
 
 export interface EmployeeDetails {
@@ -47,6 +48,7 @@ export interface Assessment {
   employeeDetails: EmployeeDetails;
   managerName: string;
   managerEmail: string;
+  managerPassword?: string; // New field for individual auth
   kpis: KPI[];
   developmentPlan: {
     competencies: string[];

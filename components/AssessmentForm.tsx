@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Assessment, Rating, KPI, Competency } from '../types.ts';
 import { RATING_DESCRIPTIONS, INITIAL_KPIS, CORE_COMPETENCIES } from '../constants.ts';
 
@@ -90,7 +90,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
   const SectionBadge = ({ text, type = 'self' }: { text: string, type?: 'self' | 'manager' }) => (
     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider mb-2 ${
-      type === 'self' ? 'bg-brand-100 text-brand-700' : 'bg-slate-200 text-slate-600'
+      type === 'self' ? 'bg-brand-100 text-brand-700' : 'bg-slate-900 text-white'
     }`}>
       {text}
     </span>
@@ -117,7 +117,6 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         {currentStage === 0 && (
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Employee Overview</h3>
-            <p className="text-sm text-slate-500 mb-4">Please fill in your current employment details for this review cycle.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
               {Object.entries(formData.employeeDetails).map(([key, value]) => (
                 <div key={key} className="flex flex-col border-b border-slate-50 pb-2">
@@ -127,9 +126,9 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   <input
                     type={key === 'email' ? 'email' : 'text'}
                     value={value}
+                    readOnly={key === 'email'}
                     onChange={(e) => handleDetailChange(key, e.target.value)}
-                    placeholder={`Enter ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
-                    className="text-slate-700 font-medium bg-transparent border-none focus:ring-0 p-0 outline-none"
+                    className={`text-slate-700 font-medium bg-transparent border-none focus:ring-0 p-0 outline-none ${key === 'email' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   />
                 </div>
               ))}
@@ -139,142 +138,80 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
         {/* Stage 2: KPIs */}
         {currentStage === 1 && (
-          <div className="space-y-10">
-            {/* Rating Scale Summary Table */}
-            <div className="mb-12 overflow-hidden border border-slate-200 rounded-lg">
-              <div className="bg-slate-800 text-white px-4 py-2 font-bold text-sm">Rating scale</div>
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-500 text-white">
-                  <tr>
-                    <th className="px-4 py-2 text-xs font-bold uppercase border-r border-white/20">Rating</th>
-                    <th className="px-4 py-2 text-xs font-bold uppercase">Description</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {Object.values(Rating).map((r, i) => (
-                    <tr key={r} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                      <td className="px-4 py-3 font-bold text-slate-700 border-r border-slate-200 whitespace-nowrap">{r.split(' - ')[0]}</td>
-                      <td className="px-4 py-3 text-slate-600">{RATING_DESCRIPTIONS[r]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
+          <div className="space-y-16">
             {formData.kpis.map((kpi, idx) => (
-              <div key={kpi.id} className="p-6 bg-slate-50 rounded-lg border border-slate-100">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1 mr-4 border-b border-slate-200 pb-2">
-                    <input 
-                      type="text"
-                      value={kpi.title}
-                      onChange={(e) => updateKPI(kpi.id, { title: e.target.value })}
-                      className="text-lg font-bold text-slate-800 bg-transparent border-none focus:ring-0 p-0 w-full outline-none"
-                      placeholder="Goal Title"
-                    />
-                  </div>
+              <div key={kpi.id} className="p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                <div className="flex justify-between items-start mb-6">
+                   <h4 className="text-2xl font-black text-slate-900 tracking-tight">{kpi.title}</h4>
+                   <span className="text-[10px] font-black text-brand-600 uppercase tracking-[0.3em] bg-brand-50 px-3 py-1 rounded-full border border-brand-100">Core Goal</span>
                 </div>
-                <textarea 
-                  value={kpi.description}
-                  onChange={(e) => updateKPI(kpi.id, { description: e.target.value })}
-                  className="w-full text-slate-600 text-sm mb-6 bg-white p-3 rounded border border-slate-100 italic outline-none resize-none"
-                  placeholder="Describe the objective and target results..."
-                  rows={2}
-                />
                 
-                {/* Mid-Year Review Section */}
-                <div className="mb-8 p-4 bg-white rounded-lg border border-slate-200">
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">Mid-Year Review</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <SectionBadge text="Self-Assessment" />
-                      <textarea 
-                        value={kpi.midYearSelfComments || ''}
-                        onChange={(e) => updateKPI(kpi.id, { midYearSelfComments: e.target.value })}
-                        className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-24"
-                        placeholder="Your mid-year progress comments..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <SectionBadge text="Assessor Only" type="manager" />
-                      <textarea 
-                        value={kpi.midYearManagerComments || ''}
-                        readOnly
-                        className="w-full border border-slate-200 rounded-md p-2 text-sm bg-slate-100 text-slate-500 cursor-not-allowed outline-none h-24 resize-none"
-                        placeholder="Feedback will be provided by manager after review..."
-                      />
-                    </div>
+                <div className="mb-10">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 opacity-60">KPI Description / Expectations</span>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-relaxed italic shadow-inner">
+                    {kpi.description}
                   </div>
                 </div>
-
-                {/* Annual Review Section */}
-                <div>
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b pb-2 text-brand-700">Annual Review</h4>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <div className="space-y-10">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 border-b pb-2">Annual Self-Appraisal</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-4">
                       <SectionBadge text="Self Rating" />
                       {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }))}
                     </div>
-                    <div className="space-y-4">
+                    <div className="md:col-span-2 space-y-4">
                       <SectionBadge text="Achievement Comments" />
                       <textarea 
                         value={kpi.selfComments || ''}
                         onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
-                        className="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32"
-                        placeholder="Detail your results and achievements for this period..."
+                        className="w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm"
+                        placeholder="Describe your actual performance against this KPI..."
                       />
                     </div>
-                    <div className="space-y-4 opacity-75">
-                      <SectionBadge text="Assessor Feedback" type="manager" />
-                      <textarea 
-                        value={kpi.managerComments || ''}
-                        readOnly
-                        className="w-full border border-slate-200 rounded-md p-3 text-sm h-32 bg-slate-100 text-slate-500 cursor-not-allowed outline-none resize-none"
-                        placeholder="Manager feedback will appear here once reviewed."
-                      />
+                  </div>
+
+                  {/* Assessor Feedback Section (Placeholder for Staff) */}
+                  <div className="pt-10 mt-10 border-t border-slate-200 opacity-60 grayscale bg-slate-100/50 p-6 rounded-[2rem]">
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Manager Review (Placeholder)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div className="space-y-4">
+                        <SectionBadge text="Assessor Rating" type="manager" />
+                        <div className="p-3 bg-white/50 border border-slate-200 rounded-lg text-xs text-slate-400 italic">Awaiting assessment...</div>
+                      </div>
+                      <div className="md:col-span-2 space-y-4">
+                        <SectionBadge text="Assessor Comments" type="manager" />
+                        <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-400 italic min-h-[80px]">Evaluation will appear here during the review hub cycle.</div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
-            <button 
-              onClick={() => setFormData(prev => ({
-                ...prev,
-                kpis: [...prev.kpis, { id: Math.random().toString(36).substr(2, 9), title: `KPI ${prev.kpis.length + 1}`, description: '', status: '', startDate: '', targetDate: '', midYearSelfComments: '', midYearManagerComments: '' }]
-              }))}
-              className="text-sm font-bold text-brand-600 hover:text-brand-700 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-              Add Another KPI
-            </button>
           </div>
         )}
 
         {/* Stage 3: Development Plan */}
         {currentStage === 2 && (
-          <div className="space-y-8">
-            <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Self-Individual Development</h3>
-            <p className="text-sm text-slate-500">Reflect on your growth and key competencies you've worked on (e.g., People Management, Customer Focus).</p>
-            
-            <div className="space-y-6">
+          <div className="space-y-12">
+            <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Individual Development</h3>
+            <div className="space-y-8">
               <div className="space-y-2">
-                <SectionBadge text="Staff Self-Assessment" />
+                <SectionBadge text="Staff Self-Reflection" />
                 <textarea 
                   value={formData.developmentPlan.selfComments}
                   onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: e.target.value } }))}
-                  className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48"
-                  placeholder="What specific skills or knowledge did you focus on developing this year? How did you apply them?"
+                  className="w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm"
+                  placeholder="Reflect on your growth during this cycle. What skills did you acquire or enhance?"
                 />
               </div>
 
-              <div className="space-y-2">
-                <SectionBadge text="Assessor Development Feedback" type="manager" />
-                <textarea 
-                  value={formData.developmentPlan.managerComments || ''}
-                  readOnly
-                  className="w-full border border-slate-200 rounded-lg p-4 text-sm bg-slate-100 text-slate-500 cursor-not-allowed outline-none h-48 resize-none"
-                  placeholder="Feedback from your manager regarding development will be provided here."
-                />
+              {/* Manager Feedback Section (Placeholder) */}
+              <div className="pt-8 border-t border-slate-100 opacity-60">
+                <SectionBadge text="Assessor Developmental Feedback" type="manager" />
+                <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl text-xs text-slate-400 italic">
+                  Manager evaluation and developmental roadmap will be provided here.
+                </div>
               </div>
             </div>
           </div>
@@ -283,17 +220,14 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         {/* Stage 4: Core Competencies */}
         {currentStage === 3 && (
           <div className="space-y-8">
-            <div className="bg-brand-50 border border-brand-100 p-4 rounded-lg text-sm text-brand-800 mb-4">
-              Rate yourself against the core competencies defined for your role.
-            </div>
             {formData.coreCompetencies.map((comp, idx) => (
-              <div key={comp.id} className="p-6 bg-white rounded-lg border border-slate-200 shadow-sm">
-                <h4 className="text-lg font-bold text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
-                <p className="text-sm text-slate-500 mb-4">{comp.description}</p>
+              <div key={comp.id} className="p-8 bg-white rounded-[2rem] border border-slate-200 shadow-sm">
+                <h4 className="text-xl font-black text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
+                <p className="text-sm text-slate-500 mb-6 leading-relaxed">{comp.description}</p>
                 
-                <div className="bg-slate-50 p-4 rounded mb-6 border border-slate-100">
-                  <span className="text-xs font-black text-slate-400 uppercase mb-2 block tracking-widest">Behavioural Indicators</span>
-                  <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-1">
+                <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100 shadow-inner">
+                  <span className="text-[9px] font-black text-slate-400 uppercase mb-3 block tracking-widest">Observable Indicators</span>
+                  <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-2">
                     {comp.indicators.map((ind, i) => <li key={i}>{ind}</li>)}
                   </ul>
                 </div>
@@ -310,47 +244,43 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         {/* Stage 5: Final Review */}
         {currentStage === 4 && (
           <div className="space-y-10">
-             <div className="bg-brand-50 border border-brand-100 p-6 rounded-lg text-brand-800">
-               <h3 className="text-lg font-bold mb-2">Annual Final Review</h3>
-               <p className="text-sm">Provide a comprehensive summary of your performance for this review cycle. The final rating will be determined by your assessor after review.</p>
+             <div className="bg-brand-900 text-white p-10 rounded-[2.5rem] shadow-xl">
+               <h3 className="text-2xl font-bold mb-3">Staff Submission Summary</h3>
+               <p className="text-sm opacity-80 leading-relaxed">Provide a final overview of your annual performance highlights. This serves as your executive statement to your manager.</p>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <SectionBadge text="Overall Self-Appraisal Summary" />
-                    <textarea 
-                      value={formData.overallPerformance.selfComments}
-                      onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
-                      className="w-full border border-slate-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-48"
-                      placeholder="Summarize your key highlights, challenges overcome, and vision for the next review period..."
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <SectionBadge text="Suggested Overall Self-Rating" />
-                    {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
-                  </div>
+             <div className="space-y-8">
+                <div className="space-y-2">
+                  <SectionBadge text="Overall Achievement Narrative" />
+                  <textarea 
+                    value={formData.overallPerformance.selfComments}
+                    onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
+                    className="w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md"
+                    placeholder="Summarize your key highlights and achievements for the year..."
+                  />
                 </div>
 
-                <div className="space-y-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
-                  <div className="space-y-2">
-                    <SectionBadge text="Overall Manager Feedback (Assessor Only)" type="manager" />
-                    <textarea 
-                      value={formData.overallPerformance.managerComments || ''}
-                      readOnly
-                      className="w-full border border-slate-200 rounded-lg p-4 text-sm bg-white text-slate-400 cursor-not-allowed outline-none h-48 resize-none"
-                      placeholder="To be completed by assessor..."
-                    />
-                  </div>
+                <div className="max-w-md space-y-2">
+                  <SectionBadge text="Suggested Performance Grade" />
+                  {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
+                </div>
 
-                  <div className="space-y-2">
-                    <SectionBadge text="Final Performance Rating (Assessor Only)" type="manager" />
-                    {renderRatingSelect(
-                      formData.overallPerformance.managerRating, 
-                      () => {},
-                      true
-                    )}
+                {/* Assessor Feedback Section (Placeholder for Stage 5) */}
+                <div className="pt-10 mt-10 border-t border-slate-200 opacity-60 grayscale bg-slate-50/50 p-8 rounded-[2.5rem]">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Official Assessor Final Assessment (Placeholder)</h4>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <SectionBadge text="Assessor Appraisal Narrative" type="manager" />
+                      <div className="p-8 bg-white/50 border border-slate-200 rounded-[2rem] text-xs text-slate-400 italic min-h-[120px]">
+                        The manager's final appraisal narrative and executive summary will be recorded here during the review process.
+                      </div>
+                    </div>
+                    <div className="max-w-md space-y-2">
+                      <SectionBadge text="Final Official Performance Grade" type="manager" />
+                      <div className="p-3 bg-white/50 border border-slate-200 rounded-lg text-xs text-slate-400 italic">
+                        Agreed Result Pending...
+                      </div>
+                    </div>
                   </div>
                 </div>
              </div>
@@ -358,37 +288,37 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         )}
 
         {/* Navigation Buttons */}
-        <div className="mt-12 flex justify-between pt-6 border-t border-slate-100">
+        <div className="mt-12 flex justify-between pt-8 border-t border-slate-100">
           <button 
             onClick={handlePrev}
             disabled={currentStage === 0}
-            className={`px-6 py-2 rounded-md font-medium text-sm transition-all ${
-              currentStage === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+            className={`px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+              currentStage === 0 ? 'text-slate-300 cursor-not-allowed border-transparent' : 'text-slate-600 hover:bg-slate-50 border border-slate-200'
             }`}
           >
-            Previous
+            Back
           </button>
           
           <div className="flex gap-4">
             <button 
               onClick={saveToDraft}
-              className="px-6 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-md font-medium text-sm transition-all border border-slate-200"
+              className="px-8 py-3 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
             >
               Save Draft
             </button>
             {currentStage === STAGES.length - 1 ? (
               <button 
                 onClick={() => onSubmit(formData)}
-                className="px-8 py-2 bg-brand-600 text-white hover:bg-brand-700 rounded-md font-bold text-sm shadow-md transition-all ring-offset-2 focus:ring-2 focus:ring-brand-500"
+                className="px-12 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all transform active:scale-95"
               >
-                Submit Appraisal
+                Submit Now
               </button>
             ) : (
               <button 
                 onClick={handleNext}
-                className="px-8 py-2 bg-slate-800 text-white hover:bg-slate-900 rounded-md font-bold text-sm shadow-md transition-all"
+                className="px-10 py-3 bg-slate-900 text-white hover:bg-slate-800 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg"
               >
-                Next Section
+                Next Step
               </button>
             )}
           </div>
