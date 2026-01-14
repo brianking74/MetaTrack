@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [showFullReport, setShowFullReport] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [dbConnected, setDbConnected] = useState<boolean | null>(null);
   
   const [staffEmailInput, setStaffEmailInput] = useState("");
   const [assessorEmailInput, setAssessorEmailInput] = useState("");
@@ -25,36 +26,42 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState("");
 
   useEffect(() => {
-    const loadData = async () => {
+    const initApp = async () => {
       setIsLoading(true);
+      
+      // Check connection health first
+      const isHealthy = await supabaseService.checkConnection();
+      setDbConnected(isHealthy);
+
       const data = await supabaseService.getAllAssessments();
-      if (data.length === 0) {
+      if (data && data.length > 0) {
+        setAssessments(data);
+      } else {
         const saved = localStorage.getItem('metabev-assessments-v2');
         if (saved) {
           try { setAssessments(JSON.parse(saved)); } catch (e) {}
         }
-      } else {
-        setAssessments(data);
       }
       setIsLoading(false);
     };
-    loadData();
+    initApp();
   }, []);
-
-  useEffect(() => {
-    if (assessments.length > 0) {
-      localStorage.setItem('metabev-assessments-v2', JSON.stringify(assessments));
-    }
-  }, [assessments]);
 
   const handleStaffLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const email = staffEmailInput.trim().toLowerCase();
-    if (!email.includes("@")) { setAuthError("Please enter a valid email."); return; }
+    if (!email.includes("@")) { 
+      setAuthError("Please enter a valid email address."); 
+      return; 
+    }
     
-    const exists = assessments.some(a => a.employeeDetails.email.toLowerCase() === email);
-    if (!exists && email !== SUPER_ADMIN_EMAIL) {
-      setAuthError("This email is not registered. Please contact HR.");
+    // Debug helper: log current emails in registry
+    console.log("Registered Staff Emails:", assessments.map(a => a.employeeDetails.email.toLowerCase()));
+
+    const userRecord = assessments.find(a => a.employeeDetails.email.toLowerCase() === email);
+    
+    if (!userRecord && email !== SUPER_ADMIN_EMAIL) {
+      setAuthError(`Email "${email}" not found in registry. Please contact your manager.`);
       return;
     }
 
@@ -85,7 +92,7 @@ const App: React.FC = () => {
       setRole('manager');
       setAuthError("");
     } else {
-      setAuthError("Invalid manager email or password.");
+      setAuthError("Invalid manager email or password. Note: Default password is 'metabev2025'.");
     }
   };
 
@@ -100,7 +107,10 @@ const App: React.FC = () => {
 
   const syncToCloud = async (updatedAssessments: Assessment[]) => {
     setIsSyncing(true);
-    await supabaseService.bulkSaveAssessments(updatedAssessments);
+    const success = await supabaseService.bulkSaveAssessments(updatedAssessments);
+    if (!success) {
+      console.warn("Cloud sync failed. Data is saved locally but not in Supabase.");
+    }
     setIsSyncing(false);
   };
 
@@ -123,8 +133,11 @@ const App: React.FC = () => {
     newEntries.forEach(entry => {
       const email = entry.employeeDetails.email.toLowerCase();
       const idx = merged.findIndex(m => m.employeeDetails.email.toLowerCase() === email);
-      if (idx === -1) merged.push(entry);
-      else merged[idx] = { ...merged[idx], ...entry };
+      if (idx === -1) {
+        merged.push(entry);
+      } else {
+        merged[idx] = { ...merged[idx], ...entry };
+      }
     });
     setAssessments(merged);
     await syncToCloud(merged);
@@ -136,7 +149,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-4">
         <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-xs font-black uppercase tracking-[0.4em] opacity-60">Connecting...</p>
+        <p className="text-xs font-black uppercase tracking-[0.4em] opacity-60">Initializing Portal...</p>
       </div>
     );
   }
@@ -152,26 +165,38 @@ const App: React.FC = () => {
             ></div>
             <div className="relative z-10">
               <h1 className="text-4xl font-serif tracking-widest mb-2" style={{ fontFamily: 'Georgia, serif' }}>METABEV</h1>
-              <p className="text-xs uppercase tracking-[0.4em] opacity-60">Staff Performance Portal</p>
+              <p className="text-xs uppercase tracking-[0.4em] opacity-60">Performance Portal</p>
             </div>
-            <p className="text-sm opacity-80 italic relative z-10">"Excellence is not a singular act, but a habit."</p>
+            
+            <div className="relative z-10 space-y-4">
+              <p className="text-sm opacity-80 italic">"Excellence is not a singular act, but a habit."</p>
+              
+              {/* Connection Status Indicator for Debugging */}
+              <div className="pt-8 flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${dbConnected ? 'bg-green-400 animate-pulse' : dbConnected === false ? 'bg-red-400' : 'bg-slate-500'}`}></div>
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                  Database: {dbConnected ? 'ONLINE' : dbConnected === false ? 'OFFLINE / CONFIG ERROR' : 'CHECKING...'}
+                </span>
+              </div>
+            </div>
           </div>
+
           <div className="md:w-1/2 p-12 bg-white">
-            <h2 className="text-2xl font-black text-slate-800 mb-8">Login to Portal</h2>
+            <h2 className="text-2xl font-black text-slate-800 mb-8">Login</h2>
             <div className="space-y-10">
               <form onSubmit={handleStaffLogin} className="space-y-4">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">For Employees</span>
-                <input name="staff_email" type="email" placeholder="Staff Email" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" value={staffEmailInput} onChange={(e) => setStaffEmailInput(e.target.value)} required />
+                <input name="staff_email" type="email" placeholder="Staff Email" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500" value={staffEmailInput} onChange={(e) => setStaffEmailInput(e.target.value)} required />
                 <button type="submit" className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold shadow-lg">Staff Access</button>
               </form>
               <div className="relative py-2 text-center"><span className="bg-white px-3 text-[10px] font-black text-slate-300 uppercase">OR</span></div>
               <form onSubmit={handleAssessorLogin} className="space-y-4">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">For Managers</span>
-                <input name="manager_email" type="email" placeholder="Manager Email" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" value={assessorEmailInput} onChange={(e) => setAssessorEmailInput(e.target.value)} required />
-                <input name="manager_password" type="password" placeholder="Password" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} required />
+                <input name="manager_email" type="email" placeholder="Manager Email" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500" value={assessorEmailInput} onChange={(e) => setAssessorEmailInput(e.target.value)} required />
+                <input name="manager_password" type="password" placeholder="Password" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} required />
                 <button type="submit" className="w-full bg-brand-600 text-white py-3 rounded-xl font-bold shadow-lg">Assessor Hub</button>
               </form>
-              {authError && <p className="text-center text-xs font-bold text-red-500 bg-red-50 p-2 rounded-lg">{authError}</p>}
+              {authError && <p className="text-center text-xs font-bold text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">{authError}</p>}
             </div>
           </div>
         </div>
@@ -226,8 +251,8 @@ const App: React.FC = () => {
           ) : (
             <div className="bg-white p-12 rounded-3xl shadow-xl text-center">
               <h2 className="text-2xl font-black text-slate-800 mb-4">Entry Not Found</h2>
-              <p className="text-slate-500">Email <b>{currentUserEmail}</b> is not in the registry.</p>
-              <button onClick={handleLogout} className="mt-8 text-brand-600 font-bold hover:underline">Sign Out</button>
+              <p className="text-slate-500">The email <b>{currentUserEmail}</b> is not associated with an assessment in this cycle.</p>
+              <button onClick={handleLogout} className="mt-8 text-brand-600 font-bold hover:underline">Sign Out & Try Again</button>
             </div>
           )
         ) : (

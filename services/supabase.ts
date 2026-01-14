@@ -2,57 +2,70 @@
 import { createClient } from '@supabase/supabase-js';
 import { Assessment } from '../types';
 
-// Replace these with your actual Supabase Project URL and Anon Key from your Project Settings -> API
-const SUPABASE_URL = 'https://your-project-url.supabase.co';
-const SUPABASE_ANON_KEY = 'your-anon-key';
+/**
+ * CONFIGURATION:
+ * Credentials have been updated with provided project details.
+ */
+const SUPABASE_URL = 'https://cgczxefpsrskssibdiec.supabase.co'; 
+const SUPABASE_ANON_KEY: string = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnY3p4ZWZwc3Jza3NzaWJkaWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzNzUwMjIsImV4cCI6MjA4Mzk1MTAyMn0.at83gc8t-CmupmaJGyTHMZQgtdafephnBLdZeAntoGI';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Internal check to ensure the client is only initialized with valid-looking credentials
+const isConfigured = () => {
+  return SUPABASE_URL.includes('supabase.co') && 
+         SUPABASE_ANON_KEY !== 'your-anon-key' &&
+         SUPABASE_ANON_KEY.length > 50; // JWT keys are typically long
+};
+
+const supabase = isConfigured() 
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 export const supabaseService = {
+  /**
+   * Check connection health and configuration
+   */
+  async checkConnection(): Promise<boolean> {
+    if (!supabase) {
+      console.error('[Supabase] Configuration Missing or Invalid.');
+      return false;
+    }
+    try {
+      // Simple query to verify table access
+      const { error } = await supabase.from('assessments').select('id').limit(1);
+      if (error) {
+        console.error('[Supabase] Connection Error:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('[Supabase] Fatal Connection Error:', err);
+      return false;
+    }
+  },
+
   /**
    * Fetch all assessments from the database
    */
   async getAllAssessments(): Promise<Assessment[]> {
+    if (!supabase) return [];
+    
+    console.log('[Supabase] Fetching assessments...');
     try {
       const { data, error } = await supabase
         .from('assessments')
         .select('data');
       
       if (error) {
-        console.error('Supabase fetch error:', error.message);
+        console.error('[Supabase] Fetch error:', error.message);
         return [];
       }
       
-      return (data || []).map(row => row.data as Assessment);
+      const results = (data || []).map(row => row.data as Assessment);
+      console.log(`[Supabase] Successfully loaded ${results.length} records.`);
+      return results;
     } catch (err) {
-      console.error('Unexpected Supabase error:', err);
+      console.error('[Supabase] Unexpected fetch error:', err);
       return [];
-    }
-  },
-
-  /**
-   * Sync a single assessment to the cloud
-   */
-  async saveAssessment(assessment: Assessment): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('assessments')
-        .upsert({ 
-          id: assessment.id, // Column 'id' type must be 'text' in Supabase
-          email: assessment.employeeDetails.email.toLowerCase(),
-          manager_email: assessment.managerEmail.toLowerCase(),
-          data: assessment, // Column 'data' type must be 'jsonb' in Supabase
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-
-      if (error) {
-        console.error('Supabase save error:', error.message);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error('Unexpected save error:', err);
-      return false;
     }
   },
 
@@ -60,11 +73,17 @@ export const supabaseService = {
    * Bulk upload/update assessments
    */
   async bulkSaveAssessments(assessments: Assessment[]): Promise<boolean> {
+    if (!supabase) {
+      console.warn("Database not configured properly. Cloud sync is inactive.");
+      return false;
+    }
+
+    console.log(`[Supabase] Syncing ${assessments.length} records...`);
     try {
       const payload = assessments.map(a => ({
         id: a.id,
-        email: a.employeeDetails.email.toLowerCase(),
-        manager_email: a.managerEmail.toLowerCase(),
+        email: a.employeeDetails.email.toLowerCase().trim(),
+        manager_email: a.managerEmail.toLowerCase().trim(),
         data: a,
         updated_at: new Date().toISOString()
       }));
@@ -74,20 +93,23 @@ export const supabaseService = {
         .upsert(payload, { onConflict: 'id' });
 
       if (error) {
-        console.error('Supabase bulk save error:', error.message);
+        console.error('[Supabase] Sync Error:', error.message);
         return false;
       }
+      
+      console.log('[Supabase] Sync Successful.');
       return true;
     } catch (err) {
-      console.error('Unexpected bulk save error:', err);
+      console.error('[Supabase] Unexpected sync error:', err);
       return false;
     }
   },
 
   /**
-   * Remove an assessment from the cloud
+   * Remove an assessment
    */
   async deleteAssessment(id: string): Promise<boolean> {
+    if (!supabase) return false;
     try {
       const { error } = await supabase
         .from('assessments')
@@ -95,12 +117,11 @@ export const supabaseService = {
         .eq('id', id);
 
       if (error) {
-        console.error('Supabase delete error:', error.message);
+        console.error('[Supabase] Delete error:', error.message);
         return false;
       }
       return true;
     } catch (err) {
-      console.error('Unexpected delete error:', err);
       return false;
     }
   }
