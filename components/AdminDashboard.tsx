@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Assessment, Rating, KPI, RoleType, Competency } from '../types.ts';
+import { Assessment, Rating, RoleType } from '../types.ts';
 import { createBlankAssessment } from '../constants.ts';
 
 interface AdminDashboardProps {
@@ -10,6 +10,7 @@ interface AdminDashboardProps {
   onReviewComplete: (updated: Assessment) => void;
   onBulkUpload: (newAssessments: Assessment[]) => void;
   onDeleteAssessment: (id: string) => void;
+  onRestoreBackup?: (assessments: Assessment[]) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -18,7 +19,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   role, 
   onReviewComplete,
   onBulkUpload,
-  onDeleteAssessment
+  onDeleteAssessment,
+  onRestoreBackup
 }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [activeTab, setActiveTab] = useState<'submissions' | 'management'>(
@@ -27,6 +29,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
 
   const filteredAssessments = role === 'admin' 
     ? assessments 
@@ -79,7 +82,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         const newEntries: Assessment[] = [];
         dataRows.forEach((row, idx) => {
           if (row.length < 9) return;
-          // Extract 10th column if it exists for password
           const [name, email, k1, k2, k3, k4, k5, mName, mEmail, mPass] = row;
           newEntries.push(createBlankAssessment(name, email.toLowerCase(), mName, mEmail.toLowerCase(), [k1, k2, k3, k4, k5], mPass));
         });
@@ -90,6 +92,84 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         }
       } catch (err: any) { alert(`Error: ${err.message}`); }
       finally { if (fileInputRef.current) fileInputRef.current.value = ""; }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExportBackup = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(assessments));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `metabev_system_backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleExportExcel = () => {
+    const completed = assessments.filter(a => a.status === 'reviewed');
+    if (completed.length === 0) {
+      alert("No completed assessments found to export.");
+      return;
+    }
+
+    const headers = [
+      'Staff Name', 'Staff Email', 'Position', 'Division', 'Manager', 'Final Rating', 'Manager Summary',
+      'KPI 1 Rating', 'KPI 1 Manager Comment',
+      'KPI 2 Rating', 'KPI 2 Manager Comment',
+      'KPI 3 Rating', 'KPI 3 Manager Comment',
+      'KPI 4 Rating', 'KPI 4 Manager Comment',
+      'KPI 5 Rating', 'KPI 5 Manager Comment',
+      'Development Plan Comment'
+    ];
+
+    const rows = completed.map(a => {
+      const row = [
+        a.employeeDetails.fullName,
+        a.employeeDetails.email,
+        a.employeeDetails.position,
+        a.employeeDetails.division,
+        a.managerName,
+        a.overallPerformance.managerRating || 'N/A',
+        a.overallPerformance.managerComments || '',
+      ];
+
+      for (let i = 0; i < 5; i++) {
+        const kpi = a.kpis[i];
+        row.push(kpi?.managerRating || 'N/A');
+        row.push(kpi?.managerComments || '');
+      }
+
+      row.push(a.developmentPlan.managerComments || '');
+      return row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+
+    const csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `MetaBev_Completed_Assessments_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRestoreBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const restoredData = JSON.parse(text);
+        if (!Array.isArray(restoredData)) throw new Error("Invalid backup format.");
+        if (onRestoreBackup) onRestoreBackup(restoredData);
+      } catch (err: any) {
+        alert("Could not restore backup: " + err.message);
+      } finally {
+        if (backupInputRef.current) backupInputRef.current.value = "";
+      }
     };
     reader.readAsText(file);
   };
@@ -173,25 +253,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             &larr; Back to Dashboard
           </button>
           
-          {isReviewed && (
-            <div className="flex gap-3">
-              <button 
-                onClick={() => handleEmailReport(selectedAssessment)}
-                className="px-6 py-2 bg-brand-50 text-brand-700 border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100 transition-colors flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                Email to Staff
-              </button>
-              <button 
-                onClick={() => handleDownloadPDF(selectedAssessment.employeeDetails.fullName)} 
-                disabled={isDownloading}
-                className="px-6 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                {isDownloading ? 'Preparing PDF...' : 'Download PDF'}
-              </button>
-            </div>
-          )}
+          <div className="flex gap-3">
+            {isReviewed && (
+              <>
+                <button 
+                  onClick={() => handleEmailReport(selectedAssessment)}
+                  className="px-6 py-2 bg-brand-50 text-brand-700 border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  Email to Staff
+                </button>
+                <button 
+                  onClick={() => handleDownloadPDF(selectedAssessment.employeeDetails.fullName)} 
+                  disabled={isDownloading}
+                  className="px-6 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                  {isDownloading ? 'Preparing PDF...' : 'Download PDF'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
         
         <div id="appraisal-report" className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-200 shadow-sm print:shadow-none print:border-none print:p-0">
@@ -211,7 +293,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="space-y-24">
-            {/* 1. KPIs SECTION */}
             <section>
               <SectionTitle>Key Performance Indicators</SectionTitle>
               <div className="space-y-16">
@@ -221,14 +302,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <h5 className="text-2xl font-black text-slate-900">{kpi.title}</h5>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Performance Goal</span>
                     </div>
-                    
                     <div className="mb-10">
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 opacity-60">KPI Description / Expectations</span>
                       <div className="bg-white p-5 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-relaxed italic shadow-inner">
                         {kpi.description}
                       </div>
                     </div>
-
                     <div className="space-y-10">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 border-b pb-2">Annual Self-Appraisal</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -244,7 +323,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       </div>
 
-                      {/* ASSESSOR FEEDBACK AREA - RESTORED & PROMINENT */}
                       <div className="pt-10 mt-10 border-t-2 border-slate-200 space-y-8 bg-white p-8 rounded-[2rem] border-2 shadow-lg border-slate-200 print:shadow-none print:border-slate-200">
                         <div className="flex items-center gap-3 mb-2">
                           <div className="w-3 h-3 rounded-full bg-slate-900"></div>
@@ -287,7 +365,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </section>
 
-            {/* 2. CORE COMPETENCIES SECTION */}
             <section>
               <SectionTitle colorClass="border-slate-400">Core Competencies</SectionTitle>
               <div className="space-y-12">
@@ -303,8 +380,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="text-sm font-bold text-slate-800">{comp.selfRating || 'N/A'}</span>
                       </div>
                     </div>
-
-                    {/* ASSESSOR FEEDBACK FOR COMPETENCIES */}
                     <div className="pt-10 border-t border-slate-200 bg-slate-50/50 p-8 rounded-3xl space-y-8">
                        <h6 className="text-[9px] font-black text-slate-900 uppercase tracking-widest opacity-60">Assessor Behavioral Evaluation</h6>
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
@@ -335,7 +410,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   placeholder="Comment on behavioral indicators for this competency..."
                                 />
                              )}
-                             <p className="text-[9px] text-slate-400 italic mt-2">Indicators: {comp.indicators.join(', ')}</p>
                           </div>
                        </div>
                     </div>
@@ -344,7 +418,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </section>
 
-            {/* 3. DEVELOPMENT PLAN SECTION */}
             <section className="bg-slate-900 p-10 rounded-[2.5rem] shadow-2xl text-white print:bg-slate-100 print:text-slate-900 print:shadow-none">
                <SectionTitle colorClass="border-brand-500">Individual Development Plan</SectionTitle>
                <div className="space-y-10">
@@ -371,7 +444,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                </div>
             </section>
 
-            {/* 4. FINAL EXECUTIVE SUMMARY SECTION */}
             <section className="pt-12 border-t-2 border-slate-100">
               <SectionTitle>Executive Summary & Final Grade</SectionTitle>
               <div className="space-y-12">
@@ -381,11 +453,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     "{selectedAssessment.overallPerformance.selfComments || 'No overall summary provided.'}"
                   </div>
                 </div>
-
                 {!isReviewed ? (
                   <div className="bg-brand-50 p-10 rounded-[3rem] border-2 border-brand-100 flex flex-col gap-10">
                     <div className="space-y-4">
-                      <label className="text-brand-900 text-[10px] font-black uppercase tracking-[0.3em] px-2 block">Manager Final Performance Appraisal Narrative</label>
+                      <label className="text-brand-900 text-[10px] font-black uppercase tracking-[0.3em] px-2 block">Manager Final Appraisal Narrative</label>
                       <textarea 
                         value={selectedAssessment.overallPerformance.managerComments || ''}
                         onChange={(e) => setSelectedAssessment({...selectedAssessment, overallPerformance: {...selectedAssessment.overallPerformance, managerComments: e.target.value}})}
@@ -455,7 +526,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
         
         {role === 'admin' && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+             <button onClick={handleExportExcel} title="Export all reviewed assessments to CSV" className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">
+               Export Completed (Excel)
+             </button>
+             <button onClick={handleExportBackup} title="Export entire system data to JSON" className="bg-brand-50 border border-brand-200 text-brand-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-brand-100 transition-colors">
+               Export Backup
+             </button>
+             <button onClick={() => backupInputRef.current?.click()} title="Import entire system data from JSON" className="bg-brand-50 border border-brand-200 text-brand-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-brand-100 transition-colors">
+               Restore Backup
+             </button>
+             <input type="file" accept=".json" ref={backupInputRef} onChange={handleRestoreBackup} className="hidden" />
+             <div className="w-px h-8 bg-slate-200 mx-2 hidden md:block"></div>
              <button onClick={downloadTemplate} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors">
                Get Template
              </button>
@@ -474,6 +556,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Member</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Manager</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Rating</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
             </tr>
           </thead>
@@ -496,6 +579,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {a.status}
                   </span>
                 </td>
+                <td className="px-8 py-6">
+                  <p className="text-xs font-bold text-slate-800">
+                    {a.overallPerformance.managerRating || <span className="text-slate-300 font-normal italic">Pending Review</span>}
+                  </p>
+                </td>
                 <td className="px-8 py-6 text-right">
                    <div className="flex justify-end gap-3">
                     <button onClick={() => setSelectedAssessment(a)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">
@@ -512,7 +600,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             ))}
             {((activeTab === 'submissions' && submissionsCount === 0) || (activeTab === 'management' && registryCount === 0)) && (
               <tr>
-                <td colSpan={4} className="px-8 py-20 text-center text-slate-400 text-sm italic">
+                <td colSpan={5} className="px-8 py-20 text-center text-slate-400 text-sm italic">
                   {activeTab === 'submissions' ? 'Awaiting staff self-appraisals...' : 'No staff members registered yet. Upload a CSV to begin.'}
                 </td>
               </tr>

@@ -33,7 +33,8 @@ export const createBlankAssessment = (
   managerPassword?: string
 ): Assessment => {
   return {
-    id: Math.random().toString(36).substr(2, 9),
+    // Generates a string ID like "mb-7x9z2k"
+    id: `mb-${Math.random().toString(36).substr(2, 9)}`,
     employeeId: email,
     employeeDetails: {
       fullName: name,
