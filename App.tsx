@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import Layout from './components/Layout.tsx';
+import Layout, { Logo } from './components/Layout.tsx';
 import AssessmentForm from './components/AssessmentForm.tsx';
 import AdminDashboard from './components/AdminDashboard.tsx';
 import AppraisalReport from './components/AppraisalReport.tsx';
@@ -105,46 +105,103 @@ const App: React.FC = () => {
   const currentAssessment = assessments.find(a => a.employeeDetails.email.toLowerCase() === currentUserEmail.toLowerCase());
 
   if (isLoading) return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-4">
-      <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p className="text-xs font-black uppercase tracking-[0.4em] opacity-60">Initializing Portal...</p>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-900 p-4">
+      <div className="w-16 h-16 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-xs font-black uppercase tracking-[0.4em] opacity-40">Initializing Portal...</p>
     </div>
   );
 
   if (!role) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px]">
-          <div className="bg-brand-900 md:w-1/2 p-12 text-white flex flex-col justify-between relative overflow-hidden group">
-            {/* Light Bubble Visual Effects */}
-            <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-brand-400/20 rounded-full blur-[80px] pointer-events-none transition-transform duration-[3000ms] group-hover:translate-x-10 group-hover:translate-y-10"></div>
-            <div className="absolute bottom-[-5%] right-[-15%] w-96 h-96 bg-brand-300/10 rounded-full blur-[100px] pointer-events-none transition-transform duration-[4000ms] group-hover:-translate-x-10 group-hover:-translate-y-5"></div>
-            <div className="absolute top-[30%] right-[-10%] w-48 h-48 bg-white/5 rounded-full blur-[60px] pointer-events-none"></div>
-            
-            <div className="relative z-10">
-              <h1 className="text-4xl font-serif tracking-widest mb-2" style={{ fontFamily: 'Georgia, serif' }}>METABEV</h1>
-              <p className="text-xs uppercase tracking-[0.4em] opacity-60">Performance Portal</p>
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 sm:p-12">
+        <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] overflow-hidden flex flex-col md:flex-row min-h-[640px]">
+          {/* Left Side Panel - Dark Blue */}
+          <div className="bg-[#0f172a] md:w-5/12 p-16 text-white flex flex-col justify-between relative overflow-hidden group">
+            {/* Visual Design Elements */}
+            <div className="absolute top-[-20%] left-[-20%] w-[150%] h-[150%] opacity-20 pointer-events-none">
+              <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500 rounded-full blur-[120px] animate-pulse"></div>
+              <div className="absolute bottom-0 right-0 w-80 h-80 bg-cyan-500 rounded-full blur-[100px] animate-pulse delay-1000"></div>
             </div>
             
-            {/* Database status removed for a cleaner look as requested */}
-            <div className="relative z-10 h-8"></div>
+            <div className="relative z-10 flex flex-col items-start h-full">
+              <div className="mb-12">
+                <Logo light />
+              </div>
+              
+              <div className="mt-auto space-y-6">
+                <h3 className="text-2xl font-light leading-snug">“We can’t become what we <span className="text-blue-400 font-bold italic">need to be</span> by remaining what we are.”</h3>
+              </div>
+            </div>
           </div>
-          <div className="md:w-1/2 p-12">
-            <h2 className="text-2xl font-black text-slate-800 mb-8">Login</h2>
-            <div className="space-y-10">
-              <form onSubmit={handleStaffLogin} className="space-y-4">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">For Employees</span>
-                <input type="email" placeholder="Staff Email" className="w-full px-4 py-3 bg-slate-50 border rounded-xl" value={staffEmailInput} onChange={(e) => setStaffEmailInput(e.target.value)} required />
-                <button type="submit" className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold">Staff Access</button>
-              </form>
-              <div className="relative py-2 text-center"><span className="bg-white px-3 text-[10px] font-black text-slate-300 uppercase">OR</span></div>
-              <form onSubmit={handleAssessorLogin} className="space-y-4">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">For Managers</span>
-                <input type="email" placeholder="Manager Email" className="w-full px-4 py-3 bg-slate-50 border rounded-xl" value={assessorEmailInput} onChange={(e) => setAssessorEmailInput(e.target.value)} required />
-                <input type="password" placeholder="Password" className="w-full px-4 py-3 bg-slate-50 border rounded-xl" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} required />
-                <button type="submit" className="w-full bg-brand-600 text-white py-3 rounded-xl font-bold">Manager Login</button>
-              </form>
-              {authError && <p className="text-xs font-bold text-red-500 bg-red-50 p-3 rounded-xl">{authError}</p>}
+
+          {/* Right Side - Form */}
+          <div className="md:w-7/12 p-16 flex flex-col justify-center bg-white">
+            <div className="max-w-md mx-auto w-full">
+              <h2 className="text-2xl sm:text-[1.75rem] md:text-3xl font-black text-slate-900 mb-2 tracking-tight whitespace-nowrap">Performance Review Portal</h2>
+              <p className="text-slate-400 text-sm font-medium mb-12">Select your access level to continue to the appraisal portal.</p>
+              
+              <div className="space-y-12">
+                {/* Staff Login */}
+                <form onSubmit={handleStaffLogin} className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Team Member Portal</span>
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type="email" 
+                      placeholder="Enter your corporate email" 
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-slate-900 outline-none transition-all placeholder:text-slate-300" 
+                      value={staffEmailInput} 
+                      onChange={(e) => setStaffEmailInput(e.target.value)} 
+                      required 
+                    />
+                  </div>
+                  <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-black transition-all transform active:scale-[0.98]">
+                    Start Assessment
+                  </button>
+                </form>
+
+                <div className="relative flex items-center">
+                  <div className="flex-grow border-t border-slate-100"></div>
+                  <span className="flex-shrink mx-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Administrative Hub</span>
+                  <div className="flex-grow border-t border-slate-100"></div>
+                </div>
+
+                {/* Manager Login */}
+                <form onSubmit={handleAssessorLogin} className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <input 
+                      type="email" 
+                      placeholder="Manager Email" 
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-blue-600 outline-none transition-all placeholder:text-slate-300" 
+                      value={assessorEmailInput} 
+                      onChange={(e) => setAssessorEmailInput(e.target.value)} 
+                      required 
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="Access Password" 
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-blue-600 outline-none transition-all placeholder:text-slate-300" 
+                      value={passwordInput} 
+                      onChange={(e) => setPasswordInput(e.target.value)} 
+                      required 
+                    />
+                  </div>
+                  <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all transform active:scale-[0.98]">
+                    Assessor Login
+                  </button>
+                </form>
+
+                {authError && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-xs font-bold text-red-500 bg-red-50 p-4 rounded-2xl border border-red-100 flex items-center gap-3">
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      {authError}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

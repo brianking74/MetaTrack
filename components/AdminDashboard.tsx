@@ -236,7 +236,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                  ) : 'Force Cloud Sync'}
                </button>
              )}
-             <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export assessments.</button>
+             <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export Assessments</button>
              <button onClick={() => fileInputRef.current?.click()} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors">Upload Registry</button>
              <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} className="hidden" />
           </div>
@@ -250,7 +250,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Member</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Manager</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Assessment Score</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Assessment Score</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
             </tr>
           </thead>
@@ -273,7 +273,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {a.status}
                   </span>
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-8 py-6 text-center">
                   {a.overallPerformance.managerRating ? (
                     <span className="text-sm font-black text-slate-800">
                       {a.overallPerformance.managerRating.split(' - ')[0]}

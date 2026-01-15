@@ -9,11 +9,24 @@ interface LayoutProps {
   isSyncing?: boolean;
 }
 
-const Logo: React.FC = () => (
-  <div className="flex flex-col items-center select-none" style={{ width: 'fit-content' }}>
-    <div className="text-[44px] leading-none tracking-[0.25em] text-brand-600 mb-2" style={{ fontFamily: 'Georgia, serif' }}>METABEV</div>
-    <div className="text-[12px] font-medium leading-none tracking-[0.45em] text-slate-800 mb-3 uppercase">Passionate F & B Partners</div>
-    <div className="text-[12px] font-medium leading-none tracking-[0.45em] text-slate-800 uppercase">Since 1989</div>
+export const Logo: React.FC<{ light?: boolean }> = ({ light }) => (
+  <div className="flex flex-col items-center select-none text-center" style={{ width: 'fit-content' }}>
+    <div 
+      className={`text-[42px] leading-none tracking-[0.2em] mb-2 ${light ? 'text-[#c87a41]' : 'text-brand-600'}`} 
+      style={{ fontFamily: 'Georgia, serif' }}
+    >
+      METABEV
+    </div>
+    <div 
+      className={`text-[10px] font-bold leading-none tracking-[0.4em] mb-3 uppercase ${light ? 'text-white/60' : 'text-slate-600'}`}
+    >
+      Passionate F & B Partners
+    </div>
+    <div 
+      className={`text-[10px] font-bold leading-none tracking-[0.4em] uppercase ${light ? 'text-white/40' : 'text-slate-500'}`}
+    >
+      Since 1989
+    </div>
   </div>
 );
 
