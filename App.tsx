@@ -85,7 +85,6 @@ const App: React.FC = () => {
   };
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
-    // Merge new entries into current state
     const merged = [...assessments];
     newEntries.forEach(entry => {
       const email = entry.employeeDetails.email.toLowerCase();
@@ -98,7 +97,8 @@ const App: React.FC = () => {
     
     const success = await syncToCloud(merged);
     if (success) {
-      alert(`Successfully synchronized ${newEntries.length} records to Supabase.`);
+      const count = newEntries.length;
+      alert(`Successfully upload ${count} record${count === 1 ? '' : 's'}.`);
     }
   };
 
@@ -162,7 +162,16 @@ const App: React.FC = () => {
           <AssessmentForm 
             initialData={currentAssessment} 
             onSave={(d) => { const n = assessments.map(a => a.id === d.id ? d : a); setAssessments(n); syncToCloud(n); }} 
-            onSubmit={(d) => { const n = assessments.map(a => a.id === d.id ? {...d, status: 'submitted'} : a); setAssessments(n); syncToCloud(n).then(() => confetti()); }} 
+            onSubmit={(d) => { 
+              const n = assessments.map(a => a.id === d.id ? {...d, status: 'submitted'} : a); 
+              setAssessments(n); 
+              syncToCloud(n).then((success) => {
+                if (success) {
+                  confetti();
+                  alert("Assessment submitted successfully! Your manager will now be able to review your performance.");
+                }
+              }); 
+            }} 
           />
         )
       ) : (
@@ -170,11 +179,23 @@ const App: React.FC = () => {
           assessments={assessments} 
           currentUserEmail={currentUserEmail} 
           role={role} 
-          onReviewComplete={(upd) => { const n = assessments.map(a => a.id === upd.id ? upd : a); setAssessments(n); syncToCloud(n); }} 
+          onReviewComplete={(upd) => { 
+            const n = assessments.map(a => a.id === upd.id ? upd : a); 
+            setAssessments(n); 
+            syncToCloud(n).then((success) => {
+              if (success) alert("Evaluation finalized and synced to cloud.");
+            }); 
+          }} 
           onBulkUpload={handleBulkUpload} 
-          onDeleteAssessment={(id) => { const n = assessments.filter(a => a.id !== id); setAssessments(n); supabaseService.deleteAssessment(id); }} 
+          onDeleteAssessment={(id) => { 
+            if (confirm("Are you sure you want to delete this record?")) {
+              const n = assessments.filter(a => a.id !== id); 
+              setAssessments(n); 
+              supabaseService.deleteAssessment(id); 
+            }
+          }} 
           isSyncing={isSyncing} 
-          onForceSync={() => syncToCloud(assessments)} 
+          onForceSync={() => syncToCloud(assessments).then(s => s && alert("Cloud storage synchronized successfully."))} 
         />
       )}
     </Layout>
