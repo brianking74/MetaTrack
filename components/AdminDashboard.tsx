@@ -250,7 +250,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Member</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Manager</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cloud</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Assessment Score</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
             </tr>
           </thead>
@@ -274,10 +274,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </span>
                 </td>
                 <td className="px-8 py-6">
-                  <div className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-blue-400 animate-pulse' : 'bg-green-500'}`}></div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Synced</span>
-                  </div>
+                  {a.overallPerformance.managerRating ? (
+                    <span className="text-sm font-black text-slate-800">
+                      {a.overallPerformance.managerRating.split(' - ')[0]}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Pending</span>
+                  )}
                 </td>
                 <td className="px-8 py-6 text-right">
                    <div className="flex justify-end gap-3">
