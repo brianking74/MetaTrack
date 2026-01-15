@@ -34,7 +34,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const backupInputRef = useRef<HTMLInputElement>(null);
 
   const filteredAssessments = role === 'admin' 
     ? assessments 
@@ -171,8 +170,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {role === 'admin' && (
           <div className="flex flex-wrap gap-3">
              {activeTab === 'management' && assessments.length > 0 && (
-               <button onClick={onForceSync} disabled={isSyncing} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-                 {isSyncing ? 'Syncing...' : 'Sync All to Database'}
+               <button onClick={onForceSync} disabled={isSyncing} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${isSyncing ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                 {isSyncing ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Syncing...
+                    </>
+                 ) : 'Force Cloud Sync'}
                </button>
              )}
              <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export Completed</button>

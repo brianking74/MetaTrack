@@ -17,8 +17,8 @@ export const supabaseService = {
     try {
       const { error } = await supabase.from('assessments').select('id').limit(1);
       if (error) {
-        if (error.code === '42P01') return { success: false, error: 'Table "assessments" not found. Run the SQL script in Supabase.' };
-        if (error.code === '42501') return { success: false, error: 'Row Level Security (RLS) error. Please check your Supabase policies.' };
+        if (error.code === '42P01') return { success: false, error: 'Table "assessments" not found. Please run the updated SQL script.' };
+        if (error.code === 'PGRST204') return { success: false, error: 'Database schema cache is stale. Run the SQL script again to refresh it.' };
         return { success: false, error: error.message };
       }
       return { success: true };
@@ -46,13 +46,11 @@ export const supabaseService = {
     try {
       const payload = assessments.map(a => ({
         id: a.id,
-        email: a.employeeDetails.email.toLowerCase().trim(),
-        manager_email: a.managerEmail.toLowerCase().trim(),
+        email: (a.employeeDetails.email || '').toLowerCase().trim(),
+        manager_email: (a.managerEmail || '').toLowerCase().trim(),
         data: a,
         updated_at: new Date().toISOString()
       }));
-
-      console.log('[Supabase] Syncing payload:', payload);
 
       const { error } = await supabase
         .from('assessments')
@@ -60,6 +58,10 @@ export const supabaseService = {
 
       if (error) {
         console.error('[Supabase] Sync Error:', error);
+        // If we get a column error, suggest the fix
+        if (error.message.includes('updated_at')) {
+          return { success: false, error: 'Column "updated_at" missing in database. Please run the "Clean Reset" SQL script in Supabase.' };
+        }
         return { success: false, error: `${error.code}: ${error.message}` };
       }
       
