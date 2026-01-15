@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Assessment, Rating } from '../types.ts';
 import { analyzeAssessment } from '../services/geminiService.ts';
@@ -150,7 +151,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                              value={kpi.managerComments || ''}
                              onChange={(e) => {
                                if(onUpdate) {
-                                 onUpdate({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, managerComments: e.target.value} : k)});
+                                 onUpdate({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, managerRating: k.managerRating, managerComments: e.target.value} : k)});
                                }
                              }}
                              className="w-full text-xs border border-slate-300 rounded-2xl p-5 h-36 outline-none focus:ring-2 focus:ring-brand-500 shadow-inner bg-slate-50/50"
@@ -218,29 +219,33 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         </section>
 
         {/* Development Plan */}
-        <section className="bg-slate-900 p-10 rounded-[2.5rem] shadow-2xl text-white print:bg-slate-100 print:text-slate-900 print:shadow-none">
+        <section className="bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-200 shadow-sm print:shadow-none print:border-slate-300 space-y-10">
            <SectionTitle colorClass="border-brand-500">Individual Development Plan</SectionTitle>
            <div className="space-y-10">
               <div className="space-y-3">
-                <span className="px-2 py-0.5 bg-brand-600 text-white text-[9px] font-black uppercase rounded tracking-widest">Staff Development Goals</span>
-                <div className="p-6 bg-slate-800 rounded-2xl text-xs text-slate-300 italic leading-relaxed min-h-[120px] print:bg-white print:text-slate-600 print:border">
+                <span className="px-2 py-0.5 bg-brand-50 text-brand-600 text-[9px] font-black uppercase rounded tracking-widest">Staff Development Goals</span>
+                <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600 italic leading-relaxed min-h-[120px] shadow-inner">
                   "{assessment.developmentPlan.selfComments || 'No self-reflection provided.'}"
                 </div>
               </div>
               <div className="space-y-3">
-                <span className="px-2 py-0.5 bg-white text-slate-900 text-[9px] font-black uppercase rounded tracking-widest border border-slate-200 print:bg-slate-900 print:text-white">Assessor Developmental Roadmap</span>
-                {!isEditable ? (
-                   <div className="p-6 bg-slate-800 rounded-2xl text-sm text-white print:bg-white print:text-slate-800 print:border min-h-[160px]">{assessment.developmentPlan.managerComments || 'Awaiting developmental focus.'}</div>
-                ) : (
-                   <textarea 
-                     value={assessment.developmentPlan.managerComments || ''}
-                     onChange={(e) => {
-                       if(onUpdate) onUpdate({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: e.target.value}});
-                     }}
-                     className="w-full text-xs bg-slate-800 text-white border-none rounded-2xl p-6 h-40 outline-none focus:ring-2 focus:ring-brand-500 shadow-inner"
-                     placeholder="Outline specific training needs..."
-                   />
-                )}
+                <span className="px-2 py-0.5 bg-slate-900 text-white text-[9px] font-black uppercase rounded tracking-widest">Assessor Developmental Roadmap</span>
+                <div className="p-1 mt-2">
+                  {!isEditable ? (
+                    <div className="p-6 bg-white border-2 border-slate-100 rounded-2xl text-sm text-slate-800 min-h-[160px] leading-relaxed shadow-sm">
+                      {assessment.developmentPlan.managerComments || 'Awaiting developmental focus.'}
+                    </div>
+                  ) : (
+                    <textarea 
+                      value={assessment.developmentPlan.managerComments || ''}
+                      onChange={(e) => {
+                        if(onUpdate) onUpdate({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: e.target.value}});
+                      }}
+                      className="w-full text-sm bg-white text-slate-800 border-2 border-slate-200 rounded-2xl p-6 h-40 outline-none focus:ring-2 focus:ring-brand-500 shadow-inner"
+                      placeholder="Outline specific training needs..."
+                    />
+                  )}
+                </div>
               </div>
            </div>
         </section>
@@ -257,19 +262,24 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
             </div>
 
             {isEditable ? (
-              <div className="bg-brand-50 p-10 rounded-[3rem] border-2 border-brand-100 flex flex-col gap-10">
-                <div className="space-y-4">
+              <div className="bg-brand-50 p-10 rounded-[3rem] border-2 border-brand-100 flex flex-col gap-10 relative overflow-hidden group">
+                {/* Subtle Light Bubble Effect */}
+                <div className="absolute top-[-10%] left-[-5%] w-64 h-64 bg-brand-200/20 rounded-full blur-3xl pointer-events-none transition-transform duration-1000 group-hover:scale-110"></div>
+                <div className="absolute bottom-[-15%] right-[-5%] w-80 h-80 bg-brand-300/15 rounded-full blur-3xl pointer-events-none transition-transform duration-1000 group-hover:scale-105"></div>
+                <div className="absolute top-1/4 right-[-10%] w-48 h-48 bg-white/40 rounded-full blur-2xl pointer-events-none"></div>
+                
+                <div className="relative z-10 space-y-4">
                   <label className="text-brand-900 text-[10px] font-black uppercase tracking-[0.3em] px-2 block">Manager Final Appraisal Narrative</label>
                   <textarea 
                     value={assessment.overallPerformance.managerComments || ''}
                     onChange={(e) => {
                       if(onUpdate) onUpdate({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}});
                     }}
-                    className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg"
+                    className="w-full bg-white/80 backdrop-blur-sm text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg"
                     placeholder="Provide the final executive evaluation..."
                   />
                 </div>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-6 border-t border-brand-200">
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 pt-6 border-t border-brand-200">
                   <div className="flex-1 w-full max-w-md">
                     <label className="text-brand-900 text-[10px] font-black uppercase tracking-widest block mb-3">Final Official Performance Grade</label>
                     <select 
@@ -277,7 +287,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       onChange={(e) => {
                         if(onUpdate) onUpdate({...assessment, overallPerformance: {...assessment.overallPerformance, managerRating: e.target.value as Rating}});
                       }}
-                      className="w-full bg-white text-slate-900 p-4 rounded-xl border border-brand-300 outline-none text-sm font-bold shadow-sm"
+                      className="w-full bg-white/90 backdrop-blur-sm text-slate-900 p-4 rounded-xl border border-brand-300 outline-none text-sm font-bold shadow-sm"
                     >
                       <option value="">Select Official Result...</option>
                       {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
@@ -288,19 +298,21 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       if(!assessment.overallPerformance.managerRating) return alert("Final grade is required.");
                       if(onFinalize) onFinalize({...assessment, status: 'reviewed'});
                     }} 
-                    className="bg-brand-600 text-white px-14 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] hover:bg-brand-700 transition-all shadow-2xl transform active:scale-95"
+                    className="bg-brand-600 text-white px-14 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] hover:bg-brand-700 transition-all shadow-2xl transform active:scale-95 z-20"
                   >
-                    Finalize Review Cycle
+                    Complete Review
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="p-12 bg-slate-900 text-white rounded-[3rem] flex flex-col md:flex-row justify-between items-center gap-10 shadow-2xl print:bg-slate-50 print:text-slate-900 print:border">
-                 <div className="space-y-2">
+              <div className="p-12 bg-slate-900 text-white rounded-[3rem] flex flex-col md:flex-row justify-between items-center gap-10 shadow-2xl print:bg-slate-50 print:text-slate-900 print:border relative overflow-hidden">
+                 {/* Decorative elements for completed view */}
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                 <div className="relative z-10 space-y-2">
                     <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest block">Final Result</span>
                     <span className="text-5xl font-black text-white print:text-brand-900">{assessment.overallPerformance.managerRating || 'PENDING'}</span>
                  </div>
-                 <div className="md:max-w-lg text-right border-l border-slate-700 pl-10 print:border-slate-300">
+                 <div className="relative z-10 md:max-w-lg text-right border-l border-slate-700 pl-10 print:border-slate-300">
                     <p className="text-sm text-slate-400 italic font-medium leading-relaxed print:text-slate-600">
                       {assessment.overallPerformance.managerComments || 'Assessment cycle is in progress.'}
                     </p>

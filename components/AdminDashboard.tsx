@@ -116,13 +116,70 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleExportExcel = () => {
     const completed = assessments.filter(a => a.status === 'reviewed');
     if (completed.length === 0) { alert("No completed assessments found."); return; }
-    const headers = ['Staff Name', 'Staff Email', 'Position', 'Division', 'Manager', 'Final Rating', 'Manager Summary'];
-    const rows = completed.map(a => [a.employeeDetails.fullName, a.employeeDetails.email, a.employeeDetails.position, a.employeeDetails.division, a.managerName, a.overallPerformance.managerRating || 'N/A', a.overallPerformance.managerComments || ''].map(val => `"${String(val).replace(/"/g, '""')}"`).join(","));
+    
+    // Comprehensive Headers
+    const headers = [
+      'Staff Name', 'Staff Email', 'Position', 'Division', 'Manager',
+      'KPI 1 Title', 'KPI 1 Self Rating', 'KPI 1 Self Comments', 'KPI 1 Mgr Rating', 'KPI 1 Mgr Comments',
+      'KPI 2 Title', 'KPI 2 Self Rating', 'KPI 2 Self Comments', 'KPI 2 Mgr Rating', 'KPI 2 Mgr Comments',
+      'KPI 3 Title', 'KPI 3 Self Rating', 'KPI 3 Self Comments', 'KPI 3 Mgr Rating', 'KPI 3 Mgr Comments',
+      'KPI 4 Title', 'KPI 4 Self Rating', 'KPI 4 Self Comments', 'KPI 4 Mgr Rating', 'KPI 4 Mgr Comments',
+      'KPI 5 Title', 'KPI 5 Self Rating', 'KPI 5 Self Comments', 'KPI 5 Mgr Rating', 'KPI 5 Mgr Comments',
+      'Work Effectiveness Self', 'Work Effectiveness Mgr', 'Work Effectiveness Comments',
+      'Innovation Self', 'Innovation Mgr', 'Innovation Comments',
+      'Analysing Self', 'Analysing Mgr', 'Analysing Comments',
+      'Customer Focused Self', 'Customer Focused Mgr', 'Customer Focused Comments',
+      'Results Orientation Self', 'Results Orientation Mgr', 'Results Orientation Comments',
+      'Ownership Self', 'Ownership Mgr', 'Ownership Comments',
+      'IDP Staff Goals', 'IDP Assessor Roadmap',
+      'Staff Final Summary', 'Final Official Rating', 'Manager Executive Narrative'
+    ];
+
+    const rows = completed.map(a => {
+      const rowData: any[] = [
+        a.employeeDetails.fullName,
+        a.employeeDetails.email,
+        a.employeeDetails.position,
+        a.employeeDetails.division,
+        a.managerName
+      ];
+
+      // Add 5 KPIs (handle missing gracefully)
+      for (let i = 0; i < 5; i++) {
+        const k = a.kpis[i];
+        if (k) {
+          rowData.push(k.title, k.selfRating || 'N/A', k.selfComments || '', k.managerRating || 'N/A', k.managerComments || '');
+        } else {
+          rowData.push('', '', '', '', '');
+        }
+      }
+
+      // Add 6 Competencies
+      a.coreCompetencies.forEach(c => {
+        rowData.push(c.selfRating || 'N/A', c.managerRating || 'N/A', c.managerComments || '');
+      });
+
+      // IDP
+      rowData.push(a.developmentPlan.selfComments || '', a.developmentPlan.managerComments || '');
+
+      // Final Review
+      rowData.push(
+        a.overallPerformance.selfComments || '',
+        a.overallPerformance.managerRating || 'N/A',
+        a.overallPerformance.managerComments || ''
+      );
+
+      return rowData.map(val => {
+        const str = String(val === undefined || val === null ? '' : val);
+        return `"${str.replace(/"/g, '""')}"`;
+      }).join(",");
+    });
+
     const csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `MetaBev_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `MetaBev_Comprehensive_Report_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 
@@ -179,7 +236,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                  ) : 'Force Cloud Sync'}
                </button>
              )}
-             <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export Completed</button>
+             <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export Comprehensive</button>
              <button onClick={() => fileInputRef.current?.click()} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors">Upload Registry</button>
              <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} className="hidden" />
           </div>

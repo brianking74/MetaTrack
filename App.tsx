@@ -115,22 +115,19 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
         <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px]">
-          <div className="bg-brand-900 md:w-1/2 p-12 text-white flex flex-col justify-between relative overflow-hidden">
+          <div className="bg-brand-900 md:w-1/2 p-12 text-white flex flex-col justify-between relative overflow-hidden group">
+            {/* Light Bubble Visual Effects */}
+            <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-brand-400/20 rounded-full blur-[80px] pointer-events-none transition-transform duration-[3000ms] group-hover:translate-x-10 group-hover:translate-y-10"></div>
+            <div className="absolute bottom-[-5%] right-[-15%] w-96 h-96 bg-brand-300/10 rounded-full blur-[100px] pointer-events-none transition-transform duration-[4000ms] group-hover:-translate-x-10 group-hover:-translate-y-5"></div>
+            <div className="absolute top-[30%] right-[-10%] w-48 h-48 bg-white/5 rounded-full blur-[60px] pointer-events-none"></div>
+            
             <div className="relative z-10">
               <h1 className="text-4xl font-serif tracking-widest mb-2" style={{ fontFamily: 'Georgia, serif' }}>METABEV</h1>
               <p className="text-xs uppercase tracking-[0.4em] opacity-60">Performance Portal</p>
             </div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${dbStatus.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Database: {dbStatus.connected ? 'ONLINE' : 'ERROR'}</span>
-              </div>
-              {dbStatus.error && (
-                <p className="text-[9px] text-red-300 mt-2 bg-red-900/30 p-2 rounded leading-tight">
-                  {dbStatus.error}
-                </p>
-              )}
-            </div>
+            
+            {/* Database status removed for a cleaner look as requested */}
+            <div className="relative z-10 h-8"></div>
           </div>
           <div className="md:w-1/2 p-12">
             <h2 className="text-2xl font-black text-slate-800 mb-8">Login</h2>
@@ -183,7 +180,7 @@ const App: React.FC = () => {
             const n = assessments.map(a => a.id === upd.id ? upd : a); 
             setAssessments(n); 
             syncToCloud(n).then((success) => {
-              if (success) alert("Evaluation finalized and synced to cloud.");
+              if (success) alert("Assessment Completed.");
             }); 
           }} 
           onBulkUpload={handleBulkUpload} 
