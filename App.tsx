@@ -15,7 +15,6 @@ const App: React.FC = () => {
   const [role, setRole] = useState<RoleType | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [showFullReport, setShowFullReport] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean | null; error?: string }>({ connected: null });
@@ -30,6 +29,7 @@ const App: React.FC = () => {
       setIsLoading(true);
       const health = await supabaseService.checkConnection();
       setDbStatus({ connected: health.success, error: health.error });
+      
       const data = await supabaseService.getAllAssessments();
       if (data && data.length > 0) {
         setAssessments(data);
@@ -79,27 +79,37 @@ const App: React.FC = () => {
     const result = await supabaseService.bulkSaveAssessments(updatedAssessments);
     setIsSyncing(false);
     if (!result.success) {
-      console.error("Sync Failed:", result.error);
+      alert(`Database Sync Failed: ${result.error}\n\nData is saved locally in your browser but NOT in the cloud.`);
     }
     return result.success;
   };
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
+    // Merge new entries into current state
     const merged = [...assessments];
     newEntries.forEach(entry => {
       const email = entry.employeeDetails.email.toLowerCase();
       const idx = merged.findIndex(m => m.employeeDetails.email.toLowerCase() === email);
       if (idx === -1) merged.push(entry);
     });
+    
     setAssessments(merged);
     localStorage.setItem('metabev-assessments-v2', JSON.stringify(merged));
+    
     const success = await syncToCloud(merged);
-    if (success) alert("Cloud Sync Successful!");
+    if (success) {
+      alert(`Successfully synchronized ${newEntries.length} records to Supabase.`);
+    }
   };
 
   const currentAssessment = assessments.find(a => a.employeeDetails.email.toLowerCase() === currentUserEmail.toLowerCase());
 
-  if (isLoading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white"><p>Loading Portal...</p></div>;
+  if (isLoading) return (
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-4">
+      <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-xs font-black uppercase tracking-[0.4em] opacity-60">Initializing Portal...</p>
+    </div>
+  );
 
   if (!role) {
     return (
@@ -107,7 +117,7 @@ const App: React.FC = () => {
         <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px]">
           <div className="bg-brand-900 md:w-1/2 p-12 text-white flex flex-col justify-between relative overflow-hidden">
             <div className="relative z-10">
-              <h1 className="text-4xl font-serif tracking-widest mb-2">METABEV</h1>
+              <h1 className="text-4xl font-serif tracking-widest mb-2" style={{ fontFamily: 'Georgia, serif' }}>METABEV</h1>
               <p className="text-xs uppercase tracking-[0.4em] opacity-60">Performance Portal</p>
             </div>
             <div className="relative z-10">
@@ -115,17 +125,24 @@ const App: React.FC = () => {
                 <div className={`w-2 h-2 rounded-full ${dbStatus.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Database: {dbStatus.connected ? 'ONLINE' : 'ERROR'}</span>
               </div>
-              {dbStatus.error && <p className="text-[9px] text-red-300 mt-2">{dbStatus.error}</p>}
+              {dbStatus.error && (
+                <p className="text-[9px] text-red-300 mt-2 bg-red-900/30 p-2 rounded leading-tight">
+                  {dbStatus.error}
+                </p>
+              )}
             </div>
           </div>
           <div className="md:w-1/2 p-12">
             <h2 className="text-2xl font-black text-slate-800 mb-8">Login</h2>
             <div className="space-y-10">
               <form onSubmit={handleStaffLogin} className="space-y-4">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">For Employees</span>
                 <input type="email" placeholder="Staff Email" className="w-full px-4 py-3 bg-slate-50 border rounded-xl" value={staffEmailInput} onChange={(e) => setStaffEmailInput(e.target.value)} required />
                 <button type="submit" className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold">Staff Access</button>
               </form>
+              <div className="relative py-2 text-center"><span className="bg-white px-3 text-[10px] font-black text-slate-300 uppercase">OR</span></div>
               <form onSubmit={handleAssessorLogin} className="space-y-4">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">For Managers</span>
                 <input type="email" placeholder="Manager Email" className="w-full px-4 py-3 bg-slate-50 border rounded-xl" value={assessorEmailInput} onChange={(e) => setAssessorEmailInput(e.target.value)} required />
                 <input type="password" placeholder="Password" className="w-full px-4 py-3 bg-slate-50 border rounded-xl" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} required />
                 <button type="submit" className="w-full bg-brand-600 text-white py-3 rounded-xl font-bold">Manager Login</button>
@@ -141,9 +158,24 @@ const App: React.FC = () => {
   return (
     <Layout title={role === 'staff' ? 'Performance Review' : 'Manager Hub'} role={role === 'staff' ? 'employee' : 'admin'} onRoleSwitch={handleLogout} isSyncing={isSyncing}>
       {role === 'staff' ? (
-        currentAssessment && <AssessmentForm initialData={currentAssessment} onSave={(d) => { const n = assessments.map(a => a.id === d.id ? d : a); setAssessments(n); syncToCloud(n); }} onSubmit={(d) => { const n = assessments.map(a => a.id === d.id ? {...d, status: 'submitted'} : a); setAssessments(n); syncToCloud(n); confetti(); }} />
+        currentAssessment && (
+          <AssessmentForm 
+            initialData={currentAssessment} 
+            onSave={(d) => { const n = assessments.map(a => a.id === d.id ? d : a); setAssessments(n); syncToCloud(n); }} 
+            onSubmit={(d) => { const n = assessments.map(a => a.id === d.id ? {...d, status: 'submitted'} : a); setAssessments(n); syncToCloud(n).then(() => confetti()); }} 
+          />
+        )
       ) : (
-        <AdminDashboard assessments={assessments} currentUserEmail={currentUserEmail} role={role} onReviewComplete={(upd) => { const n = assessments.map(a => a.id === upd.id ? upd : a); setAssessments(n); syncToCloud(n); }} onBulkUpload={handleBulkUpload} onDeleteAssessment={(id) => { const n = assessments.filter(a => a.id !== id); setAssessments(n); supabaseService.deleteAssessment(id); }} isSyncing={isSyncing} onForceSync={() => syncToCloud(assessments)} />
+        <AdminDashboard 
+          assessments={assessments} 
+          currentUserEmail={currentUserEmail} 
+          role={role} 
+          onReviewComplete={(upd) => { const n = assessments.map(a => a.id === upd.id ? upd : a); setAssessments(n); syncToCloud(n); }} 
+          onBulkUpload={handleBulkUpload} 
+          onDeleteAssessment={(id) => { const n = assessments.filter(a => a.id !== id); setAssessments(n); supabaseService.deleteAssessment(id); }} 
+          isSyncing={isSyncing} 
+          onForceSync={() => syncToCloud(assessments)} 
+        />
       )}
     </Layout>
   );
