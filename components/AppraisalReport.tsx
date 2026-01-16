@@ -179,14 +179,19 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="p-12 bg-slate-900 text-white rounded-[3rem] flex flex-col md:flex-row justify-between items-center gap-10 shadow-2xl print:bg-slate-50 print:text-slate-900 relative">
-                 <div className="space-y-2">
-                    <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest">Final Result</span>
-                    <span className="text-5xl font-black">{assessment.overallPerformance.managerRating || 'PENDING'}</span>
+              <div className="p-6 md:p-10 bg-[#0f172a] text-white rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl print:bg-[#0f172a] print:text-white relative break-inside-avoid overflow-hidden">
+                 <div className="flex items-center gap-6 flex-1 min-w-0">
+                    <span className="text-[10px] font-black text-[#d58f5c] uppercase tracking-widest flex-shrink-0 leading-none">Final Result</span>
+                    <span className="text-3xl md:text-5xl font-black leading-tight truncate">
+                      {assessment.overallPerformance.managerRating || 'PENDING'}
+                    </span>
                  </div>
-                 <div className="md:max-w-lg text-right border-l border-slate-700 pl-10 print:border-slate-300">
-                    <p className="text-sm text-slate-400 italic font-medium leading-relaxed">{assessment.overallPerformance.managerComments || 'In progress.'}</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Reviewed & Archived</p>
+                 <div className="hidden md:block w-px h-16 bg-slate-700 opacity-50"></div>
+                 <div className="md:w-1/3 text-right flex flex-col justify-center gap-1">
+                    <p className="text-xs text-slate-300 italic font-medium leading-relaxed truncate">
+                      {assessment.overallPerformance.managerComments || 'Reviewed.'}
+                    </p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">Reviewed & Archived</p>
                  </div>
               </div>
             )}
