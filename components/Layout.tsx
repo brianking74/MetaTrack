@@ -73,7 +73,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title, role, onRoleSwitch, is
       <footer className="bg-white border-t border-slate-200 py-10">
         <div className="max-w-7xl mx-auto px-4 flex justify-center">
           <div className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">
-            METABEV Staff Performance Review &bull; Cloud Secured
+            METABEV Staff Performance Review
           </div>
         </div>
       </footer>

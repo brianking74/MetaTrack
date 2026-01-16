@@ -113,11 +113,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     reader.readAsText(file);
   };
 
+  const handleDownloadBackup = () => {
+    const dataStr = JSON.stringify(assessments, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `MetaBev_System_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportExcel = () => {
     const completed = assessments.filter(a => a.status === 'reviewed');
     if (completed.length === 0) { alert("No completed assessments found."); return; }
     
-    // Comprehensive Headers
     const headers = [
       'Staff Name', 'Staff Email', 'Position', 'Division', 'Manager',
       'KPI 1 Title', 'KPI 1 Self Rating', 'KPI 1 Self Comments', 'KPI 1 Mgr Rating', 'KPI 1 Mgr Comments',
@@ -132,7 +142,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       'Results Orientation Self', 'Results Orientation Mgr', 'Results Orientation Comments',
       'Ownership Self', 'Ownership Mgr', 'Ownership Comments',
       'IDP Staff Goals', 'IDP Assessor Roadmap',
-      'Staff Final Summary', 'Final Official Rating', 'Manager Executive Narrative'
+      'Staff Final Summary', 'Final Official Rating', 'Manager Executive Narrative',
+      'Reviewed At'
     ];
 
     const rows = completed.map(a => {
@@ -144,7 +155,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         a.managerName
       ];
 
-      // Add 5 KPIs (handle missing gracefully)
       for (let i = 0; i < 5; i++) {
         const k = a.kpis[i];
         if (k) {
@@ -154,19 +164,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         }
       }
 
-      // Add 6 Competencies
       a.coreCompetencies.forEach(c => {
         rowData.push(c.selfRating || 'N/A', c.managerRating || 'N/A', c.managerComments || '');
       });
 
-      // IDP
       rowData.push(a.developmentPlan.selfComments || '', a.developmentPlan.managerComments || '');
 
-      // Final Review
       rowData.push(
         a.overallPerformance.selfComments || '',
         a.overallPerformance.managerRating || 'N/A',
-        a.overallPerformance.managerComments || ''
+        a.overallPerformance.managerComments || '',
+        a.reviewedAt || 'N/A'
       );
 
       return rowData.map(val => {
@@ -187,8 +195,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const element = document.getElementById('appraisal-report');
     if (!element) return;
     setIsDownloading(true);
+    
     // @ts-ignore
-    html2pdf().set({ margin: 10, filename: `Appraisal_${name}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } }).from(element).save().then(() => setIsDownloading(false));
+    const opt = {
+      margin: 10,
+      filename: `Appraisal_${name.replace(/\s+/g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+
+    // @ts-ignore
+    html2pdf().set(opt).from(element).save().then(() => setIsDownloading(false));
   };
 
   if (selectedAssessment) {
@@ -199,11 +218,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <button onClick={() => setSelectedAssessment(null)} className="text-sm font-bold text-brand-600 hover:underline flex items-center gap-1">
             &larr; Back to Dashboard
           </button>
-          {isReviewed && (
-            <button onClick={() => handleDownloadPDF(selectedAssessment.employeeDetails.fullName)} disabled={isDownloading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50">
-              {isDownloading ? 'Preparing PDF...' : 'Download PDF'}
-            </button>
-          )}
+          <div className="flex gap-4 items-center">
+            {isReviewed && (
+              <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Record Locked
+              </span>
+            )}
+            {isReviewed && (
+              <button onClick={() => handleDownloadPDF(selectedAssessment.employeeDetails.fullName)} disabled={isDownloading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50">
+                {isDownloading ? 'Preparing PDF...' : 'Download PDF'}
+              </button>
+            )}
+          </div>
         </div>
         <AppraisalReport assessment={selectedAssessment} isEditable={!isReviewed} isDownloading={isDownloading} onUpdate={setSelectedAssessment} onFinalize={(final) => { onReviewComplete(final); setSelectedAssessment(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
       </div>
@@ -226,17 +253,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         {role === 'admin' && (
           <div className="flex flex-wrap gap-3">
-             {activeTab === 'management' && assessments.length > 0 && (
-               <button onClick={onForceSync} disabled={isSyncing} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${isSyncing ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                 {isSyncing ? (
-                    <>
-                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Syncing...
-                    </>
-                 ) : 'Force Cloud Sync'}
+             {activeTab === 'management' && (
+               <button onClick={handleDownloadBackup} title="Export entire system state as JSON" className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-2">
+                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                 System Backup
                </button>
              )}
-             <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export Assessments</button>
+             {activeTab === 'management' && assessments.length > 0 && (
+               <button onClick={onForceSync} disabled={isSyncing} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${isSyncing ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                 {isSyncing ? 'Syncing...' : 'Force Cloud Sync'}
+               </button>
+             )}
+             <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export Report</button>
              <button onClick={() => fileInputRef.current?.click()} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors">Upload Registry</button>
              <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} className="hidden" />
           </div>
@@ -248,9 +276,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Member</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Manager</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Security</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Assessment Score</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Score</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
             </tr>
           </thead>
@@ -264,9 +292,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
                   <p className="text-[11px] text-slate-400">{a.employeeDetails.email}</p>
                 </td>
-                <td className="px-8 py-6">
-                  <p className="text-xs font-bold text-slate-600">{a.managerName}</p>
-                  <p className="text-[10px] text-slate-400">{a.managerEmail}</p>
+                <td className="px-8 py-6 text-center">
+                   {a.status === 'reviewed' ? (
+                     <span className="inline-block" title="This record is finalized and cannot be edited.">
+                       <svg className="w-4 h-4 text-green-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                     </span>
+                   ) : (
+                     <svg className="w-4 h-4 text-slate-200 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
+                   )}
                 </td>
                 <td className="px-8 py-6">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${a.status === 'reviewed' ? 'bg-green-50 text-green-700 border-green-200' : a.status === 'submitted' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
@@ -287,7 +320,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <button onClick={() => setSelectedAssessment(a)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">
                       {a.status === 'draft' ? 'View Details' : a.status === 'reviewed' ? 'View Report' : 'Review & Rate'}
                     </button>
-                    {activeTab === 'management' && role === 'admin' && (
+                    {activeTab === 'management' && role === 'admin' && a.status === 'draft' && (
                       <button onClick={() => onDeleteAssessment(a.id)} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         Delete
                       </button>
@@ -296,13 +329,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </td>
               </tr>
             ))}
-            {filteredAssessments.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-8 py-20 text-center">
-                  <p className="text-slate-400 font-medium">No records found. {activeTab === 'management' ? 'Please upload your staff registry CSV.' : ''}</p>
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>

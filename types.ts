@@ -48,7 +48,7 @@ export interface Assessment {
   employeeDetails: EmployeeDetails;
   managerName: string;
   managerEmail: string;
-  managerPassword?: string; // New field for individual auth
+  managerPassword?: string;
   kpis: KPI[];
   developmentPlan: {
     competencies: string[];
@@ -64,4 +64,6 @@ export interface Assessment {
   };
   status: 'draft' | 'submitted' | 'reviewed';
   submittedAt?: string;
+  reviewedAt?: string;
+  updatedAt?: string;
 }

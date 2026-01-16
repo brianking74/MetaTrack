@@ -10,8 +10,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        
+        /* PDF and Print Specific Fixes */
         @media print {
             .no-print { display: none !important; }
+            .break-inside-avoid {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                display: block; /* Ensure it's not inline-flex or similar which can confuse break engines */
+            }
+        }
+        
+        /* Helper for the PDF generator to detect breaks even in preview mode */
+        .pdf-page-break-avoid {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
         }
     </style>
     <script>

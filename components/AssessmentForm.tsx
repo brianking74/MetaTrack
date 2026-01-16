@@ -22,12 +22,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   const [formData, setFormData] = useState<Assessment>(initialData || {
     id: Math.random().toString(36).substr(2, 9),
     employeeId: '',
-    employeeDetails: {
-      fullName: '',
-      position: '',
-      division: '',
-      email: '',
-    },
+    employeeDetails: { fullName: '', position: '', division: '', email: '' },
     kpis: INITIAL_KPIS,
     developmentPlan: { competencies: [], selfComments: '', managerComments: '' },
     coreCompetencies: CORE_COMPETENCIES,
@@ -35,8 +30,11 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     status: 'draft'
   });
 
+  const isReadOnly = formData.status !== 'draft';
+
   const saveToDraft = () => {
-    onSave(formData);
+    if (isReadOnly) return;
+    onSave({ ...formData, updatedAt: new Date().toISOString() });
   };
 
   const handleNext = () => {
@@ -49,6 +47,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   };
 
   const updateKPI = (id: string, updates: Partial<KPI>) => {
+    if (isReadOnly) return;
     setFormData(prev => ({
       ...prev,
       kpis: prev.kpis.map(k => k.id === id ? { ...k, ...updates } : k)
@@ -56,6 +55,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   };
 
   const updateCompetency = (id: string, updates: Partial<Competency>) => {
+    if (isReadOnly) return;
     setFormData(prev => ({
       ...prev,
       coreCompetencies: prev.coreCompetencies.map(c => c.id === id ? { ...c, ...updates } : c)
@@ -63,6 +63,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   };
 
   const handleDetailChange = (key: string, value: string) => {
+    if (isReadOnly) return;
     setFormData(prev => ({
       ...prev,
       employeeDetails: { ...prev.employeeDetails, [key]: value }
@@ -74,8 +75,8 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
       <select 
         value={currentRating || ''} 
         onChange={(e) => onChange(e.target.value as Rating)}
-        disabled={isDisabled}
-        className={`w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none ${isDisabled ? 'bg-slate-100 text-slate-500 cursor-not-allowed opacity-70' : 'bg-white'}`}
+        disabled={isDisabled || isReadOnly}
+        className={`w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none ${(isDisabled || isReadOnly) ? 'bg-slate-100 text-slate-500 cursor-not-allowed opacity-70' : 'bg-white'}`}
       >
         <option value="" disabled>Select Rating</option>
         {Object.values(Rating).map(r => (
@@ -98,7 +99,13 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* Progress Bar */}
+      {isReadOnly && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-3">
+          <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          <span className="text-xs font-bold text-amber-800 uppercase tracking-widest">Record Locked: Assessment has been submitted.</span>
+        </div>
+      )}
+      
       <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm font-medium text-slate-500">Stage {currentStage + 1} of {STAGES.length}</span>
@@ -113,7 +120,6 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
       </div>
 
       <div className="p-8">
-        {/* Stage 1: Overview */}
         {currentStage === 0 && (
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Employee Overview</h3>
@@ -126,9 +132,9 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   <input
                     type={key === 'email' ? 'email' : 'text'}
                     value={value}
-                    readOnly={key === 'email'}
+                    readOnly={key === 'email' || isReadOnly}
                     onChange={(e) => handleDetailChange(key, e.target.value)}
-                    className={`text-slate-700 font-medium bg-transparent border-none focus:ring-0 p-0 outline-none ${key === 'email' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    className={`text-slate-700 font-medium bg-transparent border-none focus:ring-0 p-0 outline-none ${(key === 'email' || isReadOnly) ? 'opacity-60 cursor-not-allowed' : ''}`}
                   />
                 </div>
               ))}
@@ -136,7 +142,6 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           </div>
         )}
 
-        {/* Stage 2: KPIs */}
         {currentStage === 1 && (
           <div className="space-y-16">
             {formData.kpis.map((kpi, idx) => (
@@ -147,7 +152,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 </div>
                 
                 <div className="mb-10">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 opacity-60">KPI Description / Expectations</span>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 opacity-60">KPI Description</span>
                   <div className="bg-white p-5 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-relaxed italic shadow-inner">
                     {kpi.description}
                   </div>
@@ -164,25 +169,11 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                       <SectionBadge text="Achievement Comments" />
                       <textarea 
                         value={kpi.selfComments || ''}
+                        readOnly={isReadOnly}
                         onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
-                        className="w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm"
+                        className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : ''}`}
                         placeholder="Describe your actual performance against this KPI..."
                       />
-                    </div>
-                  </div>
-
-                  {/* Assessor Feedback Section (Placeholder for Staff) */}
-                  <div className="pt-10 mt-10 border-t border-slate-200 opacity-60 grayscale bg-slate-100/50 p-6 rounded-[2rem]">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Manager Review (Placeholder)</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      <div className="space-y-4">
-                        <SectionBadge text="Assessor Rating" type="manager" />
-                        <div className="p-3 bg-white/50 border border-slate-200 rounded-lg text-xs text-slate-400 italic">Awaiting assessment...</div>
-                      </div>
-                      <div className="md:col-span-2 space-y-4">
-                        <SectionBadge text="Assessor Comments" type="manager" />
-                        <div className="p-4 bg-white/50 border border-slate-200 rounded-xl text-xs text-slate-400 italic min-h-[80px]">Evaluation will appear here during the review hub cycle.</div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -191,7 +182,6 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           </div>
         )}
 
-        {/* Stage 3: Development Plan */}
         {currentStage === 2 && (
           <div className="space-y-12">
             <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Individual Development</h3>
@@ -200,38 +190,22 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 <SectionBadge text="Staff Self-Reflection" />
                 <textarea 
                   value={formData.developmentPlan.selfComments}
+                  readOnly={isReadOnly}
                   onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: e.target.value } }))}
-                  className="w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm"
-                  placeholder="Reflect on your growth during this cycle. What skills did you acquire or enhance?"
+                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+                  placeholder="Reflect on your growth during this cycle..."
                 />
-              </div>
-
-              {/* Manager Feedback Section (Placeholder) */}
-              <div className="pt-8 border-t border-slate-100 opacity-60">
-                <SectionBadge text="Assessor Developmental Feedback" type="manager" />
-                <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl text-xs text-slate-400 italic">
-                  Manager evaluation and developmental roadmap will be provided here.
-                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Stage 4: Core Competencies */}
         {currentStage === 3 && (
           <div className="space-y-8">
             {formData.coreCompetencies.map((comp, idx) => (
               <div key={comp.id} className="p-8 bg-white rounded-[2rem] border border-slate-200 shadow-sm">
                 <h4 className="text-xl font-black text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
                 <p className="text-sm text-slate-500 mb-6 leading-relaxed">{comp.description}</p>
-                
-                <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100 shadow-inner">
-                  <span className="text-[9px] font-black text-slate-400 uppercase mb-3 block tracking-widest">Observable Indicators</span>
-                  <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-2">
-                    {comp.indicators.map((ind, i) => <li key={i}>{ind}</li>)}
-                  </ul>
-                </div>
-
                 <div className="max-w-md">
                   <SectionBadge text="Self-Rating" />
                   {renderRatingSelect(comp.selfRating, (r) => updateCompetency(comp.id, { selfRating: r }))}
@@ -241,53 +215,31 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           </div>
         )}
 
-        {/* Stage 5: Final Review */}
         {currentStage === 4 && (
           <div className="space-y-10">
              <div className="bg-brand-900 text-white p-10 rounded-[2.5rem] shadow-xl">
                <h3 className="text-2xl font-bold mb-3">Staff Submission Summary</h3>
-               <p className="text-sm opacity-80 leading-relaxed">Provide a final overview of your annual performance highlights. This serves as your executive statement to your manager.</p>
+               <p className="text-sm opacity-80 leading-relaxed">Provide a final overview of your annual performance highlights.</p>
              </div>
-
              <div className="space-y-8">
                 <div className="space-y-2">
                   <SectionBadge text="Overall Achievement Narrative" />
                   <textarea 
                     value={formData.overallPerformance.selfComments}
+                    readOnly={isReadOnly}
                     onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
-                    className="w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md"
-                    placeholder="Summarize your key highlights and achievements for the year..."
+                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+                    placeholder="Summarize your key highlights..."
                   />
                 </div>
-
                 <div className="max-w-md space-y-2">
                   <SectionBadge text="Suggested Performance Grade" />
                   {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
-                </div>
-
-                {/* Assessor Feedback Section (Placeholder for Stage 5) */}
-                <div className="pt-10 mt-10 border-t border-slate-200 opacity-60 grayscale bg-slate-50/50 p-8 rounded-[2.5rem]">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Official Assessor Final Assessment (Placeholder)</h4>
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <SectionBadge text="Assessor Appraisal Narrative" type="manager" />
-                      <div className="p-8 bg-white/50 border border-slate-200 rounded-[2rem] text-xs text-slate-400 italic min-h-[120px]">
-                        The manager's final appraisal narrative and executive summary will be recorded here during the review process.
-                      </div>
-                    </div>
-                    <div className="max-w-md space-y-2">
-                      <SectionBadge text="Final Official Performance Grade" type="manager" />
-                      <div className="p-3 bg-white/50 border border-slate-200 rounded-lg text-xs text-slate-400 italic">
-                        Agreed Result Pending...
-                      </div>
-                    </div>
-                  </div>
                 </div>
              </div>
           </div>
         )}
 
-        {/* Navigation Buttons */}
         <div className="mt-12 flex justify-between pt-8 border-t border-slate-100">
           <button 
             onClick={handlePrev}
@@ -300,19 +252,32 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           </button>
           
           <div className="flex gap-4">
-            <button 
-              onClick={saveToDraft}
-              className="px-8 py-3 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
-            >
-              Save Draft
-            </button>
-            {currentStage === STAGES.length - 1 ? (
+            {!isReadOnly && (
               <button 
-                onClick={() => onSubmit(formData)}
-                className="px-12 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all transform active:scale-95"
+                onClick={saveToDraft}
+                className="px-8 py-3 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
               >
-                Submit Now
+                Save Draft
               </button>
+            )}
+            {currentStage === STAGES.length - 1 ? (
+              !isReadOnly ? (
+                <button 
+                  onClick={() => {
+                    if (confirm("Once submitted, you cannot edit your self-appraisal. Proceed?")) {
+                      onSubmit({ ...formData, submittedAt: new Date().toISOString() });
+                    }
+                  }}
+                  className="px-12 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all transform active:scale-95"
+                >
+                  Submit Now
+                </button>
+              ) : (
+                <div className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-xs uppercase tracking-[0.2em] border flex items-center gap-2">
+                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                   Submitted
+                </div>
+              )
             ) : (
               <button 
                 onClick={handleNext}
