@@ -320,7 +320,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <button onClick={() => setSelectedAssessment(a)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">
                       {a.status === 'draft' ? 'View Details' : a.status === 'reviewed' ? 'View Report' : 'Review & Rate'}
                     </button>
-                    {activeTab === 'management' && role === 'admin' && a.status === 'draft' && (
+                    {role === 'admin' && (
                       <button onClick={() => onDeleteAssessment(a.id)} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         Delete
                       </button>
