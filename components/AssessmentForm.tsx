@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Assessment, Rating, KPI, Competency } from '../types.ts';
 import { RATING_DESCRIPTIONS, INITIAL_KPIS, CORE_COMPETENCIES } from '../constants.ts';
 
@@ -29,6 +29,11 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     overallPerformance: { selfComments: '', managerComments: '' },
     status: 'draft'
   });
+
+  // Ensure user is scrolled to top when switching stages
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStage]);
 
   const isReadOnly = formData.status !== 'draft';
 

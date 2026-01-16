@@ -23,6 +23,11 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
 
+  // Ensure page starts at top on role change (login/logout)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [role]);
+
   useEffect(() => {
     const initApp = async () => {
       setIsLoading(true);

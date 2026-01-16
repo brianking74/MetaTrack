@@ -175,7 +175,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   <button onClick={() => {
                     if(!assessment.overallPerformance.managerRating) return alert("Final grade required.");
                     if(confirm("FINAL ACTION: Completing this review will lock the record forever. Are you sure?")) onFinalize?.({...assessment, status: 'reviewed'});
-                  }} className="bg-brand-600 text-white px-14 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete & Lock Review</button>
+                  }} className="bg-brand-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete Review</button>
                 </div>
               </div>
             ) : (
