@@ -270,6 +270,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Member</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Assessor</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Score</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
@@ -284,6 +285,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <td className="px-8 py-6">
                   <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
                   <p className="text-[11px] text-slate-400">{a.employeeDetails.email}</p>
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-sm font-medium text-slate-600">{a.managerName}</p>
+                  <p className="text-[11px] text-slate-400">{a.managerEmail}</p>
                 </td>
                 <td className="px-8 py-6">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${a.status === 'reviewed' ? 'bg-green-50 text-green-700 border-green-200' : a.status === 'submitted' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
