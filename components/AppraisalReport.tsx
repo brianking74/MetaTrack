@@ -170,12 +170,33 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         <section className="break-inside-avoid">
           <SectionTitle>Executive Summary & Final Grade</SectionTitle>
           <div className="space-y-12">
-            <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic">
-              "{assessment.overallPerformance.selfComments || 'No summary provided.'}"
+            <div className="space-y-4">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Summary</span>
+              <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic">
+                "{assessment.overallPerformance.selfComments || 'No summary provided.'}"
+              </div>
             </div>
+
+            {!isEditable && (
+              <div className="space-y-4">
+                <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Assessor Evaluation</span>
+                <div className="p-8 bg-brand-50 rounded-[2.5rem] border border-brand-100 text-sm font-medium text-slate-800">
+                  {assessment.overallPerformance.managerComments || 'No manager narrative provided.'}
+                </div>
+              </div>
+            )}
+
             {isEditable ? (
               <div className="bg-brand-50 p-10 rounded-[3rem] border-2 border-brand-100 flex flex-col gap-10">
-                <textarea value={assessment.overallPerformance.managerComments || ''} onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}})} className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg" placeholder="Final evaluation..." />
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Assessor Narrative</span>
+                  <textarea 
+                    value={assessment.overallPerformance.managerComments || ''} 
+                    onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}})} 
+                    className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg" 
+                    placeholder="Enter final executive evaluation..." 
+                  />
+                </div>
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-6 border-t border-brand-200">
                   <div className="flex-1 w-full">
                     <select value={assessment.overallPerformance.managerRating || ''} onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerRating: e.target.value as Rating}})} className="w-full bg-white p-4 rounded-xl border font-bold">
@@ -201,9 +222,6 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                  <div className="flex-1 flex items-center justify-end gap-8">
                     <div className="hidden md:block w-px h-8 bg-slate-700 opacity-50"></div>
                     <div className="text-right flex flex-col justify-center gap-1">
-                       <p className="text-xs text-slate-300 italic font-medium leading-relaxed max-w-[240px] truncate">
-                         {assessment.overallPerformance.managerComments || 'Approved'}
-                       </p>
                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 whitespace-nowrap">Reviewed & Archived</p>
                     </div>
                  </div>
