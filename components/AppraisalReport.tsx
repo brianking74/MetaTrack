@@ -174,24 +174,27 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   </div>
                   <button onClick={() => {
                     if(!assessment.overallPerformance.managerRating) return alert("Final grade required.");
-                    if(confirm("FINAL ACTION: Completing this review will lock the record forever. Are you sure?")) onFinalize?.({...assessment, status: 'reviewed'});
+                    if(confirm("Submit and finalize this review?")) onFinalize?.({...assessment, status: 'reviewed'});
                   }} className="bg-brand-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete Review</button>
                 </div>
               </div>
             ) : (
-              <div className="p-6 md:p-10 bg-[#0f172a] text-white rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl print:bg-[#0f172a] print:text-white relative break-inside-avoid overflow-hidden">
-                 <div className="flex items-center gap-6 flex-1 min-w-0">
-                    <span className="text-[10px] font-black text-[#d58f5c] uppercase tracking-widest flex-shrink-0 leading-none">Final Result</span>
-                    <span className="text-3xl md:text-5xl font-black leading-tight truncate">
+              <div className="p-6 md:p-8 bg-[#0f172a] text-white rounded-[2rem] flex flex-row items-center justify-between gap-8 shadow-2xl print:bg-[#0f172a] print:text-white relative break-inside-avoid overflow-hidden">
+                 <div className="flex items-center gap-8 flex-shrink-0">
+                    <span className="text-[10px] font-black text-[#d58f5c] uppercase tracking-widest leading-none">Final Result</span>
+                    <span className="text-sm font-black leading-none whitespace-nowrap">
                       {assessment.overallPerformance.managerRating || 'PENDING'}
                     </span>
                  </div>
-                 <div className="hidden md:block w-px h-16 bg-slate-700 opacity-50"></div>
-                 <div className="md:w-1/3 text-right flex flex-col justify-center gap-1">
-                    <p className="text-xs text-slate-300 italic font-medium leading-relaxed truncate">
-                      {assessment.overallPerformance.managerComments || 'Reviewed.'}
-                    </p>
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">Reviewed & Archived</p>
+                 
+                 <div className="flex-1 flex items-center justify-end gap-8">
+                    <div className="hidden md:block w-px h-8 bg-slate-700 opacity-50"></div>
+                    <div className="text-right flex flex-col justify-center gap-1">
+                       <p className="text-xs text-slate-300 italic font-medium leading-relaxed max-w-[240px] truncate">
+                         {assessment.overallPerformance.managerComments || 'Approved'}
+                       </p>
+                       <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 whitespace-nowrap">Reviewed & Archived</p>
+                    </div>
                  </div>
               </div>
             )}

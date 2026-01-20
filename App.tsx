@@ -194,7 +194,7 @@ const App: React.FC = () => {
             const final = { ...upd, reviewedAt: new Date().toISOString(), status: 'reviewed' as const };
             const n = assessments.map(a => a.id === upd.id ? final : a); 
             setAssessments(n); 
-            syncToCloud(n).then((s) => s && alert("Assessment Finalized and Locked.")); 
+            syncToCloud(n).then((s) => s && alert("Assessment Finalized.")); 
           }} 
           onBulkUpload={handleBulkUpload} 
           onDeleteAssessment={(id) => { 

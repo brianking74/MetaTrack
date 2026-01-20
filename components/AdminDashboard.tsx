@@ -220,12 +220,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
           <div className="flex gap-4 items-center">
             {isReviewed && (
-              <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full border">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                Record Locked
-              </span>
-            )}
-            {isReviewed && (
               <button onClick={() => handleDownloadPDF(selectedAssessment.employeeDetails.fullName)} disabled={isDownloading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50">
                 {isDownloading ? 'Preparing PDF...' : 'Download PDF'}
               </button>
@@ -276,7 +270,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Member</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Security</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Score</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
@@ -291,15 +284,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <td className="px-8 py-6">
                   <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
                   <p className="text-[11px] text-slate-400">{a.employeeDetails.email}</p>
-                </td>
-                <td className="px-8 py-6 text-center">
-                   {a.status === 'reviewed' ? (
-                     <span className="inline-block" title="This record is finalized and cannot be edited.">
-                       <svg className="w-4 h-4 text-green-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                     </span>
-                   ) : (
-                     <svg className="w-4 h-4 text-slate-200 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
-                   )}
                 </td>
                 <td className="px-8 py-6">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${a.status === 'reviewed' ? 'bg-green-50 text-green-700 border-green-200' : a.status === 'submitted' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
