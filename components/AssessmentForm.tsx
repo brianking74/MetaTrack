@@ -19,12 +19,16 @@ const STAGES = [
 
 const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, onSubmit }) => {
   const [currentStage, setCurrentStage] = useState(0);
+  // Initializing state with default values if initialData is not provided.
+  // Fixed: Added missing managerName and managerEmail fields and cast empty competencies array to string[].
   const [formData, setFormData] = useState<Assessment>(initialData || {
     id: Math.random().toString(36).substr(2, 9),
     employeeId: '',
     employeeDetails: { fullName: '', position: '', division: '', email: '' },
+    managerName: '',
+    managerEmail: '',
     kpis: INITIAL_KPIS,
-    developmentPlan: { competencies: [], selfComments: '', managerComments: '' },
+    developmentPlan: { competencies: [] as string[], selfComments: '', managerComments: '' },
     coreCompetencies: CORE_COMPETENCIES,
     overallPerformance: { selfComments: '', managerComments: '' },
     status: 'draft'

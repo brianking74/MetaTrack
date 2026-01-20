@@ -176,27 +176,10 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           <SectionTitle colorClass="border-blue-500">Individual Development</SectionTitle>
           <div className="space-y-8">
             <div className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-4">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Reflection</span>
-                    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 text-sm text-slate-700 italic leading-relaxed min-h-[160px]">
-                      {assessment.developmentPlan.selfComments ? `"${assessment.developmentPlan.selfComments}"` : ""}
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Assessor Development Roadmap</span>
-                    {!isEditable ? (
-                      <div className="bg-brand-50 p-8 rounded-[2rem] border border-brand-100 text-sm font-medium text-slate-800 min-h-[160px]">
-                        {assessment.developmentPlan.managerComments || ''}
-                      </div>
-                    ) : (
-                      <textarea 
-                        value={assessment.developmentPlan.managerComments || ''} 
-                        onChange={(e) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: e.target.value}})} 
-                        className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-[160px] focus:ring-2 focus:ring-brand-500 shadow-sm" 
-                        placeholder="Define growth areas and training objectives..." 
-                      />
-                    )}
+               <div className="space-y-4">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Reflection</span>
+                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 text-sm text-slate-700 italic leading-relaxed min-h-[120px]">
+                    {assessment.developmentPlan.selfComments ? `"${assessment.developmentPlan.selfComments}"` : ""}
                   </div>
                </div>
             </div>

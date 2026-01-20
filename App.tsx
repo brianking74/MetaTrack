@@ -179,7 +179,8 @@ const App: React.FC = () => {
             initialData={currentAssessment} 
             onSave={(d) => { const n = assessments.map(a => a.id === d.id ? { ...d, updatedAt: new Date().toISOString() } : a); setAssessments(n); syncToCloud(n); }} 
             onSubmit={(d) => { 
-              const n = assessments.map(a => a.id === d.id ? {...d, status: 'submitted', submittedAt: new Date().toISOString()} : a); 
+              // Fixed: Added 'as const' to status to satisfy the Assessment interface and fixed explicit array type.
+              const n: Assessment[] = assessments.map(a => a.id === d.id ? {...d, status: 'submitted' as const, submittedAt: new Date().toISOString()} : a); 
               setAssessments(n); 
               syncToCloud(n).then((s) => s && (confetti(), alert("Assessment submitted successfully!"))); 
             }} 
