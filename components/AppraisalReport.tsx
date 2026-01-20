@@ -85,9 +85,20 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
             )}
           </div>
           <div className="space-y-16">
-            {assessment.kpis.map((kpi) => (
+            {assessment.kpis.map((kpi, idx) => (
               <div key={kpi.id} className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100 break-inside-avoid">
-                <h5 className="text-2xl font-black text-slate-900 mb-6">{kpi.title}</h5>
+                <div className="flex justify-between items-start mb-4">
+                  <h5 className="text-2xl font-black text-slate-900">{kpi.title}</h5>
+                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Goal {idx + 1}</span>
+                </div>
+                
+                <div className="mb-10">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-2 opacity-60">KPI Description</span>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-relaxed italic shadow-inner">
+                    {kpi.description}
+                  </div>
+                </div>
+
                 <div className="space-y-10">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-2">
