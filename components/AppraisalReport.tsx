@@ -75,6 +75,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
       </div>
 
       <div className="space-y-24">
+        {/* KPIs Section */}
         <section>
           <div className="flex justify-between items-center mb-8">
             <SectionTitle>Key Performance Indicators</SectionTitle>
@@ -135,6 +136,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           </div>
         </section>
 
+        {/* Competencies Section */}
         <section>
           <SectionTitle colorClass="border-slate-400">Core Competencies</SectionTitle>
           <div className="space-y-12">
@@ -167,19 +169,60 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           </div>
         </section>
 
+        {/* Individual Development Section */}
+        <section className="break-inside-avoid">
+          <SectionTitle colorClass="border-blue-500">Individual Development</SectionTitle>
+          <div className="space-y-8">
+            <div className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Reflection</span>
+                    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 text-sm text-slate-700 italic leading-relaxed min-h-[160px]">
+                      "{assessment.developmentPlan.selfComments || 'No reflection provided.'}"
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Assessor Development Roadmap</span>
+                    {!isEditable ? (
+                      <div className="bg-brand-50 p-8 rounded-[2rem] border border-brand-100 text-sm font-medium text-slate-800 min-h-[160px]">
+                        {assessment.developmentPlan.managerComments || 'No development plan provided.'}
+                      </div>
+                    ) : (
+                      <textarea 
+                        value={assessment.developmentPlan.managerComments || ''} 
+                        onChange={(e) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: e.target.value}})} 
+                        className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-[160px] focus:ring-2 focus:ring-brand-500 shadow-sm" 
+                        placeholder="Define growth areas and training objectives..." 
+                      />
+                    )}
+                  </div>
+               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Executive Summary Section */}
         <section className="break-inside-avoid">
           <SectionTitle>Executive Summary & Final Grade</SectionTitle>
           <div className="space-y-12">
-            <div className="space-y-4">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Summary</span>
-              <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic">
-                "{assessment.overallPerformance.selfComments || 'No summary provided.'}"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Summary Narrative</span>
+                <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic">
+                  "{assessment.overallPerformance.selfComments || 'No summary provided.'}"
+                </div>
+              </div>
+              <div className="space-y-4">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Suggested Grade</span>
+                <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm font-bold text-slate-600 flex items-center justify-center">
+                  {assessment.overallPerformance.selfRating || 'No suggestion provided'}
+                </div>
               </div>
             </div>
 
             {!isEditable && (
               <div className="space-y-4">
-                <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Assessor Evaluation</span>
+                <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Assessor Full Evaluation</span>
                 <div className="p-8 bg-brand-50 rounded-[2.5rem] border border-brand-100 text-sm font-medium text-slate-800">
                   {assessment.overallPerformance.managerComments || 'No manager narrative provided.'}
                 </div>
@@ -189,7 +232,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
             {isEditable ? (
               <div className="bg-brand-50 p-10 rounded-[3rem] border-2 border-brand-100 flex flex-col gap-10">
                 <div className="space-y-2">
-                  <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Assessor Narrative</span>
+                  <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Assessor Final Narrative</span>
                   <textarea 
                     value={assessment.overallPerformance.managerComments || ''} 
                     onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}})} 
