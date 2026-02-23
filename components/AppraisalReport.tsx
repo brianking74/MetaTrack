@@ -100,6 +100,15 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   </div>
                 </div>
 
+                {kpi.midYearSelfComments && (
+                  <div className="mb-10">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-2">Mid-Year Review</span>
+                    <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-relaxed italic">
+                      "{kpi.midYearSelfComments}"
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-10">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-2">
@@ -175,6 +184,16 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         <section className="break-inside-avoid">
           <SectionTitle colorClass="border-blue-500">Individual Development</SectionTitle>
           <div className="space-y-8">
+            {assessment.developmentPlan.midYearSelfComments && (
+              <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100">
+                 <div className="space-y-4">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Reflection</span>
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-relaxed min-h-[80px]">
+                      "{assessment.developmentPlan.midYearSelfComments}"
+                    </div>
+                 </div>
+              </div>
+            )}
             <div className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                <div className="space-y-4">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Reflection</span>
@@ -190,9 +209,19 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         <section className="break-inside-avoid">
           <SectionTitle>Executive Summary & Final Grade</SectionTitle>
           <div className="space-y-12">
+            {assessment.overallPerformance.midYearSelfComments && (
+              <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100">
+                 <div className="space-y-4">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Summary</span>
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-relaxed">
+                      "{assessment.overallPerformance.midYearSelfComments}"
+                    </div>
+                 </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Summary Narrative</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Summary</span>
                 <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic">
                    {assessment.overallPerformance.selfComments ? `"${assessment.overallPerformance.selfComments}"` : ""}
                 </div>
@@ -217,7 +246,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
             {isEditable ? (
               <div className="bg-brand-50 p-10 rounded-[3rem] border-2 border-brand-100 flex flex-col gap-10">
                 <div className="space-y-2">
-                  <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Assessor Final Narrative</span>
+                  <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Assessor Final Summary</span>
                   <textarea 
                     value={assessment.overallPerformance.managerComments || ''} 
                     onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}})} 

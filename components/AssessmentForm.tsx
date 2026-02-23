@@ -40,6 +40,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   }, [currentStage]);
 
   const isReadOnly = formData.status !== 'draft';
+  const isMidYearReadOnly = isReadOnly || formData.midYearStatus === 'submitted';
 
   const saveToDraft = () => {
     if (isReadOnly) return;
@@ -159,6 +160,25 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                     {kpi.description}
                   </div>
                 </div>
+
+                <div className="mb-10 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <SectionBadge text="Mid-Year Review" />
+                    {formData.midYearStatus === 'submitted' && (
+                      <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        Locked
+                      </span>
+                    )}
+                  </div>
+                  <textarea 
+                    value={kpi.midYearSelfComments || ''}
+                    readOnly={isMidYearReadOnly}
+                    onChange={(e) => updateKPI(kpi.id, { midYearSelfComments: e.target.value })}
+                    className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-24 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                    placeholder="Enter your mid-year progress comments here..."
+                  />
+                </div>
                 
                 <div className="space-y-10">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 border-b pb-2">Annual Self-Appraisal</h4>
@@ -188,6 +208,24 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           <div className="space-y-12">
             <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Individual Development</h3>
             <div className="space-y-8">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <SectionBadge text="Mid-Year Review" />
+                  {formData.midYearStatus === 'submitted' && (
+                    <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      Locked
+                    </span>
+                  )}
+                </div>
+                <textarea 
+                  value={formData.developmentPlan.midYearSelfComments || ''}
+                  readOnly={isMidYearReadOnly}
+                  onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, midYearSelfComments: e.target.value } }))}
+                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                  placeholder="Mid-year growth reflection..."
+                />
+              </div>
               <div className="space-y-2">
                 <SectionBadge text="Staff Self-Reflection" />
                 <textarea 
@@ -225,6 +263,24 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
              </div>
              <div className="space-y-8">
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <SectionBadge text="Mid-Year Review Summary" />
+                    {formData.midYearStatus === 'submitted' && (
+                      <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        Locked
+                      </span>
+                    )}
+                  </div>
+                  <textarea 
+                    value={formData.overallPerformance.midYearSelfComments || ''}
+                    readOnly={isMidYearReadOnly}
+                    onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, midYearSelfComments: e.target.value } }))}
+                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-md ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                    placeholder="Mid-year summary of achievements..."
+                  />
+                </div>
+                <div className="space-y-2">
                   <SectionBadge text="Overall Achievement Narrative" />
                   <textarea 
                     value={formData.overallPerformance.selfComments}
@@ -255,12 +311,33 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           
           <div className="flex gap-4">
             {!isReadOnly && (
-              <button 
-                onClick={saveToDraft}
-                className="px-8 py-3 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
-              >
-                Save Draft
-              </button>
+              <>
+                {formData.midYearStatus !== 'submitted' && (
+                  <button 
+                    onClick={() => {
+                      if (confirm("Submit your Mid-Year Review? This will lock the mid-year sections but allow you to continue with the annual appraisal later.")) {
+                        const updated = { 
+                          ...formData, 
+                          midYearStatus: 'submitted' as const, 
+                          midYearSubmittedAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString() 
+                        };
+                        setFormData(updated);
+                        onSave(updated);
+                      }
+                    }}
+                    className="px-8 py-3 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                  >
+                    Submit Mid-Year
+                  </button>
+                )}
+                <button 
+                  onClick={saveToDraft}
+                  className="px-8 py-3 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                >
+                  Save Draft
+                </button>
+              </>
             )}
             {currentStage === STAGES.length - 1 ? (
               !isReadOnly ? (

@@ -2,12 +2,12 @@
 import { Rating, Competency, KPI, Assessment } from './types.ts';
 
 export const RATING_DESCRIPTIONS: Record<Rating, string> = {
-  [Rating.NA]: 'Not Applicable to the current review cycle or role requirements.',
-  [Rating.OUTSTANDING]: 'The actual performance far exceeded the requirements of all acknowledged KPIs.',
-  [Rating.EXCEEDS]: 'The actual performance exceeded the requirements of all acknowledged KPIs.',
-  [Rating.MEETS]: 'The actual performance met the requirements of all acknowledged KPIs.',
-  [Rating.PARTIALLY_MEETS]: 'The actual performance met the requirements of some of the acknowledged KPIs.',
-  [Rating.NOT_MET]: 'The actual performance was significantly below the requirements of the acknowledged KPIs.'
+  [Rating.SEE]: "Individual's results have significantly surpassed agreed goals, performance and contribution expectations.",
+  [Rating.EE]: "Individual's results have more than achieved agreed goals, performance and contribution expectations.",
+  [Rating.ME]: "Individual's results have achieved agreed goals, performance and contribution expectations.",
+  [Rating.MSE]: "Individual's results are mixed but have achieved some agreed goals, performance and contribution expectations. Further development is necessary and improvements are expected.",
+  [Rating.BE]: "Individual's results did not achieve a majority of agreed goals, performance and contribution expectations.",
+  [Rating.NA]: "(If none of the ratings apply, select N/A)"
 };
 
 export const CORE_COMPETENCIES: Competency[] = [

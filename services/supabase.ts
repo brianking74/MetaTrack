@@ -13,16 +13,21 @@ const supabase = isConfigured() ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
 
 export const supabaseService = {
   async checkConnection(): Promise<{ success: boolean; error?: string }> {
-    if (!supabase) return { success: false, error: 'Supabase URL or Key is missing.' };
+    if (!supabase) return { success: false, error: 'Supabase configuration is missing.' };
     try {
+      // Test the connection by selecting a single row
       const { error } = await supabase.from('assessments').select('id').limit(1);
+      
       if (error) {
-        if (error.code === '42P01') return { success: false, error: 'Table "assessments" not found. Please run the updated SQL script.' };
-        if (error.code === 'PGRST204') return { success: false, error: 'Database schema cache is stale. Run the SQL script again to refresh it.' };
+        if (error.code === 'PGRST301') return { success: false, error: 'Database project is likely paused or key is invalid.' };
         return { success: false, error: error.message };
       }
       return { success: true };
     } catch (err: any) {
+      // This is where "Failed to fetch" usually originates
+      if (err.message === 'Failed to fetch') {
+        return { success: false, error: 'Network Error: Cannot reach Supabase. Your project might be paused or blocked by an ad-blocker.' };
+      }
       return { success: false, error: err.message };
     }
   },
@@ -58,17 +63,17 @@ export const supabaseService = {
 
       if (error) {
         console.error('[Supabase] Sync Error:', error);
-        // If we get a column error, suggest the fix
-        if (error.message.includes('updated_at')) {
-          return { success: false, error: 'Column "updated_at" missing in database. Please run the "Clean Reset" SQL script in Supabase.' };
-        }
         return { success: false, error: `${error.code}: ${error.message}` };
       }
       
       return { success: true };
     } catch (err: any) {
       console.error('[Supabase] Fatal Sync Error:', err);
-      return { success: false, error: err.message };
+      // Clean up the error message for the user
+      const userError = err.message === 'Failed to fetch' 
+        ? 'Network Error: Connection to Database failed. Please check if your Supabase project is paused or if you are offline.'
+        : err.message;
+      return { success: false, error: userError };
     }
   },
 

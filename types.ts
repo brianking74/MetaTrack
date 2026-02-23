@@ -1,11 +1,11 @@
 
 export enum Rating {
-  NA = 'N/A - Not Applicable',
-  OUTSTANDING = '1 - Outstanding',
-  EXCEEDS = '2 - Exceeds requirements',
-  MEETS = '3 - Meets requirements',
-  PARTIALLY_MEETS = '4 - Partially meets requirements',
-  NOT_MET = '5 - Requirements not met'
+  SEE = '(1) SEE - Substantially Exceeding Expectations',
+  EE = '(2) EE - Exceeding Expectations',
+  ME = '(3) ME - Meeting Expectations',
+  MSE = '(4) MSE - Meeting Some Expectations',
+  BE = '(5) BE - Below Expectations',
+  NA = '(6) N/A - Not Applicable'
 }
 
 export type RoleType = 'staff' | 'manager' | 'admin';
@@ -33,6 +33,7 @@ export interface Competency {
   selfRating?: Rating;
   managerRating?: Rating;
   managerComments?: string;
+  midYearSelfComments?: string;
 }
 
 export interface EmployeeDetails {
@@ -54,6 +55,7 @@ export interface Assessment {
     competencies: string[];
     selfComments: string;
     managerComments?: string;
+    midYearSelfComments?: string;
   };
   coreCompetencies: Competency[];
   overallPerformance: {
@@ -61,8 +63,11 @@ export interface Assessment {
     selfComments: string;
     managerRating?: Rating;
     managerComments: string;
+    midYearSelfComments?: string;
   };
   status: 'draft' | 'submitted' | 'reviewed';
+  midYearStatus?: 'draft' | 'submitted';
+  midYearSubmittedAt?: string;
   submittedAt?: string;
   reviewedAt?: string;
   updatedAt?: string;

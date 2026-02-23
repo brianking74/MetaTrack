@@ -17,13 +17,13 @@ const App: React.FC = () => {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [dbStatus, setDbStatus] = useState<{ connected: boolean; error?: string }>({ connected: true });
   
   const [staffEmailInput, setStaffEmailInput] = useState("");
   const [assessorEmailInput, setAssessorEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
 
-  // Ensure page starts at top on role change (login/logout)
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [role]);
@@ -31,9 +31,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const initApp = async () => {
       setIsLoading(true);
+      
+      // Check database connection first
+      const conn = await supabaseService.checkConnection();
+      setDbStatus({ connected: conn.success, error: conn.error });
+      
       const data = await supabaseService.getAllAssessments();
       if (data && data.length > 0) {
         setAssessments(data);
+        localStorage.setItem('metabev-assessments-v2', JSON.stringify(data));
       } else {
         const saved = localStorage.getItem('metabev-assessments-v2');
         if (saved) { try { setAssessments(JSON.parse(saved)); } catch (e) {} }
@@ -80,7 +86,10 @@ const App: React.FC = () => {
     const result = await supabaseService.bulkSaveAssessments(updatedAssessments);
     setIsSyncing(false);
     if (!result.success) {
-      alert(`Database Sync Failed: ${result.error}\n\nData is saved locally in your browser but NOT in the cloud.`);
+      setDbStatus({ connected: false, error: result.error });
+      alert(`Cloud Sync Error:\n\n${result.error}\n\nDon't worry, your work is still saved in this browser's local memory. You can try again later.`);
+    } else {
+      setDbStatus({ connected: true });
     }
     return result.success;
   };
@@ -109,7 +118,22 @@ const App: React.FC = () => {
 
   if (!role) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 sm:p-12">
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 sm:p-12">
+        {!dbStatus.connected && (
+          <div className="w-full max-w-5xl mb-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-2xl shadow-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-amber-700 font-bold">Cloud Database Unavailable</p>
+                <p className="text-xs text-amber-600 mt-1">{dbStatus.error || 'The system could not connect to the cloud server. Changes will be saved locally in your browser.'}</p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] overflow-hidden flex flex-col md:flex-row min-h-[640px]">
           <div className="bg-[#0f172a] md:w-5/12 p-16 text-white flex flex-col justify-between relative overflow-hidden group">
             <div className="absolute top-[-20%] left-[-20%] w-[150%] h-[150%] opacity-20 pointer-events-none">
@@ -179,7 +203,6 @@ const App: React.FC = () => {
             initialData={currentAssessment} 
             onSave={(d) => { const n = assessments.map(a => a.id === d.id ? { ...d, updatedAt: new Date().toISOString() } : a); setAssessments(n); syncToCloud(n); }} 
             onSubmit={(d) => { 
-              // Fixed: Added 'as const' to status to satisfy the Assessment interface and fixed explicit array type.
               const n: Assessment[] = assessments.map(a => a.id === d.id ? {...d, status: 'submitted' as const, submittedAt: new Date().toISOString()} : a); 
               setAssessments(n); 
               syncToCloud(n).then((s) => s && (confetti(), alert("Assessment submitted successfully!"))); 

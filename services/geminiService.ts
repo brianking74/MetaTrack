@@ -19,6 +19,14 @@ export const analyzeAssessment = async (assessment: Assessment): Promise<string>
         2. Potential areas for development.
         3. A suggested overall rating based on the provided evidence.
 
+        The rating scale is:
+        - SEE: Substantially Exceeding Expectations (Significantly surpassed goals)
+        - EE: Exceeding Expectations (More than achieved goals)
+        - ME: Meeting Expectations (Achieved goals)
+        - MSE: Meeting Some Expectations (Mixed results, achieved some goals)
+        - BE: Below Expectations (Did not achieve majority of goals)
+        - N/A: Not Applicable
+
         Employee Data:
         KPIs: ${JSON.stringify(assessment.kpis.map(k => ({ title: k.title, selfRating: k.selfRating, selfComments: k.selfComments })))}
         Development Plan: ${assessment.developmentPlan.selfComments}
