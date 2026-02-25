@@ -41,6 +41,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
   const isReadOnly = formData.status !== 'draft';
   const isMidYearReadOnly = isReadOnly || formData.midYearStatus === 'submitted';
+  const isFinalReviewReadOnly = isReadOnly || formData.midYearStatus !== 'submitted';
 
   const saveToDraft = () => {
     if (isReadOnly) return;
@@ -181,20 +182,20 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 </div>
                 
                 <div className="space-y-10">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 border-b pb-2">Annual Self-Appraisal</h4>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 border-b pb-2">Final Review</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-4">
                       <SectionBadge text="Self Rating" />
-                      {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }))}
+                      {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }), isFinalReviewReadOnly)}
                     </div>
                     <div className="md:col-span-2 space-y-4">
                       <SectionBadge text="Achievement Comments" />
                       <textarea 
                         value={kpi.selfComments || ''}
-                        readOnly={isReadOnly}
+                        readOnly={isFinalReviewReadOnly}
                         onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
-                        className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : ''}`}
-                        placeholder="Describe your actual performance against this KPI..."
+                        className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
+                        placeholder={isFinalReviewReadOnly && formData.midYearStatus !== 'submitted' ? "Locked until Mid-Year is submitted..." : "Describe your actual performance against this KPI..."}
                       />
                     </div>
                   </div>
@@ -222,7 +223,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   value={formData.developmentPlan.midYearSelfComments || ''}
                   readOnly={isMidYearReadOnly}
                   onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, midYearSelfComments: e.target.value } }))}
-                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
                   placeholder="Mid-year growth reflection..."
                 />
               </div>
@@ -230,10 +231,10 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 <SectionBadge text="Staff Self-Reflection" />
                 <textarea 
                   value={formData.developmentPlan.selfComments}
-                  readOnly={isReadOnly}
+                  readOnly={isFinalReviewReadOnly}
                   onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: e.target.value } }))}
-                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : ''}`}
-                  placeholder="Reflect on your growth during this cycle..."
+                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
+                  placeholder={isFinalReviewReadOnly && formData.midYearStatus !== 'submitted' ? "Locked until Mid-Year is submitted..." : "Reflect on your growth during this cycle..."}
                 />
               </div>
             </div>
@@ -246,9 +247,9 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
               <div key={comp.id} className="p-8 bg-white rounded-[2rem] border border-slate-200 shadow-sm">
                 <h4 className="text-xl font-black text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
                 <p className="text-sm text-slate-500 mb-6 leading-relaxed">{comp.description}</p>
-                <div className="max-w-md">
+                <div className={`max-w-md ${isFinalReviewReadOnly ? 'opacity-50 grayscale' : ''}`}>
                   <SectionBadge text="Self-Rating" />
-                  {renderRatingSelect(comp.selfRating, (r) => updateCompetency(comp.id, { selfRating: r }))}
+                  {renderRatingSelect(comp.selfRating, (r) => updateCompetency(comp.id, { selfRating: r }), isFinalReviewReadOnly)}
                 </div>
               </div>
             ))}
@@ -276,7 +277,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                     value={formData.overallPerformance.midYearSelfComments || ''}
                     readOnly={isMidYearReadOnly}
                     onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, midYearSelfComments: e.target.value } }))}
-                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-md ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-md ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
                     placeholder="Mid-year summary of achievements..."
                   />
                 </div>
@@ -284,15 +285,15 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   <SectionBadge text="Overall Achievement Narrative" />
                   <textarea 
                     value={formData.overallPerformance.selfComments}
-                    readOnly={isReadOnly}
+                    readOnly={isFinalReviewReadOnly}
                     onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
-                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : ''}`}
-                    placeholder="Summarize your key highlights..."
+                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
+                    placeholder={isFinalReviewReadOnly && formData.midYearStatus !== 'submitted' ? "Locked until Mid-Year is submitted..." : "Summarize your key highlights..."}
                   />
                 </div>
-                <div className="max-w-md space-y-2">
+                <div className={`max-w-md space-y-2 ${isFinalReviewReadOnly ? 'opacity-50 grayscale' : ''}`}>
                   <SectionBadge text="Suggested Performance Grade" />
-                  {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
+                  {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })), isFinalReviewReadOnly)}
                 </div>
              </div>
           </div>
@@ -312,7 +313,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           <div className="flex gap-4">
             {!isReadOnly && (
               <>
-                {formData.midYearStatus !== 'submitted' && (
+                {formData.midYearStatus !== 'submitted' && currentStage === STAGES.length - 1 && (
                   <button 
                     onClick={() => {
                       if (confirm("Submit your Mid-Year Review? This will lock the mid-year sections but allow you to continue with the annual appraisal later.")) {
