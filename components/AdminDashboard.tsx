@@ -39,7 +39,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     ? assessments 
     : assessments.filter(a => a.managerEmail.toLowerCase().trim() === currentUserEmail.toLowerCase().trim());
 
-  const submissionsCount = filteredAssessments.filter(a => a.status !== 'draft').length;
+  const submissionsCount = filteredAssessments.filter(a => a.status !== 'draft' || a.midYearStatus === 'submitted').length;
   const registryCount = filteredAssessments.length;
 
   const parseCSV = (text: string): string[][] => {
@@ -278,46 +278,56 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </thead>
           <tbody className="divide-y">
             {(activeTab === 'submissions' 
-              ? filteredAssessments.filter(a => a.status !== 'draft') 
+              ? filteredAssessments.filter(a => a.status !== 'draft' || a.midYearStatus === 'submitted') 
               : filteredAssessments
-            ).map(a => (
-              <tr key={a.id} className="hover:bg-slate-50 group">
-                <td className="px-8 py-6">
-                  <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
-                  <p className="text-[11px] text-slate-400">{a.employeeDetails.email}</p>
-                </td>
-                <td className="px-8 py-6">
-                  <p className="text-sm font-medium text-slate-600">{a.managerName}</p>
-                  <p className="text-[11px] text-slate-400">{a.managerEmail}</p>
-                </td>
-                <td className="px-8 py-6">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${a.status === 'reviewed' ? 'bg-green-50 text-green-700 border-green-200' : a.status === 'submitted' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-                    {a.status}
-                  </span>
-                </td>
-                <td className="px-8 py-6 text-center">
-                  {a.overallPerformance.managerRating ? (
-                    <span className="text-sm font-black text-slate-800">
-                      {a.overallPerformance.managerRating.split(' - ')[0]}
+            ).map(a => {
+              const getStatusDisplay = () => {
+                if (a.status === 'reviewed') return { text: 'Reviewed', classes: 'bg-green-50 text-green-700 border-green-200' };
+                if (a.status === 'submitted') return { text: 'Final Submitted', classes: 'bg-brand-50 text-brand-700 border-brand-200' };
+                if (a.midYearStatus === 'submitted') return { text: 'Mid-Year Submitted', classes: 'bg-blue-50 text-blue-700 border-blue-200' };
+                return { text: 'Draft', classes: 'bg-slate-50 text-slate-400 border-slate-200' };
+              };
+              const status = getStatusDisplay();
+
+              return (
+                <tr key={a.id} className="hover:bg-slate-50 group">
+                  <td className="px-8 py-6">
+                    <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
+                    <p className="text-[11px] text-slate-400">{a.employeeDetails.email}</p>
+                  </td>
+                  <td className="px-8 py-6">
+                    <p className="text-sm font-medium text-slate-600">{a.managerName}</p>
+                    <p className="text-[11px] text-slate-400">{a.managerEmail}</p>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${status.classes}`}>
+                      {status.text}
                     </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Pending</span>
-                  )}
-                </td>
-                <td className="px-8 py-6 text-right">
-                   <div className="flex justify-end gap-3">
-                    <button onClick={() => setSelectedAssessment(a)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">
-                      {a.status === 'draft' ? 'View Details' : a.status === 'reviewed' ? 'View Report' : 'Review & Rate'}
-                    </button>
-                    {role === 'admin' && (
-                      <button onClick={() => onDeleteAssessment(a.id)} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                        Delete
-                      </button>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    {a.overallPerformance.managerRating ? (
+                      <span className="text-sm font-black text-slate-800">
+                        {a.overallPerformance.managerRating.split(' - ')[0]}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Pending</span>
                     )}
-                   </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                     <div className="flex justify-end gap-3">
+                      <button onClick={() => setSelectedAssessment(a)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">
+                        {a.status === 'draft' && a.midYearStatus !== 'submitted' ? 'View Details' : a.status === 'reviewed' ? 'View Report' : 'Review & Rate'}
+                      </button>
+                      {role === 'admin' && (
+                        <button onClick={() => onDeleteAssessment(a.id)} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                          Delete
+                        </button>
+                      )}
+                     </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
