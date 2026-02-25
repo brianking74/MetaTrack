@@ -19,6 +19,7 @@ const STAGES = [
 
 const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, onSubmit }) => {
   const [currentStage, setCurrentStage] = useState(0);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   // Initializing state with default values if initialData is not provided.
   // Fixed: Added missing managerName and managerEmail fields and cast empty competencies array to string[].
   const [formData, setFormData] = useState<Assessment>(initialData || {
@@ -107,6 +108,30 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
       {text}
     </span>
   );
+
+  if (isSubmitted) {
+    return (
+      <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-16 text-center space-y-8 animate-in zoom-in duration-500">
+        <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8">
+          <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Thank you for completing the assessment</h2>
+        <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
+          Your submission has been successfully recorded and synced to the cloud. Your manager will be notified of your progress.
+        </p>
+        <div className="pt-8">
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-12 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all transform active:scale-95"
+          >
+            Return to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -228,7 +253,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 />
               </div>
               <div className="space-y-2">
-                <SectionBadge text="Staff Self-Reflection" />
+                <SectionBadge text="Final Development Review" />
                 <textarea 
                   value={formData.developmentPlan.selfComments}
                   readOnly={isFinalReviewReadOnly}
@@ -243,6 +268,10 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
         {currentStage === 3 && (
           <div className="space-y-8">
+            <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl text-blue-700 text-sm font-semibold shadow-sm flex items-center gap-3">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Only to be completed in Final Review, click Next Step below
+            </div>
             {formData.coreCompetencies.map((comp, idx) => (
               <div key={comp.id} className="p-8 bg-white rounded-[2rem] border border-slate-200 shadow-sm">
                 <h4 className="text-xl font-black text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
@@ -282,7 +311,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   />
                 </div>
                 <div className="space-y-2">
-                  <SectionBadge text="Overall Achievement Narrative" />
+                  <SectionBadge text="Final Review Summary" />
                   <textarea 
                     value={formData.overallPerformance.selfComments}
                     readOnly={isFinalReviewReadOnly}
@@ -292,7 +321,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   />
                 </div>
                 <div className={`max-w-md space-y-2 ${isFinalReviewReadOnly ? 'opacity-50 grayscale' : ''}`}>
-                  <SectionBadge text="Suggested Performance Grade" />
+                  <SectionBadge text="Performance Rating" />
                   {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })), isFinalReviewReadOnly)}
                 </div>
              </div>
@@ -325,6 +354,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                         };
                         setFormData(updated);
                         onSave(updated);
+                        setIsSubmitted(true);
                       }
                     }}
                     className="px-8 py-3 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
@@ -341,23 +371,24 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
               </>
             )}
             {currentStage === STAGES.length - 1 ? (
-              !isReadOnly ? (
+              !isReadOnly && formData.midYearStatus === 'submitted' ? (
                 <button 
                   onClick={() => {
                     if (confirm("Submit your self-appraisal? This action will finalize your input for manager review.")) {
                       onSubmit({ ...formData, submittedAt: new Date().toISOString() });
+                      setIsSubmitted(true);
                     }
                   }}
                   className="px-12 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all transform active:scale-95"
                 >
                   Submit Now
                 </button>
-              ) : (
+              ) : isReadOnly ? (
                 <div className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-xs uppercase tracking-[0.2em] border flex items-center gap-2">
                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                    Submitted
                 </div>
-              )
+              ) : null
             ) : (
               <button 
                 onClick={handleNext}

@@ -69,11 +69,34 @@ export const supabaseService = {
       return { success: true };
     } catch (err: any) {
       console.error('[Supabase] Fatal Sync Error:', err);
-      // Clean up the error message for the user
       const userError = err.message === 'Failed to fetch' 
         ? 'Network Error: Connection to Database failed. Please check if your Supabase project is paused or if you are offline.'
         : err.message;
       return { success: false, error: userError };
+    }
+  },
+
+  async saveAssessment(assessment: Assessment): Promise<{ success: boolean; error?: string }> {
+    if (!supabase) return { success: false, error: 'Database not configured' };
+    
+    try {
+      const payload = {
+        id: assessment.id,
+        email: (assessment.employeeDetails.email || '').toLowerCase().trim(),
+        manager_email: (assessment.managerEmail || '').toLowerCase().trim(),
+        data: assessment,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('assessments')
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (err: any) {
+      console.error('[Supabase] Save Error:', err);
+      return { success: false, error: err.message };
     }
   },
 

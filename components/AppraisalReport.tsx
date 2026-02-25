@@ -227,7 +227,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 </div>
               </div>
               <div className="space-y-4">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Suggested Grade</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Performance Rating</span>
                 <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm font-bold text-slate-600 flex items-center justify-center">
                   {assessment.overallPerformance.selfRating || ''}
                 </div>
