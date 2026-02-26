@@ -32,15 +32,15 @@ export const supabaseService = {
     }
   },
 
-  async getAllAssessments(): Promise<Assessment[]> {
-    if (!supabase) return [];
+  async getAllAssessments(): Promise<{ data: Assessment[]; error?: string }> {
+    if (!supabase) return { data: [], error: 'Database not configured' };
     try {
       const { data, error } = await supabase.from('assessments').select('data');
       if (error) throw error;
-      return (data || []).map(row => row.data as Assessment);
-    } catch (err) {
+      return { data: (data || []).map(row => row.data as Assessment) };
+    } catch (err: any) {
       console.error('[Supabase] Fetch error:', err);
-      return [];
+      return { data: [], error: err.message || 'Failed to fetch assessments' };
     }
   },
 

@@ -36,18 +36,44 @@ const App: React.FC = () => {
       const conn = await supabaseService.checkConnection();
       setDbStatus({ connected: conn.success, error: conn.error });
       
-      const data = await supabaseService.getAllAssessments();
-      if (data && data.length > 0) {
+      const { data, error } = await supabaseService.getAllAssessments();
+      
+      if (error) {
+        // If fetch failed, try to load from local storage as fallback
+        const saved = localStorage.getItem('metabev-assessments-v2');
+        if (saved) { 
+          try { 
+            setAssessments(JSON.parse(saved)); 
+          } catch (e) {
+            console.error('Failed to parse local storage', e);
+          } 
+        }
+        setDbStatus(prev => ({ ...prev, connected: false, error: `Fetch error: ${error}` }));
+      } else {
+        // If fetch succeeded (even if empty), use it
         setAssessments(data);
         localStorage.setItem('metabev-assessments-v2', JSON.stringify(data));
-      } else {
-        const saved = localStorage.getItem('metabev-assessments-v2');
-        if (saved) { try { setAssessments(JSON.parse(saved)); } catch (e) {} }
+        setDbStatus(prev => ({ ...prev, connected: true, error: undefined }));
       }
       setIsLoading(false);
     };
     initApp();
   }, []);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    const { data, error } = await supabaseService.getAllAssessments();
+    setIsSyncing(false);
+    
+    if (error) {
+      setAuthError(`Sync failed: ${error}`);
+    } else {
+      setAssessments(data);
+      localStorage.setItem('metabev-assessments-v2', JSON.stringify(data));
+      setAuthError("");
+      alert(`Sync successful! Found ${data.length} records.`);
+    }
+  };
 
   const handleStaffLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,9 +205,21 @@ const App: React.FC = () => {
                       required 
                     />
                   </div>
-                  <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-black transition-all transform active:scale-[0.98]">
-                    Start Assessment
-                  </button>
+                  <div className="flex flex-col gap-3">
+                    <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-black transition-all transform active:scale-[0.98]">
+                      Start Assessment
+                    </button>
+                    {assessments.length === 0 && (
+                      <button 
+                        type="button" 
+                        onClick={handleManualSync}
+                        disabled={isSyncing}
+                        className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline disabled:opacity-50"
+                      >
+                        {isSyncing ? 'Syncing...' : 'Registry empty? Click to Sync'}
+                      </button>
+                    )}
+                  </div>
                 </form>
                 <div className="relative flex items-center">
                   <div className="flex-grow border-t border-slate-100"></div>
