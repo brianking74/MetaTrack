@@ -204,6 +204,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                     className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-24 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
                     placeholder="Enter your mid-year progress comments here..."
                   />
+                  {kpi.midYearManagerComments && (
+                    <div className="mt-2 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
+                      <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest block mb-1">Manager Mid-Year Feedback</span>
+                      <p className="text-xs text-slate-700 italic leading-relaxed">{kpi.midYearManagerComments}</p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-10">
@@ -251,6 +257,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
                   placeholder="Mid-year growth reflection..."
                 />
+                {formData.developmentPlan.midYearManagerComments && (
+                  <div className="mt-2 p-4 bg-blue-50 border border-blue-100 rounded-2xl animate-in fade-in slide-in-from-top-1 duration-300">
+                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest block mb-1">Manager Mid-Year Feedback</span>
+                    <p className="text-xs text-slate-700 italic leading-relaxed">{formData.developmentPlan.midYearManagerComments}</p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <SectionBadge text="Final Development Review" />
@@ -309,6 +321,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                     className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-md ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
                     placeholder="Mid-year summary of achievements..."
                   />
+                  {formData.overallPerformance.midYearManagerComments && (
+                    <div className="mt-4 p-6 bg-blue-50 border border-blue-100 rounded-[2rem] animate-in fade-in slide-in-from-top-1 duration-300">
+                      <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest block mb-1">Manager Mid-Year Feedback</span>
+                      <p className="text-xs text-slate-700 italic leading-relaxed">{formData.overallPerformance.midYearManagerComments}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <SectionBadge text="Final Review Summary" />

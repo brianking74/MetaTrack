@@ -56,6 +56,7 @@ export interface Assessment {
     selfComments: string;
     managerComments?: string;
     midYearSelfComments?: string;
+    midYearManagerComments?: string;
   };
   coreCompetencies: Competency[];
   overallPerformance: {
@@ -64,6 +65,7 @@ export interface Assessment {
     managerRating?: Rating;
     managerComments: string;
     midYearSelfComments?: string;
+    midYearManagerComments?: string;
   };
   status: 'draft' | 'submitted' | 'reviewed';
   midYearStatus?: 'draft' | 'submitted';

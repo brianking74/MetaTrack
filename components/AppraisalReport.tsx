@@ -101,10 +101,26 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 </div>
 
                 {kpi.midYearSelfComments && (
-                  <div className="mb-10">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block mb-2">Mid-Year Review</span>
-                    <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-relaxed italic">
-                      "{kpi.midYearSelfComments}"
+                  <div className="mb-10 space-y-4">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block">Mid-Year Review</span>
+                    <div className="space-y-4">
+                      <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-relaxed italic">
+                        <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Staff Reflection</span>
+                        "{kpi.midYearSelfComments}"
+                      </div>
+                      <div className="bg-white p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-relaxed shadow-sm">
+                        <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Manager Mid-Year Feedback</span>
+                        {!isEditable ? (
+                          <p className="italic text-slate-500">{kpi.midYearManagerComments || 'No feedback provided.'}</p>
+                        ) : (
+                          <textarea 
+                            value={kpi.midYearManagerComments || ''} 
+                            onChange={(e) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: e.target.value} : k)})}
+                            className="w-full text-xs border-none p-0 bg-transparent outline-none h-20 resize-none focus:ring-0"
+                            placeholder="Enter mid-year feedback for this KPI..."
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -185,11 +201,26 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           <SectionTitle colorClass="border-blue-500">Individual Development</SectionTitle>
           <div className="space-y-8">
             {assessment.developmentPlan.midYearSelfComments && (
-              <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100">
+              <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Reflection</span>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-relaxed min-h-[80px]">
                       "{assessment.developmentPlan.midYearSelfComments}"
+                    </div>
+                 </div>
+                 <div className="space-y-4">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-relaxed min-h-[80px]">
+                      {!isEditable ? (
+                        <p className="italic text-slate-500">{assessment.developmentPlan.midYearManagerComments || 'No feedback provided.'}</p>
+                      ) : (
+                        <textarea 
+                          value={assessment.developmentPlan.midYearManagerComments || ''} 
+                          onChange={(e) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, midYearManagerComments: e.target.value}})}
+                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
+                          placeholder="Enter mid-year feedback for development plan..."
+                        />
+                      )}
                     </div>
                  </div>
               </div>
@@ -210,11 +241,26 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           <SectionTitle>Executive Summary & Final Grade</SectionTitle>
           <div className="space-y-12">
             {assessment.overallPerformance.midYearSelfComments && (
-              <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100">
+              <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Summary</span>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-relaxed">
                       "{assessment.overallPerformance.midYearSelfComments}"
+                    </div>
+                 </div>
+                 <div className="space-y-4">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-relaxed">
+                      {!isEditable ? (
+                        <p className="italic text-slate-500">{assessment.overallPerformance.midYearManagerComments || 'No feedback provided.'}</p>
+                      ) : (
+                        <textarea 
+                          value={assessment.overallPerformance.midYearManagerComments || ''} 
+                          onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, midYearManagerComments: e.target.value}})}
+                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
+                          placeholder="Enter mid-year executive summary feedback..."
+                        />
+                      )}
                     </div>
                  </div>
               </div>
