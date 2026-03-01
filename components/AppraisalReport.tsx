@@ -126,6 +126,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 )}
 
                 <div className="space-y-10">
+                  <h6 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.4em] mb-6">Final Review</h6>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-2">
                        <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Rating</span>
@@ -139,7 +140,6 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     </div>
                   </div>
                   <div className="pt-10 mt-10 border-t-2 border-slate-200 bg-white p-8 rounded-[2rem] border-2 shadow-sm break-inside-avoid">
-                    <h6 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.4em] mb-6">Final Review</h6>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       <div className="space-y-2">
                         <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Manager Rating</span>
