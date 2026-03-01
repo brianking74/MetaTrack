@@ -227,13 +227,34 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                  </div>
               </div>
             )}
-            <div className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
-               <div className="space-y-4">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Reflection</span>
-                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 text-sm text-slate-700 italic leading-normal min-h-[120px]">
-                    {assessment.developmentPlan.selfComments ? `"${assessment.developmentPlan.selfComments}"` : ""}
+            <div className="space-y-10">
+              <h6 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.4em] mb-6">Final Review</h6>
+              <div className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                 <div className="space-y-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Reflection</span>
+                    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 text-sm text-slate-700 italic leading-normal min-h-[120px]">
+                      {assessment.developmentPlan.selfComments ? `"${assessment.developmentPlan.selfComments}"` : ""}
+                    </div>
+                 </div>
+              </div>
+              
+              <div className="pt-10 mt-10 border-t-2 border-slate-200 bg-white p-8 rounded-[2rem] border-2 shadow-sm break-inside-avoid">
+                <div className="space-y-4">
+                  <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Manager Final Feedback</span>
+                  <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-sm text-slate-700 leading-normal min-h-[120px]">
+                    {!isEditable ? (
+                      <p className="italic text-slate-500">{assessment.developmentPlan.managerComments || 'No feedback provided.'}</p>
+                    ) : (
+                      <textarea 
+                        value={assessment.developmentPlan.managerComments || ''} 
+                        onChange={(e) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: e.target.value}})}
+                        className="w-full text-xs border-none p-0 bg-transparent outline-none h-32 resize-none focus:ring-0"
+                        placeholder="Enter final manager feedback for development plan..."
+                      />
+                    )}
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -284,7 +305,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
 
             {!isEditable && (
               <div className="space-y-4">
-                <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Manager Full Evaluation</span>
+                <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Final Evaluation</span>
                 <div className="p-8 bg-brand-50 rounded-[2.5rem] border border-brand-100 text-sm font-medium text-slate-800 leading-normal">
                   {assessment.overallPerformance.managerComments || ''}
                 </div>
