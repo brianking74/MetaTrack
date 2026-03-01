@@ -41,8 +41,8 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   }, [currentStage]);
 
   const isReadOnly = formData.status !== 'draft';
-  const isMidYearReadOnly = isReadOnly || formData.midYearStatus === 'submitted';
-  const isFinalReviewReadOnly = isReadOnly || formData.midYearStatus !== 'submitted';
+  const isMidYearReadOnly = isReadOnly || formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed';
+  const isFinalReviewReadOnly = isReadOnly || (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed');
 
   const saveToDraft = () => {
     if (isReadOnly) return;
@@ -190,7 +190,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 <div className="mb-10 space-y-4">
                   <div className="flex items-center gap-2">
                     <SectionBadge text="Mid-Year Review" />
-                    {formData.midYearStatus === 'submitted' && (
+                    {(formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') && (
                       <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         Locked
@@ -226,7 +226,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                         readOnly={isFinalReviewReadOnly}
                         onChange={(e) => updateKPI(kpi.id, { selfComments: e.target.value })}
                         className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                        placeholder={isFinalReviewReadOnly && formData.midYearStatus !== 'submitted' ? "Locked until Mid-Year is submitted..." : "Describe your actual performance against this KPI..."}
+                        placeholder={isFinalReviewReadOnly && (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') ? "Locked until Mid-Year is submitted..." : "Describe your actual performance against this KPI..."}
                       />
                     </div>
                   </div>
@@ -243,7 +243,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <SectionBadge text="Mid-Year Review" />
-                  {formData.midYearStatus === 'submitted' && (
+                  {(formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') && (
                     <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                       Locked
@@ -271,7 +271,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   readOnly={isFinalReviewReadOnly}
                   onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: e.target.value } }))}
                   className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                  placeholder={isFinalReviewReadOnly && formData.midYearStatus !== 'submitted' ? "Locked until Mid-Year is submitted..." : "Reflect on your growth during this cycle..."}
+                  placeholder={isFinalReviewReadOnly && (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') ? "Locked until Mid-Year is submitted..." : "Reflect on your growth during this cycle..."}
                 />
               </div>
             </div>
@@ -307,7 +307,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <SectionBadge text="Mid-Year Review Summary" />
-                    {formData.midYearStatus === 'submitted' && (
+                    {(formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') && (
                       <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         Locked
@@ -335,7 +335,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                     readOnly={isFinalReviewReadOnly}
                     onChange={(e) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: e.target.value } }))}
                     className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                    placeholder={isFinalReviewReadOnly && formData.midYearStatus !== 'submitted' ? "Locked until Mid-Year is submitted..." : "Summarize your key highlights..."}
+                    placeholder={isFinalReviewReadOnly && (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') ? "Locked until Mid-Year is submitted..." : "Summarize your key highlights..."}
                   />
                 </div>
                 <div className={`max-w-md space-y-2 ${isFinalReviewReadOnly ? 'opacity-50 grayscale' : ''}`}>
@@ -360,7 +360,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           <div className="flex gap-4">
             {!isReadOnly && (
               <>
-                {formData.midYearStatus !== 'submitted' && currentStage === STAGES.length - 1 && (
+                {formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed' && currentStage === STAGES.length - 1 && (
                   <button 
                     onClick={() => {
                       if (confirm("Submit your Mid-Year Review? This will lock the mid-year sections but allow you to continue with the annual appraisal later.")) {
@@ -389,7 +389,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
               </>
             )}
             {currentStage === STAGES.length - 1 ? (
-              !isReadOnly && formData.midYearStatus === 'submitted' ? (
+              !isReadOnly && (formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') ? (
                 <button 
                   onClick={() => {
                     if (confirm("Submit your self-appraisal? This action will finalize your input for manager review.")) {

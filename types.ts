@@ -68,7 +68,7 @@ export interface Assessment {
     midYearManagerComments?: string;
   };
   status: 'draft' | 'submitted' | 'reviewed';
-  midYearStatus?: 'draft' | 'submitted';
+  midYearStatus?: 'draft' | 'submitted' | 'reviewed';
   midYearSubmittedAt?: string;
   submittedAt?: string;
   reviewedAt?: string;

@@ -27,6 +27,8 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted';
+
   const handleAiAnalysis = async () => {
     setIsAnalyzing(true);
     try {
@@ -125,7 +127,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   </div>
                 )}
 
-                <div className="space-y-10">
+                <div className={`space-y-10 ${isFinalReviewLocked ? 'opacity-50 grayscale pointer-events-none select-none' : ''}`}>
                   <h6 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.4em] mb-6">Final Review</h6>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-2">
@@ -168,7 +170,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         {/* Competencies Section */}
         <section>
           <SectionTitle colorClass="border-slate-400">Core Competencies</SectionTitle>
-          <div className="space-y-12">
+          <div className={`space-y-12 ${isFinalReviewLocked ? 'opacity-50 grayscale pointer-events-none select-none' : ''}`}>
             {assessment.coreCompetencies.map((comp, idx) => (
               <div key={comp.id} className="p-8 md:p-10 bg-white rounded-[2.5rem] border border-slate-200 break-inside-avoid">
                 <div className="flex justify-between items-start mb-6">
@@ -227,7 +229,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                  </div>
               </div>
             )}
-            <div className="space-y-10">
+            <div className={`space-y-10 ${isFinalReviewLocked ? 'opacity-50 grayscale pointer-events-none select-none' : ''}`}>
               <h6 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.4em] mb-6">Final Review</h6>
               <div className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                  <div className="space-y-4">
@@ -288,7 +290,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                  </div>
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${isFinalReviewLocked ? 'opacity-50 grayscale pointer-events-none select-none' : ''}`}>
               <div className="space-y-4">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Summary</span>
                 <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic">
@@ -314,26 +316,45 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
 
             {isEditable ? (
               <div className="bg-brand-50 p-10 rounded-[3rem] border-2 border-brand-100 flex flex-col gap-10">
-                <div className="space-y-2">
-                  <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Manager Final Summary</span>
-                  <textarea 
-                    value={assessment.overallPerformance.managerComments || ''} 
-                    onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}})} 
-                    className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg leading-normal" 
-                    placeholder="Enter final executive evaluation..." 
-                  />
-                </div>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-6 border-t border-brand-200">
-                  <div className="flex-1 w-full">
-                    <select value={assessment.overallPerformance.managerRating || ''} onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerRating: e.target.value as Rating}})} className="w-full bg-white p-4 rounded-xl border font-bold">
-                      <option value="">Select Official Result...</option>
-                      {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
+                <div className={`space-y-10 ${isFinalReviewLocked ? 'opacity-50 grayscale pointer-events-none select-none' : ''}`}>
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Manager Final Summary</span>
+                    <textarea 
+                      value={assessment.overallPerformance.managerComments || ''} 
+                      onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}})} 
+                      className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg leading-normal" 
+                      placeholder="Enter final executive evaluation..." 
+                    />
                   </div>
-                  <button onClick={() => {
-                    if(!assessment.overallPerformance.managerRating) return alert("Final grade required.");
-                    if(confirm("Submit and finalize this review?")) onFinalize?.({...assessment, status: 'reviewed'});
-                  }} className="bg-brand-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete Review</button>
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-6 border-t border-brand-200">
+                    <div className="flex-1 w-full">
+                      <select value={assessment.overallPerformance.managerRating || ''} onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerRating: e.target.value as Rating}})} className="w-full bg-white p-4 rounded-xl border font-bold">
+                        <option value="">Select Official Result...</option>
+                        {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end pt-4 border-t border-brand-100">
+                  {isFinalReviewLocked ? (
+                    <button 
+                      onClick={() => {
+                        if(confirm("Submit mid-year feedback? This will unlock the final review sections for later in the year.")) {
+                          onUpdate?.({...assessment, midYearStatus: 'reviewed'});
+                          alert("Mid-year feedback submitted. Final review sections are now unlocked.");
+                        }
+                      }} 
+                      className="bg-blue-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-blue-700"
+                    >
+                      Submit Mid-Year Feedback
+                    </button>
+                  ) : (
+                    <button onClick={() => {
+                      if(!assessment.overallPerformance.managerRating) return alert("Final grade required.");
+                      if(confirm("Submit and finalize this review?")) onFinalize?.({...assessment, status: 'reviewed'});
+                    }} className="bg-brand-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete Review</button>
+                  )}
                 </div>
               </div>
             ) : (

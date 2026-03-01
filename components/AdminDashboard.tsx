@@ -278,12 +278,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </thead>
           <tbody className="divide-y">
             {(activeTab === 'submissions' 
-              ? filteredAssessments.filter(a => a.status !== 'draft' || a.midYearStatus === 'submitted') 
+              ? filteredAssessments.filter(a => a.status !== 'draft' || a.midYearStatus === 'submitted' || a.midYearStatus === 'reviewed') 
               : filteredAssessments
             ).map(a => {
               const getStatusDisplay = () => {
                 if (a.status === 'reviewed') return { text: 'Reviewed', classes: 'bg-green-50 text-green-700 border-green-200' };
                 if (a.status === 'submitted') return { text: 'Final Submitted', classes: 'bg-brand-50 text-brand-700 border-brand-200' };
+                if (a.midYearStatus === 'reviewed') return { text: 'Mid-Year Reviewed', classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
                 if (a.midYearStatus === 'submitted') return { text: 'Mid-Year Submitted', classes: 'bg-blue-50 text-blue-700 border-blue-200' };
                 return { text: 'Draft', classes: 'bg-slate-50 text-slate-400 border-slate-200' };
               };
