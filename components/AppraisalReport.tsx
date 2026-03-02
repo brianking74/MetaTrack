@@ -27,7 +27,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted';
+  const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted' && assessment.status !== 'submitted';
 
   const handleAiAnalysis = async () => {
     setIsAnalyzing(true);

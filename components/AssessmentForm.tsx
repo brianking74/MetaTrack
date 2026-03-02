@@ -280,10 +280,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
 
         {currentStage === 3 && (
           <div className="space-y-8">
-            <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl text-blue-700 text-sm font-semibold shadow-sm flex items-center gap-3">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Only to be completed in Final Review, click Next Step below
-            </div>
+            {(formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') && (
+              <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl text-blue-700 text-sm font-semibold shadow-sm flex items-center gap-3">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Only to be completed in Final Review, click Next Step below
+              </div>
+            )}
             {formData.coreCompetencies.map((comp, idx) => (
               <div key={comp.id} className="p-8 bg-white rounded-[2rem] border border-slate-200 shadow-sm">
                 <h4 className="text-xl font-black text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
