@@ -40,6 +40,31 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStage]);
 
+  const validateMidYear = () => {
+    const missingKPIs = formData.kpis.some(k => !k.midYearSelfComments?.trim());
+    const missingDev = !formData.developmentPlan.midYearSelfComments?.trim();
+    const missingOverall = !formData.overallPerformance.midYearSelfComments?.trim();
+    
+    if (missingKPIs || missingDev || missingOverall) {
+      alert("Please complete all mid-year response sections before submitting.");
+      return false;
+    }
+    return true;
+  };
+
+  const validateFinal = () => {
+    const missingKPIs = formData.kpis.some(k => !k.selfRating || !k.selfComments?.trim());
+    const missingDev = !formData.developmentPlan.selfComments?.trim();
+    const missingComps = formData.coreCompetencies.some(c => !c.selfRating);
+    const missingOverall = !formData.overallPerformance.selfRating || !formData.overallPerformance.selfComments?.trim();
+
+    if (missingKPIs || missingDev || missingComps || missingOverall) {
+      alert("Please complete all final review response sections and ratings before submitting.");
+      return false;
+    }
+    return true;
+  };
+
   const isReadOnly = formData.status !== 'draft';
   const isMidYearReadOnly = isReadOnly || formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed';
   const isFinalReviewReadOnly = isReadOnly || (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed');
@@ -365,6 +390,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 {formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed' && currentStage === STAGES.length - 1 && (
                   <button 
                     onClick={() => {
+                      if (!validateMidYear()) return;
                       if (confirm("Submit your Mid-Year Review? This will lock the mid-year sections but allow you to continue with the annual appraisal later.")) {
                         const updated = { 
                           ...formData, 
@@ -394,6 +420,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
               !isReadOnly && (formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') ? (
                 <button 
                   onClick={() => {
+                    if (!validateFinal()) return;
                     if (confirm("Submit your self-appraisal? This action will finalize your input for manager review.")) {
                       onSubmit({ ...formData, submittedAt: new Date().toISOString() });
                       setIsSubmitted(true);

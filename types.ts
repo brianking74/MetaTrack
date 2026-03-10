@@ -50,6 +50,7 @@ export interface Assessment {
   managerName: string;
   managerEmail: string;
   managerPassword?: string;
+  employeePassword?: string;
   kpis: KPI[];
   developmentPlan: {
     competencies: string[];

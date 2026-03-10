@@ -27,6 +27,31 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const validateMidYearFeedback = () => {
+    const missingKPIs = assessment.kpis.some(k => !k.midYearManagerComments?.trim());
+    const missingDev = !assessment.developmentPlan.midYearManagerComments?.trim();
+    const missingOverall = !assessment.overallPerformance.midYearManagerComments?.trim();
+
+    if (missingKPIs || missingDev || missingOverall) {
+      alert("Please complete all manager mid-year feedback sections before submitting.");
+      return false;
+    }
+    return true;
+  };
+
+  const validateFinalReview = () => {
+    const missingKPIs = assessment.kpis.some(k => !k.managerRating || !k.managerComments?.trim());
+    const missingDev = !assessment.developmentPlan.managerComments?.trim();
+    const missingComps = assessment.coreCompetencies.some(c => !c.managerRating || !c.managerComments?.trim());
+    const missingOverall = !assessment.overallPerformance.managerRating || !assessment.overallPerformance.managerComments?.trim();
+
+    if (missingKPIs || missingDev || missingComps || missingOverall) {
+      alert("Please complete all manager final review sections, ratings, and comments before finalizing.");
+      return false;
+    }
+    return true;
+  };
+
   const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted' && assessment.status !== 'submitted';
 
   const handleAiAnalysis = async () => {
@@ -340,6 +365,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   {isFinalReviewLocked ? (
                     <button 
                       onClick={() => {
+                        if (!validateMidYearFeedback()) return;
                         if(confirm("Submit mid-year feedback? This will unlock the final review sections for later in the year.")) {
                           onUpdate?.({...assessment, midYearStatus: 'reviewed'});
                           alert("Mid-year feedback submitted. Final review sections are now unlocked.");
@@ -351,7 +377,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     </button>
                   ) : (
                     <button onClick={() => {
-                      if(!assessment.overallPerformance.managerRating) return alert("Final grade required.");
+                      if (!validateFinalReview()) return;
                       if(confirm("Submit and finalize this review?")) onFinalize?.({...assessment, status: 'reviewed'});
                     }} className="bg-brand-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete Review</button>
                   )}

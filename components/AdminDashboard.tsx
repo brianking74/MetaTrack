@@ -88,14 +88,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         dataRows.forEach((row, idx) => {
           if (row.length < 2 || !row[1].includes('@')) return;
-          const [name, email, k1, k2, k3, k4, k5, mName, mEmail, mPass] = row;
+          const [name, email, k1, k2, k3, k4, k5, mName, mEmail, mPass, ePass] = row;
           newEntries.push(createBlankAssessment(
             name || "No Name", 
             email.toLowerCase(), 
             mName || "No Manager", 
             mEmail?.toLowerCase() || "", 
             [k1, k2, k3, k4, k5].filter(Boolean), 
-            mPass
+            mPass,
+            ePass
           ));
         });
 
@@ -129,7 +130,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (completed.length === 0) { alert("No completed assessments found."); return; }
     
     const headers = [
-      'Staff Name', 'Staff Email', 'Position', 'Division', 'Manager',
+      'Staff Name', 'Staff Email', 'Staff Password', 'Position', 'Division', 'Manager',
       'KPI 1 Title', 'KPI 1 Self Rating', 'KPI 1 Self Comments', 'KPI 1 Mgr Rating', 'KPI 1 Mgr Comments',
       'KPI 2 Title', 'KPI 2 Self Rating', 'KPI 2 Self Comments', 'KPI 2 Mgr Rating', 'KPI 2 Mgr Comments',
       'KPI 3 Title', 'KPI 3 Self Rating', 'KPI 3 Self Comments', 'KPI 3 Mgr Rating', 'KPI 3 Mgr Comments',
@@ -150,6 +151,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const rowData: any[] = [
         a.employeeDetails.fullName,
         a.employeeDetails.email,
+        a.employeePassword || 'metabev2025',
         a.employeeDetails.position,
         a.employeeDetails.division,
         a.managerName

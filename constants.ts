@@ -30,7 +30,8 @@ export const createBlankAssessment = (
   managerName: string, 
   managerEmail: string, 
   kpiContents: string[],
-  managerPassword?: string
+  managerPassword?: string,
+  employeePassword?: string
 ): Assessment => {
   return {
     // Generates a string ID like "mb-7x9z2k"
@@ -45,6 +46,7 @@ export const createBlankAssessment = (
     managerName,
     managerEmail,
     managerPassword: managerPassword || 'metabev2025', // Default if not provided
+    employeePassword: employeePassword || 'metabev2025', // Default if not provided
     kpis: kpiContents.map((content, idx) => ({
       id: `kpi-${idx}-${Math.random().toString(36).substr(2, 4)}`,
       title: `KPI ${idx + 1}`,

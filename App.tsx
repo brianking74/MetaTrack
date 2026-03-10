@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error?: string }>({ connected: true });
   
   const [staffEmailInput, setStaffEmailInput] = useState("");
+  const [staffPasswordInput, setStaffPasswordInput] = useState("");
   const [assessorEmailInput, setAssessorEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
@@ -83,6 +84,16 @@ const App: React.FC = () => {
       setAuthError(`Email "${email}" not found in registry.`);
       return;
     }
+    
+    // Check password if not super admin
+    if (email !== SUPER_ADMIN_EMAIL) {
+      const expectedPassword = userRecord?.employeePassword || 'metabev2025';
+      if (staffPasswordInput !== expectedPassword) {
+        setAuthError("Invalid password.");
+        return;
+      }
+    }
+
     setCurrentUserEmail(email);
     setRole('staff');
     setAuthError("");
@@ -202,6 +213,14 @@ const App: React.FC = () => {
                       className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-slate-900 outline-none transition-all placeholder:text-slate-300" 
                       value={staffEmailInput} 
                       onChange={(e) => setStaffEmailInput(e.target.value)} 
+                      required 
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="Enter your password" 
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-slate-900 outline-none transition-all placeholder:text-slate-300 mt-4" 
+                      value={staffPasswordInput} 
+                      onChange={(e) => setStaffPasswordInput(e.target.value)} 
                       required 
                     />
                   </div>
