@@ -46,7 +46,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     const missingOverall = !formData.overallPerformance.midYearSelfComments?.trim();
     
     if (missingKPIs || missingDev || missingOverall) {
-      alert("Please complete all mid-year response sections before submitting.");
+      alert("Please ensure you have answered all questions before moving to the next stage.");
       return false;
     }
     return true;
@@ -59,9 +59,41 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     const missingOverall = !formData.overallPerformance.selfRating || !formData.overallPerformance.selfComments?.trim();
 
     if (missingKPIs || missingDev || missingComps || missingOverall) {
-      alert("Please complete all final review response sections and ratings before submitting.");
+      alert("Please ensure you have answered all questions before moving to the next stage.");
       return false;
     }
+    return true;
+  };
+
+  const validateStage = (stage: number) => {
+    const isMidYear = formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed';
+    
+    if (stage === 1) { // Key Performance Indicators
+      if (isMidYear) {
+        return formData.kpis.every(k => k.midYearSelfComments?.trim());
+      } else {
+        return formData.kpis.every(k => k.selfRating && k.selfComments?.trim());
+      }
+    }
+    
+    if (stage === 2) { // Individual Development
+      if (isMidYear) {
+        return !!formData.developmentPlan.midYearSelfComments?.trim();
+      } else {
+        return !!formData.developmentPlan.selfComments?.trim();
+      }
+    }
+    
+    if (stage === 3) { // Core Competencies
+      if (isMidYear) return true; // Locked in mid-year
+      return formData.coreCompetencies.every(c => !!c.selfRating);
+    }
+    
+    if (stage === 4) { // Final Review
+      if (isMidYear) return true; // Exception requested by user
+      return !!formData.overallPerformance.selfRating && !!formData.overallPerformance.selfComments?.trim();
+    }
+    
     return true;
   };
 
@@ -75,6 +107,10 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   };
 
   const handleNext = () => {
+    if (!validateStage(currentStage)) {
+      alert("Please ensure you have answered all questions before moving to the next stage.");
+      return;
+    }
     saveToDraft();
     if (currentStage < STAGES.length - 1) setCurrentStage(prev => prev + 1);
   };
@@ -264,6 +300,14 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
         {currentStage === 2 && (
           <div className="space-y-12">
             <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Individual Development</h3>
+            
+            <div className="p-8 bg-brand-50/50 rounded-3xl border border-brand-100 shadow-sm">
+              <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block mb-2">Individual Development Goal</span>
+              <div className="bg-white p-6 rounded-2xl border border-brand-200 text-sm text-slate-700 leading-relaxed italic">
+                {formData.developmentPlan.developmentGoal}
+              </div>
+            </div>
+
             <div className="space-y-8">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

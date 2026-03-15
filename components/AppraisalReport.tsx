@@ -33,7 +33,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
     const missingOverall = !assessment.overallPerformance.midYearManagerComments?.trim();
 
     if (missingKPIs || missingDev || missingOverall) {
-      alert("Please complete all manager mid-year feedback sections before submitting.");
+      alert("Please ensure you have answered all questions before moving to the next stage.");
       return false;
     }
     return true;
@@ -46,7 +46,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
     const missingOverall = !assessment.overallPerformance.managerRating || !assessment.overallPerformance.managerComments?.trim();
 
     if (missingKPIs || missingDev || missingComps || missingOverall) {
-      alert("Please complete all manager final review sections, ratings, and comments before finalizing.");
+      alert("Please ensure you have answered all questions before moving to the next stage.");
       return false;
     }
     return true;
@@ -228,6 +228,14 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         {/* Individual Development Section */}
         <section className="break-inside-avoid">
           <SectionTitle colorClass="border-blue-500">Individual Development</SectionTitle>
+          
+          <div className="mb-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-200">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Individual Development Goal</span>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-relaxed italic shadow-inner">
+              {assessment.developmentPlan.developmentGoal}
+            </div>
+          </div>
+
           <div className="space-y-8">
             {assessment.developmentPlan.midYearSelfComments && (
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">

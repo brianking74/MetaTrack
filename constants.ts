@@ -31,7 +31,8 @@ export const createBlankAssessment = (
   managerEmail: string, 
   kpiContents: string[],
   managerPassword?: string,
-  employeePassword?: string
+  employeePassword?: string,
+  developmentGoal?: string
 ): Assessment => {
   return {
     // Generates a string ID like "mb-7x9z2k"
@@ -57,7 +58,12 @@ export const createBlankAssessment = (
       midYearSelfComments: '',
       midYearManagerComments: ''
     })),
-    developmentPlan: { competencies: [], selfComments: '', managerComments: '' },
+    developmentPlan: { 
+      developmentGoal: developmentGoal || 'To be defined by staff and manager.',
+      competencies: [], 
+      selfComments: '', 
+      managerComments: '' 
+    },
     coreCompetencies: CORE_COMPETENCIES.map(c => ({ ...c })),
     overallPerformance: { selfComments: '', managerComments: '' },
     status: 'draft'

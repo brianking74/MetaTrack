@@ -53,6 +53,7 @@ export interface Assessment {
   employeePassword?: string;
   kpis: KPI[];
   developmentPlan: {
+    developmentGoal: string;
     competencies: string[];
     selfComments: string;
     managerComments?: string;

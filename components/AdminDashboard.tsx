@@ -88,7 +88,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         dataRows.forEach((row, idx) => {
           if (row.length < 2 || !row[1].includes('@')) return;
-          const [name, email, k1, k2, k3, k4, k5, mName, mEmail, mPass, ePass] = row;
+          const [name, email, k1, k2, k3, k4, k5, devGoal, mName, mEmail, mPass, ePass] = row;
           newEntries.push(createBlankAssessment(
             name || "No Name", 
             email.toLowerCase(), 
@@ -96,7 +96,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             mEmail?.toLowerCase() || "", 
             [k1, k2, k3, k4, k5].filter(Boolean), 
             mPass,
-            ePass
+            ePass,
+            devGoal
           ));
         });
 

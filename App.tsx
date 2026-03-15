@@ -89,7 +89,7 @@ const App: React.FC = () => {
     if (email !== SUPER_ADMIN_EMAIL) {
       const expectedPassword = userRecord?.employeePassword || 'metabev2025';
       if (staffPasswordInput !== expectedPassword) {
-        setAuthError("Invalid password.");
+        setAuthError("Invalid password please try again or contact your manager/administrator.");
         return;
       }
     }
