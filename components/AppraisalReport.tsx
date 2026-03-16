@@ -164,13 +164,18 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   </div>
                 </div>
 
-                {kpi.midYearSelfComments && (
+                {(kpi.midYearSelfComments || kpi.midYearManagerComments || isFinalReviewLocked) && (
                   <div className="mb-10 space-y-4">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block">Mid-Year Review</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block">Mid-Year Review</span>
+                      {isFinalReviewLocked && (
+                        <span className="text-[8px] font-bold text-blue-400 uppercase tracking-tight bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Review Mode</span>
+                      )}
+                    </div>
                     <div className="space-y-4">
                       <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal italic">
                         <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Staff Reflection</span>
-                        "{kpi.midYearSelfComments}"
+                        {kpi.midYearSelfComments ? `"${kpi.midYearSelfComments}"` : <span className="text-slate-400 italic">No reflection provided.</span>}
                       </div>
                       <div className="bg-white p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal shadow-sm">
                         <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Manager Mid-Year Feedback</span>
@@ -194,12 +199,12 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-2">
                        <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Rating</span>
-                       <div className="p-3 bg-white border rounded-xl text-sm font-bold text-slate-700">{kpi.selfRating || ''}</div>
+                       <div className="p-3 bg-white border rounded-xl text-sm font-bold text-slate-700">{kpi.selfRating || 'N/A'}</div>
                     </div>
                     <div className="md:col-span-2 space-y-2">
                        <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Comments</span>
                        <div className="p-4 bg-white border rounded-xl text-xs text-slate-600 italic">
-                         {kpi.selfComments ? `"${kpi.selfComments}"` : ""}
+                         {kpi.selfComments ? `"${kpi.selfComments}"` : <span className="text-slate-300 italic">No comments provided.</span>}
                        </div>
                     </div>
                   </div>
@@ -218,7 +223,12 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                         {!isEditable ? (
                            <div className="p-5 bg-slate-50 border rounded-2xl text-xs text-slate-700 italic leading-normal">{kpi.managerComments || ''}</div>
                         ) : (
-                           <textarea value={kpi.managerComments || ''} onChange={(e) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, managerComments: e.target.value} : k)})} className="w-full text-xs border rounded-2xl p-5 h-36 outline-none bg-slate-50/50 focus:ring-2 focus:ring-brand-500 leading-normal" placeholder="Evaluate performance..." />
+                           <DebouncedTextarea 
+                          value={kpi.managerComments || ''} 
+                          onChange={(val) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, managerComments: val} : k)})} 
+                          className="w-full text-xs border rounded-2xl p-5 h-36 outline-none bg-slate-50/50 focus:ring-2 focus:ring-brand-500 leading-normal" 
+                          placeholder="Evaluate performance..." 
+                        />
                         )}
                       </div>
                     </div>
@@ -253,7 +263,12 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     {!isEditable ? (
                       <div className="p-4 bg-white border rounded-2xl text-xs">{comp.managerComments || ''}</div>
                     ) : (
-                      <textarea value={comp.managerComments || ''} onChange={(e) => onUpdate?.({...assessment, coreCompetencies: assessment.coreCompetencies.map(c => c.id === comp.id ? {...c, managerComments: e.target.value} : c)})} className="w-full text-xs border rounded-2xl p-4 h-24 outline-none focus:ring-2 focus:ring-brand-500" placeholder="Comment..." />
+                      <DebouncedTextarea 
+                      value={comp.managerComments || ''} 
+                      onChange={(val) => onUpdate?.({...assessment, coreCompetencies: assessment.coreCompetencies.map(c => c.id === comp.id ? {...c, managerComments: val} : c)})} 
+                      className="w-full text-xs border rounded-2xl p-4 h-24 outline-none focus:ring-2 focus:ring-brand-500" 
+                      placeholder="Comment..." 
+                    />
                     )}
                    </div>
                 </div>
@@ -274,12 +289,12 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           </div>
 
           <div className="space-y-8">
-            {assessment.developmentPlan.midYearSelfComments && (
+            {(assessment.developmentPlan.midYearSelfComments || assessment.developmentPlan.midYearManagerComments || isFinalReviewLocked) && (
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Reflection</span>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-normal min-h-[80px]">
-                      "{assessment.developmentPlan.midYearSelfComments}"
+                      {assessment.developmentPlan.midYearSelfComments ? `"${assessment.developmentPlan.midYearSelfComments}"` : <span className="text-slate-400 italic">No reflection provided.</span>}
                     </div>
                  </div>
                  <div className="space-y-4">
@@ -317,9 +332,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     {!isEditable ? (
                       <p className="italic text-slate-500">{assessment.developmentPlan.managerComments || 'No feedback provided.'}</p>
                     ) : (
-                      <textarea 
+                      <DebouncedTextarea 
                         value={assessment.developmentPlan.managerComments || ''} 
-                        onChange={(e) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: e.target.value}})}
+                        onChange={(val) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: val}})}
                         className="w-full text-xs border-none p-0 bg-transparent outline-none h-32 resize-none focus:ring-0"
                         placeholder="Enter final manager feedback for development plan..."
                       />
@@ -335,12 +350,12 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         <section className="break-inside-avoid">
           <SectionTitle>Executive Summary & Final Grade</SectionTitle>
           <div className="space-y-12">
-            {assessment.overallPerformance.midYearSelfComments && (
+            {(assessment.overallPerformance.midYearSelfComments || assessment.overallPerformance.midYearManagerComments || isFinalReviewLocked) && (
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Summary</span>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-normal">
-                      "{assessment.overallPerformance.midYearSelfComments}"
+                      {assessment.overallPerformance.midYearSelfComments ? `"${assessment.overallPerformance.midYearSelfComments}"` : <span className="text-slate-400 italic">No summary provided.</span>}
                     </div>
                  </div>
                  <div className="space-y-4">
@@ -389,9 +404,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 <div className={`space-y-10 ${isFinalReviewLocked ? 'opacity-50 grayscale pointer-events-none select-none' : ''}`}>
                   <div className="space-y-2">
                     <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Manager Final Summary</span>
-                    <textarea 
+                    <DebouncedTextarea 
                       value={assessment.overallPerformance.managerComments || ''} 
-                      onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: e.target.value}})} 
+                      onChange={(val) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: val}})} 
                       className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg leading-normal" 
                       placeholder="Enter final executive evaluation..." 
                     />
