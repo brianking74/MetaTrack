@@ -61,13 +61,19 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   onFinalize,
   isDownloading 
 }) => {
+  const assessmentRef = useRef(assessment);
+  
+  useEffect(() => {
+    assessmentRef.current = assessment;
+  }, [assessment]);
+
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const validateMidYearFeedback = () => {
-    const missingKPIs = assessment.kpis.some(k => !k.midYearManagerComments?.trim());
-    const missingDev = !assessment.developmentPlan.midYearManagerComments?.trim();
-    const missingOverall = !assessment.overallPerformance.midYearManagerComments?.trim();
+    const missingKPIs = assessmentRef.current.kpis.some(k => !k.midYearManagerComments?.trim());
+    const missingDev = !assessmentRef.current.developmentPlan.midYearManagerComments?.trim();
+    const missingOverall = !assessmentRef.current.overallPerformance.midYearManagerComments?.trim();
 
     if (missingKPIs || missingDev || missingOverall) {
       alert("Please ensure you have answered all questions before moving to the next stage.");
@@ -77,10 +83,10 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   };
 
   const validateFinalReview = () => {
-    const missingKPIs = assessment.kpis.some(k => !k.managerRating || !k.managerComments?.trim());
-    const missingDev = !assessment.developmentPlan.managerComments?.trim();
-    const missingComps = assessment.coreCompetencies.some(c => !c.managerRating || !c.managerComments?.trim());
-    const missingOverall = !assessment.overallPerformance.managerRating || !assessment.overallPerformance.managerComments?.trim();
+    const missingKPIs = assessmentRef.current.kpis.some(k => !k.managerRating || !k.managerComments?.trim());
+    const missingDev = !assessmentRef.current.developmentPlan.managerComments?.trim();
+    const missingComps = assessmentRef.current.coreCompetencies.some(c => !c.managerRating || !c.managerComments?.trim());
+    const missingOverall = !assessmentRef.current.overallPerformance.managerRating || !assessmentRef.current.overallPerformance.managerComments?.trim();
 
     if (missingKPIs || missingDev || missingComps || missingOverall) {
       alert("Please ensure you have answered all questions before moving to the next stage.");
@@ -184,7 +190,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                         ) : (
                           <DebouncedTextarea 
                             value={kpi.midYearManagerComments || ''} 
-                            onChange={(val) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: val} : k)})}
+                            onChange={(val) => onUpdate?.({...assessmentRef.current, kpis: assessmentRef.current.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: val} : k)})}
                             className="w-full text-xs border-none p-0 bg-transparent outline-none h-20 resize-none focus:ring-0"
                             placeholder="Enter mid-year feedback for this KPI..."
                           />
@@ -199,7 +205,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-2">
                        <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Rating</span>
-                       <div className="p-3 bg-white border rounded-xl text-sm font-bold text-slate-700">{kpi.selfRating || 'N/A'}</div>
+                       <div className="p-3 bg-white border rounded-xl text-sm font-bold text-slate-700">{kpi.selfRating ? kpi.selfRating.split(' - ')[0] : 'N/A'}</div>
                     </div>
                     <div className="md:col-span-2 space-y-2">
                        <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Comments</span>
@@ -213,9 +219,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       <div className="space-y-2">
                         <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Manager Rating</span>
                         {!isEditable ? (
-                           <div className="p-3 bg-slate-50 border rounded-xl text-sm font-bold text-slate-800">{kpi.managerRating || ''}</div>
+                           <div className="p-3 bg-slate-50 border rounded-xl text-sm font-bold text-slate-800">{kpi.managerRating ? kpi.managerRating.split(' - ')[0] : 'N/A'}</div>
                         ) : (
-                           renderRatingSelect(kpi.managerRating, (r) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, managerRating: r} : k)}))
+                           renderRatingSelect(kpi.managerRating, (r) => onUpdate?.({...assessmentRef.current, kpis: assessmentRef.current.kpis.map(k => k.id === kpi.id ? {...k, managerRating: r} : k)}))
                         )}
                       </div>
                       <div className="md:col-span-2 space-y-2">
@@ -225,7 +231,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                         ) : (
                            <DebouncedTextarea 
                           value={kpi.managerComments || ''} 
-                          onChange={(val) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, managerComments: val} : k)})} 
+                          onChange={(val) => onUpdate?.({...assessmentRef.current, kpis: assessmentRef.current.kpis.map(k => k.id === kpi.id ? {...k, managerComments: val} : k)})} 
                           className="w-full text-xs border rounded-2xl p-5 h-36 outline-none bg-slate-50/50 focus:ring-2 focus:ring-brand-500 leading-normal" 
                           placeholder="Evaluate performance..." 
                         />
@@ -248,15 +254,15 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 <div className="flex justify-between items-start mb-6">
                    <h5 className="text-xl font-black text-slate-900">{idx + 1}. {comp.name}</h5>
                    <div className="text-right">
-                    <span className="text-[9px] font-black text-brand-600 block">Self: {comp.selfRating || 'N/A'}</span>
+                    <span className="text-[9px] font-black text-brand-600 block">Self: {comp.selfRating ? comp.selfRating.split(' - ')[0] : 'N/A'}</span>
                    </div>
                 </div>
                 <div className="pt-6 border-t bg-slate-50/50 p-6 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-6">
                    <div>
                     {!isEditable ? (
-                      <div className="p-3 bg-white border rounded-xl text-sm font-bold">{comp.managerRating || ''}</div>
+                      <div className="p-3 bg-white border rounded-xl text-sm font-bold">{comp.managerRating ? comp.managerRating.split(' - ')[0] : 'N/A'}</div>
                     ) : (
-                      renderRatingSelect(comp.managerRating, (r) => onUpdate?.({...assessment, coreCompetencies: assessment.coreCompetencies.map(c => c.id === comp.id ? {...c, managerRating: r} : c)}))
+                      renderRatingSelect(comp.managerRating, (r) => onUpdate?.({...assessmentRef.current, coreCompetencies: assessmentRef.current.coreCompetencies.map(c => c.id === comp.id ? {...c, managerRating: r} : c)}))
                     )}
                    </div>
                    <div className="md:col-span-2">
@@ -265,7 +271,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     ) : (
                       <DebouncedTextarea 
                       value={comp.managerComments || ''} 
-                      onChange={(val) => onUpdate?.({...assessment, coreCompetencies: assessment.coreCompetencies.map(c => c.id === comp.id ? {...c, managerComments: val} : c)})} 
+                      onChange={(val) => onUpdate?.({...assessmentRef.current, coreCompetencies: assessmentRef.current.coreCompetencies.map(c => c.id === comp.id ? {...c, managerComments: val} : c)})} 
                       className="w-full text-xs border rounded-2xl p-4 h-24 outline-none focus:ring-2 focus:ring-brand-500" 
                       placeholder="Comment..." 
                     />
@@ -305,7 +311,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       ) : (
                         <DebouncedTextarea 
                           value={assessment.developmentPlan.midYearManagerComments || ''} 
-                          onChange={(val) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, midYearManagerComments: val}})}
+                          onChange={(val) => onUpdate?.({...assessmentRef.current, developmentPlan: {...assessmentRef.current.developmentPlan, midYearManagerComments: val}})}
                           className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
                           placeholder="Enter mid-year feedback for development plan..."
                         />
@@ -334,7 +340,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     ) : (
                       <DebouncedTextarea 
                         value={assessment.developmentPlan.managerComments || ''} 
-                        onChange={(val) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, managerComments: val}})}
+                        onChange={(val) => onUpdate?.({...assessmentRef.current, developmentPlan: {...assessmentRef.current.developmentPlan, managerComments: val}})}
                         className="w-full text-xs border-none p-0 bg-transparent outline-none h-32 resize-none focus:ring-0"
                         placeholder="Enter final manager feedback for development plan..."
                       />
@@ -366,7 +372,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       ) : (
                         <DebouncedTextarea 
                           value={assessment.overallPerformance.midYearManagerComments || ''} 
-                          onChange={(val) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, midYearManagerComments: val}})}
+                          onChange={(val) => onUpdate?.({...assessmentRef.current, overallPerformance: {...assessmentRef.current.overallPerformance, midYearManagerComments: val}})}
                           className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
                           placeholder="Enter mid-year executive summary feedback..."
                         />
@@ -385,7 +391,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
               <div className="space-y-4">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Performance Rating</span>
                 <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm font-bold text-slate-600 flex items-center justify-center">
-                  {assessment.overallPerformance.selfRating || ''}
+                  {assessment.overallPerformance.selfRating ? assessment.overallPerformance.selfRating.split(' - ')[0] : 'N/A'}
                 </div>
               </div>
             </div>
@@ -406,14 +412,14 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Manager Final Summary</span>
                     <DebouncedTextarea 
                       value={assessment.overallPerformance.managerComments || ''} 
-                      onChange={(val) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerComments: val}})} 
+                      onChange={(val) => onUpdate?.({...assessmentRef.current, overallPerformance: {...assessmentRef.current.overallPerformance, managerComments: val}})} 
                       className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg leading-normal" 
                       placeholder="Enter final executive evaluation..." 
                     />
                   </div>
                   <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-6 border-t border-brand-200">
                     <div className="flex-1 w-full">
-                      <select value={assessment.overallPerformance.managerRating || ''} onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, managerRating: e.target.value as Rating}})} className="w-full bg-white p-4 rounded-xl border font-bold">
+                      <select value={assessment.overallPerformance.managerRating || ''} onChange={(e) => onUpdate?.({...assessmentRef.current, overallPerformance: {...assessmentRef.current.overallPerformance, managerRating: e.target.value as Rating}})} className="w-full bg-white p-4 rounded-xl border font-bold">
                         <option value="">Select Official Result...</option>
                         {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
@@ -427,7 +433,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       onClick={() => {
                         if (!validateMidYearFeedback()) return;
                         if(confirm("Submit mid-year feedback? This will unlock the final review sections for later in the year.")) {
-                          onUpdate?.({...assessment, midYearStatus: 'reviewed'});
+                          onUpdate?.({...assessmentRef.current, midYearStatus: 'reviewed'});
                           alert("Mid-year feedback submitted. Final review sections are now unlocked.");
                         }
                       }} 
@@ -438,7 +444,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   ) : (
                     <button onClick={() => {
                       if (!validateFinalReview()) return;
-                      if(confirm("Submit and finalize this review?")) onFinalize?.({...assessment, status: 'reviewed'});
+                      if(confirm("Submit and finalize this review?")) onFinalize?.({...assessmentRef.current, status: 'reviewed'});
                     }} className="bg-brand-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete Review</button>
                   )}
                 </div>
@@ -448,7 +454,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                  <div className="flex items-center gap-8 flex-shrink-0">
                     <span className="text-[10px] font-black text-[#d58f5c] uppercase tracking-widest leading-none">Final Result</span>
                     <span className="text-sm font-black leading-none whitespace-nowrap">
-                      {assessment.overallPerformance.managerRating || 'PENDING'}
+                      {assessment.overallPerformance.managerRating ? assessment.overallPerformance.managerRating.split(' - ')[0] : 'PENDING'}
                     </span>
                  </div>
                  

@@ -170,7 +170,7 @@ const App: React.FC = () => {
         // We use the ref value to ensure we always sync the most recent state
         await syncSingleToCloud(latestAssessmentRef.current);
       }
-    }, 1500); // Increased to 1.5s for better stability
+    }, 500); // Reduced to 500ms for better responsiveness
   };
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
