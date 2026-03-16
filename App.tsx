@@ -170,7 +170,7 @@ const App: React.FC = () => {
         // We use the ref value to ensure we always sync the most recent state
         await syncSingleToCloud(latestAssessmentRef.current);
       }
-    }, 500); // Reduced to 500ms for better responsiveness
+    }, 300); // Reduced to 300ms for better responsiveness
   };
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
@@ -322,10 +322,14 @@ const App: React.FC = () => {
             setAssessments(prev => prev.map(a => a.id === upd.id ? final : a)); 
             syncSingleToCloud(final).then((s) => s && alert("Assessment Finalized.")); 
           }} 
-          onUpdate={(upd) => {
+          onUpdate={(upd, immediate) => {
             const updatedWithTimestamp = { ...upd, updatedAt: new Date().toISOString() };
             setAssessments(prev => prev.map(a => a.id === upd.id ? updatedWithTimestamp : a));
-            debouncedSync(updatedWithTimestamp);
+            if (immediate) {
+              syncSingleToCloud(updatedWithTimestamp);
+            } else {
+              debouncedSync(updatedWithTimestamp);
+            }
           }}
           onBulkUpload={handleBulkUpload} 
           onDeleteAssessment={(id) => { 

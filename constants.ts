@@ -20,8 +20,8 @@ export const CORE_COMPETENCIES: Competency[] = [
 ];
 
 export const INITIAL_KPIS: KPI[] = [
-  { id: 'kpi-1', title: 'KPI 1', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '', midYearManagerRating: undefined },
-  { id: 'kpi-2', title: 'KPI 2', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '', midYearManagerRating: undefined }
+  { id: 'kpi-1', title: 'KPI 1', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' },
+  { id: 'kpi-2', title: 'KPI 2', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' }
 ];
 
 export const createBlankAssessment = (
@@ -56,18 +56,27 @@ export const createBlankAssessment = (
       targetDate: new Date().getFullYear().toString(),
       status: 'Active',
       midYearSelfComments: '',
-      midYearManagerComments: '',
-      midYearManagerRating: undefined
+      midYearManagerComments: ''
     })),
     developmentPlan: { 
       developmentGoal: developmentGoal || 'To be defined by staff and manager.',
       competencies: [], 
       selfComments: '', 
       managerComments: '',
-      midYearManagerRating: undefined
+      midYearSelfComments: '',
+      midYearManagerComments: ''
     },
-    coreCompetencies: CORE_COMPETENCIES.map(c => ({ ...c, midYearManagerRating: undefined })),
-    overallPerformance: { selfComments: '', managerComments: '', midYearManagerRating: undefined },
+    coreCompetencies: CORE_COMPETENCIES.map(c => ({ 
+      ...c, 
+      midYearSelfComments: '', 
+      midYearManagerComments: '' 
+    })),
+    overallPerformance: { 
+      selfComments: '', 
+      managerComments: '',
+      midYearSelfComments: '',
+      midYearManagerComments: ''
+    },
     status: 'draft'
   };
 };

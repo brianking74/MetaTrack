@@ -38,7 +38,7 @@ const DebouncedTextarea: React.FC<DebouncedTextareaProps> = ({
     timeoutRef.current = setTimeout(() => {
       onChange(newVal);
       timeoutRef.current = null;
-    }, 500);
+    }, 300);
   };
 
   const handleBlur = () => {
