@@ -65,6 +65,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   };
 
   const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted' && assessment.status !== 'submitted';
+  const isMidYearEditable = isEditable && assessment.midYearStatus === 'submitted';
+  const hasMidYearContent = (item: any) => !!(item.midYearSelfComments || item.midYearManagerComments);
+  const shouldShowMidYear = (item: any) => assessment.midYearStatus === 'submitted' || assessment.midYearStatus === 'reviewed' || hasMidYearContent(item);
 
   const handleAiAnalysis = async () => {
     setIsAnalyzing(true);
@@ -139,12 +142,15 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   </div>
                 </div>
 
-                {(kpi.midYearSelfComments || kpi.midYearManagerComments || isFinalReviewLocked) && (
+                {/* Mid-Year Review Section for KPI */}
+                {shouldShowMidYear(kpi) && (
                   <div className="mb-10 space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block">Mid-Year Review</span>
-                      {isFinalReviewLocked && (
-                        <span className="text-[8px] font-bold text-blue-400 uppercase tracking-tight bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Review Mode</span>
+                      {(assessment.midYearStatus === 'submitted' || assessment.midYearStatus === 'reviewed') && (
+                        <span className="text-[8px] font-bold text-blue-400 uppercase tracking-tight bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                          {assessment.midYearStatus === 'reviewed' ? 'Mid-Year Completed' : 'Review Mode'}
+                        </span>
                       )}
                     </div>
                     <div className="space-y-4">
@@ -154,7 +160,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       </div>
                       <div className="bg-white p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal shadow-sm">
                         <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Manager Mid-Year Feedback</span>
-                        {!isEditable ? (
+                        {!isMidYearEditable ? (
                           <p className="italic text-slate-500">{kpi.midYearManagerComments || 'No feedback provided.'}</p>
                         ) : (
                           <DebouncedTextarea 
@@ -228,7 +234,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 </div>
 
                 {/* Mid-Year Review Section for Competencies */}
-                {(comp.midYearSelfComments || comp.midYearManagerComments || isFinalReviewLocked) && (
+                {shouldShowMidYear(comp) && (
                   <div className="mb-8 p-6 bg-blue-50/30 rounded-3xl border border-blue-100 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-white p-4 rounded-2xl border border-blue-50 text-xs text-slate-600 italic">
@@ -237,7 +243,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       </div>
                       <div className="bg-white p-4 rounded-2xl border border-blue-50 text-xs text-slate-700">
                         <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Mid-Year Feedback</span>
-                        {!isEditable ? (
+                        {!isMidYearEditable ? (
                           <p className="italic text-slate-500">{comp.midYearManagerComments || 'No feedback provided.'}</p>
                         ) : (
                           <DebouncedTextarea 
@@ -290,7 +296,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           </div>
 
           <div className="space-y-8">
-            {(assessment.developmentPlan.midYearSelfComments || assessment.developmentPlan.midYearManagerComments || isFinalReviewLocked) && (
+            {shouldShowMidYear(assessment.developmentPlan) && (
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Reflection</span>
@@ -301,7 +307,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal min-h-[80px]">
-                      {!isEditable ? (
+                      {!isMidYearEditable ? (
                         <p className="italic text-slate-500">{assessment.developmentPlan.midYearManagerComments || 'No feedback provided.'}</p>
                       ) : (
                         <DebouncedTextarea 
@@ -351,7 +357,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         <section className="break-inside-avoid">
           <SectionTitle>Executive Summary & Final Grade</SectionTitle>
           <div className="space-y-12">
-            {(assessment.overallPerformance.midYearSelfComments || assessment.overallPerformance.midYearManagerComments || isFinalReviewLocked) && (
+            {shouldShowMidYear(assessment.overallPerformance) && (
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Summary</span>
@@ -362,7 +368,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal">
-                      {!isEditable ? (
+                      {!isMidYearEditable ? (
                         <p className="italic text-slate-500">{assessment.overallPerformance.midYearManagerComments || 'No feedback provided.'}</p>
                       ) : (
                         <DebouncedTextarea 

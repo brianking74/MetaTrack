@@ -325,7 +325,13 @@ const App: React.FC = () => {
           onUpdate={(upd, immediate) => {
             const updatedWithTimestamp = { ...upd, updatedAt: new Date().toISOString() };
             setAssessments(prev => prev.map(a => a.id === upd.id ? updatedWithTimestamp : a));
+            
+            // Always update the ref so any pending debounced sync uses the latest data
+            latestAssessmentRef.current = updatedWithTimestamp;
+            
             if (immediate) {
+              // Clear any pending debounced sync to avoid overwriting the immediate sync
+              if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
               syncSingleToCloud(updatedWithTimestamp);
             } else {
               debouncedSync(updatedWithTimestamp);
