@@ -152,18 +152,28 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                         <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Staff Reflection</span>
                         {kpi.midYearSelfComments ? `"${kpi.midYearSelfComments}"` : <span className="text-slate-400 italic">No reflection provided.</span>}
                       </div>
-                      <div className="bg-white p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal shadow-sm">
-                        <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Manager Mid-Year Feedback</span>
-                        {!isEditable ? (
-                          <p className="italic text-slate-500">{kpi.midYearManagerComments || 'No feedback provided.'}</p>
-                        ) : (
-                          <DebouncedTextarea 
-                            value={kpi.midYearManagerComments || ''} 
-                            onChange={(val) => handleUpdate({...assessmentRef.current, kpis: assessmentRef.current.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: val} : k)})}
-                            className="w-full text-xs border-none p-0 bg-transparent outline-none h-20 resize-none focus:ring-0"
-                            placeholder="Enter mid-year feedback for this KPI..."
-                          />
-                        )}
+                      <div className="bg-white p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2">
+                          <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Manager Mid-Year Feedback</span>
+                          {!isEditable ? (
+                            <p className="italic text-slate-500">{kpi.midYearManagerComments || 'No feedback provided.'}</p>
+                          ) : (
+                            <DebouncedTextarea 
+                              value={kpi.midYearManagerComments || ''} 
+                              onChange={(val) => handleUpdate({...assessmentRef.current, kpis: assessmentRef.current.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: val} : k)})}
+                              className="w-full text-xs border-none p-0 bg-transparent outline-none h-20 resize-none focus:ring-0"
+                              placeholder="Enter mid-year feedback for this KPI..."
+                            />
+                          )}
+                        </div>
+                        <div className="border-l border-blue-50 pl-6">
+                          <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Mid-Year Rating</span>
+                          {!isEditable ? (
+                            <div className="text-sm font-bold text-slate-800">{kpi.midYearManagerRating ? kpi.midYearManagerRating.split(' - ')[0] : 'N/A'}</div>
+                          ) : (
+                            renderRatingSelect(kpi.midYearManagerRating, (r) => handleUpdate({...assessmentRef.current, kpis: assessmentRef.current.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerRating: r} : k)}))
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -226,6 +236,42 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     <span className="text-[9px] font-black text-brand-600 block">Self: {comp.selfRating ? comp.selfRating.split(' - ')[0] : 'N/A'}</span>
                    </div>
                 </div>
+
+                {/* Mid-Year Review Section for Competencies */}
+                {(comp.midYearSelfComments || comp.midYearManagerComments || isFinalReviewLocked) && (
+                  <div className="mb-8 p-6 bg-blue-50/30 rounded-3xl border border-blue-100 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white p-4 rounded-2xl border border-blue-50 text-xs text-slate-600 italic">
+                        <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Mid-Year Reflection</span>
+                        {comp.midYearSelfComments ? `"${comp.midYearSelfComments}"` : <span className="text-slate-400 italic">No reflection provided.</span>}
+                      </div>
+                      <div className="bg-white p-4 rounded-2xl border border-blue-50 text-xs text-slate-700 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="md:col-span-2">
+                          <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Mid-Year Feedback</span>
+                          {!isEditable ? (
+                            <p className="italic text-slate-500">{comp.midYearManagerComments || 'No feedback provided.'}</p>
+                          ) : (
+                            <DebouncedTextarea 
+                              value={comp.midYearManagerComments || ''} 
+                              onChange={(val) => handleUpdate({...assessmentRef.current, coreCompetencies: assessmentRef.current.coreCompetencies.map(c => c.id === comp.id ? {...c, midYearManagerComments: val} : c)})}
+                              className="w-full text-[10px] border-none p-0 bg-transparent outline-none h-12 resize-none focus:ring-0"
+                              placeholder="Mid-year feedback..."
+                            />
+                          )}
+                        </div>
+                        <div className="border-l border-blue-50 pl-4">
+                          <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Rating</span>
+                          {!isEditable ? (
+                            <div className="text-xs font-bold text-slate-800">{comp.midYearManagerRating ? comp.midYearManagerRating.split(' - ')[0] : 'N/A'}</div>
+                          ) : (
+                            renderRatingSelect(comp.midYearManagerRating, (r) => handleUpdate({...assessmentRef.current, coreCompetencies: assessmentRef.current.coreCompetencies.map(c => c.id === comp.id ? {...c, midYearManagerRating: r} : c)}))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-6 border-t bg-slate-50/50 p-6 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-6">
                    <div>
                     {!isEditable ? (
@@ -273,7 +319,16 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     </div>
                  </div>
                  <div className="space-y-4">
-                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
+                      <div className="w-48">
+                        {!isEditable ? (
+                          <div className="text-xs font-bold text-slate-800 bg-white px-3 py-1 rounded border border-blue-50">Rating: {assessment.developmentPlan.midYearManagerRating ? assessment.developmentPlan.midYearManagerRating.split(' - ')[0] : 'N/A'}</div>
+                        ) : (
+                          renderRatingSelect(assessment.developmentPlan.midYearManagerRating, (r) => handleUpdate({...assessmentRef.current, developmentPlan: {...assessmentRef.current.developmentPlan, midYearManagerRating: r}}))
+                        )}
+                      </div>
+                    </div>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal min-h-[80px]">
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.developmentPlan.midYearManagerComments || 'No feedback provided.'}</p>
@@ -334,7 +389,16 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     </div>
                  </div>
                  <div className="space-y-4">
-                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
+                      <div className="w-48">
+                        {!isEditable ? (
+                          <div className="text-xs font-bold text-slate-800 bg-white px-3 py-1 rounded border border-blue-50">Rating: {assessment.overallPerformance.midYearManagerRating ? assessment.overallPerformance.midYearManagerRating.split(' - ')[0] : 'N/A'}</div>
+                        ) : (
+                          renderRatingSelect(assessment.overallPerformance.midYearManagerRating, (r) => handleUpdate({...assessmentRef.current, overallPerformance: {...assessmentRef.current.overallPerformance, midYearManagerRating: r}}))
+                        )}
+                      </div>
+                    </div>
                     <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal">
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.overallPerformance.midYearManagerComments || 'No feedback provided.'}</p>

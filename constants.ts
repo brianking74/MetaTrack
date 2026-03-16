@@ -20,8 +20,8 @@ export const CORE_COMPETENCIES: Competency[] = [
 ];
 
 export const INITIAL_KPIS: KPI[] = [
-  { id: 'kpi-1', title: 'KPI 1', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' },
-  { id: 'kpi-2', title: 'KPI 2', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' }
+  { id: 'kpi-1', title: 'KPI 1', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '', midYearManagerRating: undefined },
+  { id: 'kpi-2', title: 'KPI 2', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '', midYearManagerRating: undefined }
 ];
 
 export const createBlankAssessment = (
@@ -56,16 +56,18 @@ export const createBlankAssessment = (
       targetDate: new Date().getFullYear().toString(),
       status: 'Active',
       midYearSelfComments: '',
-      midYearManagerComments: ''
+      midYearManagerComments: '',
+      midYearManagerRating: undefined
     })),
     developmentPlan: { 
       developmentGoal: developmentGoal || 'To be defined by staff and manager.',
       competencies: [], 
       selfComments: '', 
-      managerComments: '' 
+      managerComments: '',
+      midYearManagerRating: undefined
     },
-    coreCompetencies: CORE_COMPETENCIES.map(c => ({ ...c })),
-    overallPerformance: { selfComments: '', managerComments: '' },
+    coreCompetencies: CORE_COMPETENCIES.map(c => ({ ...c, midYearManagerRating: undefined })),
+    overallPerformance: { selfComments: '', managerComments: '', midYearManagerRating: undefined },
     status: 'draft'
   };
 };

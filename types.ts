@@ -23,6 +23,7 @@ export interface KPI {
   managerComments?: string;
   midYearSelfComments?: string;
   midYearManagerComments?: string;
+  midYearManagerRating?: Rating;
 }
 
 export interface Competency {
@@ -34,6 +35,7 @@ export interface Competency {
   managerRating?: Rating;
   managerComments?: string;
   midYearSelfComments?: string;
+  midYearManagerRating?: Rating;
 }
 
 export interface EmployeeDetails {
@@ -59,6 +61,7 @@ export interface Assessment {
     managerComments?: string;
     midYearSelfComments?: string;
     midYearManagerComments?: string;
+    midYearManagerRating?: Rating;
   };
   coreCompetencies: Competency[];
   overallPerformance: {
@@ -68,6 +71,7 @@ export interface Assessment {
     managerComments: string;
     midYearSelfComments?: string;
     midYearManagerComments?: string;
+    midYearManagerRating?: Rating;
   };
   status: 'draft' | 'submitted' | 'reviewed';
   midYearStatus?: 'draft' | 'submitted' | 'reviewed';
