@@ -16,6 +16,9 @@ const App: React.FC = () => {
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const syncTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const latestAssessmentRef = React.useRef<Assessment | null>(null);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error?: string }>({ connected: true });
   
@@ -24,6 +27,12 @@ const App: React.FC = () => {
   const [assessorEmailInput, setAssessorEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -137,11 +146,23 @@ const App: React.FC = () => {
     setIsSyncing(false);
     if (!result.success) {
       setDbStatus({ connected: false, error: result.error });
-      alert(`Cloud Sync Error:\n\n${result.error}\n\nDon't worry, your work is still saved in this browser's local memory.`);
+      console.error("Cloud Sync Error:", result.error);
     } else {
       setDbStatus({ connected: true });
     }
     return result.success;
+  };
+
+  const debouncedSync = (updatedAssessment: Assessment) => {
+    latestAssessmentRef.current = updatedAssessment;
+    
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    
+    syncTimeoutRef.current = setTimeout(async () => {
+      if (latestAssessmentRef.current) {
+        await syncSingleToCloud(latestAssessmentRef.current);
+      }
+    }, 1000); // 1 second debounce
   };
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
@@ -298,7 +319,7 @@ const App: React.FC = () => {
           onUpdate={(upd) => {
             const n = assessments.map(a => a.id === upd.id ? { ...upd, updatedAt: new Date().toISOString() } : a);
             setAssessments(n);
-            syncSingleToCloud(upd);
+            debouncedSync(upd);
           }}
           onBulkUpload={handleBulkUpload} 
           onDeleteAssessment={(id) => { 
