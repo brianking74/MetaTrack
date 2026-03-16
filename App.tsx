@@ -142,15 +142,22 @@ const App: React.FC = () => {
 
   const syncSingleToCloud = async (updatedAssessment: Assessment): Promise<boolean> => {
     setIsSyncing(true);
-    const result = await supabaseService.saveAssessment(updatedAssessment);
-    setIsSyncing(false);
-    if (!result.success) {
-      setDbStatus({ connected: false, error: result.error });
-      console.error("Cloud Sync Error:", result.error);
-    } else {
-      setDbStatus({ connected: true });
+    try {
+      const result = await supabaseService.saveAssessment(updatedAssessment);
+      if (!result.success) {
+        setDbStatus({ connected: false, error: result.error });
+        console.error("Cloud Sync Error:", result.error);
+        return false;
+      } else {
+        setDbStatus({ connected: true });
+        return true;
+      }
+    } catch (err) {
+      console.error("Fatal Sync Error:", err);
+      return false;
+    } finally {
+      setIsSyncing(false);
     }
-    return result.success;
   };
 
   const debouncedSync = (updatedAssessment: Assessment) => {
@@ -160,9 +167,10 @@ const App: React.FC = () => {
     
     syncTimeoutRef.current = setTimeout(async () => {
       if (latestAssessmentRef.current) {
+        // We use the ref value to ensure we always sync the most recent state
         await syncSingleToCloud(latestAssessmentRef.current);
       }
-    }, 1000); // 1 second debounce
+    }, 1500); // Increased to 1.5s for better stability
   };
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
@@ -293,14 +301,13 @@ const App: React.FC = () => {
           <AssessmentForm 
             initialData={currentAssessment} 
             onSave={(d) => { 
-              const n = assessments.map(a => a.id === d.id ? { ...d, updatedAt: new Date().toISOString() } : a); 
-              setAssessments(n); 
-              syncSingleToCloud(d); 
+              const updatedWithTimestamp = { ...d, updatedAt: new Date().toISOString() };
+              setAssessments(prev => prev.map(a => a.id === d.id ? updatedWithTimestamp : a)); 
+              debouncedSync(updatedWithTimestamp); 
             }} 
             onSubmit={(d) => { 
               const final = {...d, status: 'submitted' as const, submittedAt: new Date().toISOString()};
-              const n: Assessment[] = assessments.map(a => a.id === d.id ? final : a); 
-              setAssessments(n); 
+              setAssessments(prev => prev.map(a => a.id === d.id ? final : a)); 
               syncSingleToCloud(final).then((s) => s && (confetti(), alert("Assessment submitted successfully!"))); 
             }} 
           />
@@ -312,14 +319,13 @@ const App: React.FC = () => {
           role={role} 
           onReviewComplete={(upd) => { 
             const final = { ...upd, reviewedAt: new Date().toISOString(), status: 'reviewed' as const };
-            const n = assessments.map(a => a.id === upd.id ? final : a); 
-            setAssessments(n); 
+            setAssessments(prev => prev.map(a => a.id === upd.id ? final : a)); 
             syncSingleToCloud(final).then((s) => s && alert("Assessment Finalized.")); 
           }} 
           onUpdate={(upd) => {
-            const n = assessments.map(a => a.id === upd.id ? { ...upd, updatedAt: new Date().toISOString() } : a);
-            setAssessments(n);
-            debouncedSync(upd);
+            const updatedWithTimestamp = { ...upd, updatedAt: new Date().toISOString() };
+            setAssessments(prev => prev.map(a => a.id === upd.id ? updatedWithTimestamp : a));
+            debouncedSync(updatedWithTimestamp);
           }}
           onBulkUpload={handleBulkUpload} 
           onDeleteAssessment={(id) => { 

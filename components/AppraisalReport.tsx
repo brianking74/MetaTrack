@@ -1,7 +1,44 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Assessment, Rating } from '../types.ts';
 import { analyzeAssessment } from '../services/geminiService.ts';
+
+interface DebouncedTextareaProps {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+}
+
+const DebouncedTextarea: React.FC<DebouncedTextareaProps> = ({ value, onChange, placeholder, className, disabled }) => {
+  const [localValue, setLocalValue] = useState(value);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newVal = e.target.value;
+    setLocalValue(newVal);
+    
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      onChange(newVal);
+    }, 500);
+  };
+
+  return (
+    <textarea
+      value={localValue}
+      onChange={handleChange}
+      placeholder={placeholder}
+      className={className}
+      disabled={disabled}
+    />
+  );
+};
 
 interface AppraisalReportProps {
   assessment: Assessment;
@@ -140,9 +177,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                         {!isEditable ? (
                           <p className="italic text-slate-500">{kpi.midYearManagerComments || 'No feedback provided.'}</p>
                         ) : (
-                          <textarea 
+                          <DebouncedTextarea 
                             value={kpi.midYearManagerComments || ''} 
-                            onChange={(e) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: e.target.value} : k)})}
+                            onChange={(val) => onUpdate?.({...assessment, kpis: assessment.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: val} : k)})}
                             className="w-full text-xs border-none p-0 bg-transparent outline-none h-20 resize-none focus:ring-0"
                             placeholder="Enter mid-year feedback for this KPI..."
                           />
@@ -251,9 +288,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.developmentPlan.midYearManagerComments || 'No feedback provided.'}</p>
                       ) : (
-                        <textarea 
+                        <DebouncedTextarea 
                           value={assessment.developmentPlan.midYearManagerComments || ''} 
-                          onChange={(e) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, midYearManagerComments: e.target.value}})}
+                          onChange={(val) => onUpdate?.({...assessment, developmentPlan: {...assessment.developmentPlan, midYearManagerComments: val}})}
                           className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
                           placeholder="Enter mid-year feedback for development plan..."
                         />
@@ -312,9 +349,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.overallPerformance.midYearManagerComments || 'No feedback provided.'}</p>
                       ) : (
-                        <textarea 
+                        <DebouncedTextarea 
                           value={assessment.overallPerformance.midYearManagerComments || ''} 
-                          onChange={(e) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, midYearManagerComments: e.target.value}})}
+                          onChange={(val) => onUpdate?.({...assessment, overallPerformance: {...assessment.overallPerformance, midYearManagerComments: val}})}
                           className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
                           placeholder="Enter mid-year executive summary feedback..."
                         />
