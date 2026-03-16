@@ -9,6 +9,7 @@ interface AdminDashboardProps {
   currentUserEmail: string;
   role: RoleType;
   onReviewComplete: (updated: Assessment) => void;
+  onUpdate: (updated: Assessment) => void;
   onBulkUpload: (newAssessments: Assessment[]) => void;
   onDeleteAssessment: (id: string) => void;
   onRestoreBackup?: (assessments: Assessment[]) => void;
@@ -21,6 +22,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUserEmail, 
   role, 
   onReviewComplete,
+  onUpdate,
   onBulkUpload,
   onDeleteAssessment,
   onRestoreBackup,
@@ -229,7 +231,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
           </div>
         </div>
-        <AppraisalReport assessment={selectedAssessment} isEditable={!isReviewed} isDownloading={isDownloading} onUpdate={setSelectedAssessment} onFinalize={(final) => { onReviewComplete(final); setSelectedAssessment(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+        <AppraisalReport 
+          assessment={selectedAssessment} 
+          isEditable={!isReviewed} 
+          isDownloading={isDownloading} 
+          onUpdate={(upd) => {
+            setSelectedAssessment(upd);
+            onUpdate(upd);
+          }} 
+          onFinalize={(final) => { onReviewComplete(final); setSelectedAssessment(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+        />
       </div>
     );
   }

@@ -295,6 +295,11 @@ const App: React.FC = () => {
             setAssessments(n); 
             syncSingleToCloud(final).then((s) => s && alert("Assessment Finalized.")); 
           }} 
+          onUpdate={(upd) => {
+            const n = assessments.map(a => a.id === upd.id ? { ...upd, updatedAt: new Date().toISOString() } : a);
+            setAssessments(n);
+            syncSingleToCloud(upd);
+          }}
           onBulkUpload={handleBulkUpload} 
           onDeleteAssessment={(id) => { 
             if (confirm("Delete this record? This cannot be undone.")) {
