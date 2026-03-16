@@ -2,43 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Assessment, Rating, KPI, Competency } from '../types.ts';
 import { RATING_DESCRIPTIONS, INITIAL_KPIS, CORE_COMPETENCIES } from '../constants.ts';
-
-interface DebouncedTextareaProps {
-  value: string;
-  onChange: (val: string) => void;
-  placeholder?: string;
-  className?: string;
-  readOnly?: boolean;
-}
-
-const DebouncedTextarea: React.FC<DebouncedTextareaProps> = ({ value, onChange, placeholder, className, readOnly }) => {
-  const [localValue, setLocalValue] = useState(value);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newVal = e.target.value;
-    setLocalValue(newVal);
-    
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      onChange(newVal);
-    }, 500);
-  };
-
-  return (
-    <textarea
-      value={localValue}
-      onChange={handleChange}
-      placeholder={placeholder}
-      className={className}
-      readOnly={readOnly}
-    />
-  );
-};
+import DebouncedTextarea from './DebouncedTextarea.tsx';
 
 interface AssessmentFormProps {
   initialData?: Assessment;
