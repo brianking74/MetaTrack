@@ -20,23 +20,25 @@ const DebouncedTextarea: React.FC<DebouncedTextareaProps> = ({
 }) => {
   const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastValueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
 
+  // Keep the latest onChange in a ref to avoid stale closures in the timeout
   useEffect(() => {
-    if (value !== lastValueRef.current) {
-      setLocalValue(value);
-      lastValueRef.current = value;
-    }
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Sync local value with prop value when it changes externally
+  useEffect(() => {
+    setLocalValue(value);
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newVal = e.target.value;
     setLocalValue(newVal);
-    lastValueRef.current = newVal;
     
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      onChange(newVal);
+      onChangeRef.current(newVal);
       timeoutRef.current = null;
     }, 300);
   };
@@ -45,7 +47,7 @@ const DebouncedTextarea: React.FC<DebouncedTextareaProps> = ({
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
-      onChange(localValue);
+      onChangeRef.current(localValue);
     }
   };
 

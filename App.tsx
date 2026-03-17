@@ -143,17 +143,28 @@ const App: React.FC = () => {
   const syncSingleToCloud = async (updatedAssessment: Assessment): Promise<boolean> => {
     setIsSyncing(true);
     try {
+      console.log("%c[Sync] Attempting to save assessment...", "color: #2563eb; font-weight: bold;");
+      
+      // Log mid-year comments specifically for visibility
+      const midYearData = {
+        kpis: updatedAssessment.kpis.map(k => ({ id: k.id, managerFeedback: k.midYearManagerComments })),
+        devPlan: updatedAssessment.developmentPlan.midYearManagerComments,
+        overall: updatedAssessment.overallPerformance.midYearManagerComments
+      };
+      console.log("[Sync] Mid-year comments in payload:", midYearData);
+
       const result = await supabaseService.saveAssessment(updatedAssessment);
       if (!result.success) {
         setDbStatus({ connected: false, error: result.error });
-        console.error("Cloud Sync Error:", result.error);
+        console.error("%c[Sync] Cloud Sync Error:", "color: #dc2626; font-weight: bold;", result.error);
         return false;
       } else {
         setDbStatus({ connected: true });
+        console.log("%c[Sync] Cloud Sync Successful!", "color: #16a34a; font-weight: bold;");
         return true;
       }
     } catch (err) {
-      console.error("Fatal Sync Error:", err);
+      console.error("%c[Sync] Fatal Sync Error:", "color: #dc2626; font-weight: bold;", err);
       return false;
     } finally {
       setIsSyncing(false);

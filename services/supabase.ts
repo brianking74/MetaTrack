@@ -80,6 +80,20 @@ export const supabaseService = {
     if (!supabase) return { success: false, error: 'Database not configured' };
     
     try {
+      console.log(`[Supabase] Saving assessment ${assessment.id} for ${assessment.employeeDetails.email}`);
+      // Check if mid-year comments are present in the payload
+      const hasMidYearComments = assessment.kpis.some(k => k.midYearManagerComments) || 
+                                assessment.developmentPlan.midYearManagerComments || 
+                                assessment.overallPerformance.midYearManagerComments;
+      
+      if (hasMidYearComments) {
+        console.log('[Supabase] Mid-year manager comments detected in payload:', {
+          kpis: assessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments })),
+          devPlan: assessment.developmentPlan.midYearManagerComments,
+          overall: assessment.overallPerformance.midYearManagerComments
+        });
+      }
+
       const payload = {
         id: assessment.id,
         email: (assessment.employeeDetails.email || '').toLowerCase().trim(),
