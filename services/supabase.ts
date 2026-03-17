@@ -86,11 +86,19 @@ export const supabaseService = {
                                 assessment.developmentPlan.midYearManagerComments || 
                                 assessment.overallPerformance.midYearManagerComments;
       
-      if (hasMidYearComments) {
-        console.log('[Supabase] Mid-year manager comments detected in payload:', {
-          kpis: assessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments })),
-          devPlan: assessment.developmentPlan.midYearManagerComments,
-          overall: assessment.overallPerformance.midYearManagerComments
+      if (hasMidYearComments || assessment.kpis.some(k => k.managerComments) || assessment.coreCompetencies.some(c => c.managerComments) || assessment.developmentPlan.managerComments || assessment.overallPerformance.managerComments) {
+        console.log('[Supabase] Manager comments detected in payload:', {
+          midYear: {
+            kpis: assessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments })),
+            devPlan: assessment.developmentPlan.midYearManagerComments,
+            overall: assessment.overallPerformance.midYearManagerComments
+          },
+          final: {
+            kpis: assessment.kpis.map(k => ({ id: k.id, comment: k.managerComments })),
+            comps: assessment.coreCompetencies.map(c => ({ id: c.id, comment: c.managerComments })),
+            devPlan: assessment.developmentPlan.managerComments,
+            overall: assessment.overallPerformance.managerComments
+          }
         });
       }
 

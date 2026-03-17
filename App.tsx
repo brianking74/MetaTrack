@@ -145,13 +145,21 @@ const App: React.FC = () => {
     try {
       console.log("%c[Sync] Attempting to save assessment...", "color: #2563eb; font-weight: bold;");
       
-      // Log mid-year comments specifically for visibility
-      const midYearData = {
-        kpis: updatedAssessment.kpis.map(k => ({ id: k.id, managerFeedback: k.midYearManagerComments })),
-        devPlan: updatedAssessment.developmentPlan.midYearManagerComments,
-        overall: updatedAssessment.overallPerformance.midYearManagerComments
+      // Log comments specifically for visibility
+      const syncDebugData = {
+        midYear: {
+          kpis: updatedAssessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments })),
+          devPlan: updatedAssessment.developmentPlan.midYearManagerComments,
+          overall: updatedAssessment.overallPerformance.midYearManagerComments
+        },
+        final: {
+          kpis: updatedAssessment.kpis.map(k => ({ id: k.id, comment: k.managerComments })),
+          comps: updatedAssessment.coreCompetencies.map(c => ({ id: c.id, comment: c.managerComments })),
+          devPlan: updatedAssessment.developmentPlan.managerComments,
+          overall: updatedAssessment.overallPerformance.managerComments
+        }
       };
-      console.log("[Sync] Mid-year comments in payload:", midYearData);
+      console.log("[Sync] Comments in payload:", syncDebugData);
 
       const result = await supabaseService.saveAssessment(updatedAssessment);
       if (!result.success) {
@@ -319,6 +327,8 @@ const App: React.FC = () => {
             onSubmit={(d) => { 
               const final = {...d, status: 'submitted' as const, submittedAt: new Date().toISOString()};
               setAssessments(prev => prev.map(a => a.id === d.id ? final : a)); 
+              latestAssessmentRef.current = final;
+              if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
               syncSingleToCloud(final).then((s) => s && (confetti(), alert("Assessment submitted successfully!"))); 
             }} 
           />
@@ -331,6 +341,8 @@ const App: React.FC = () => {
           onReviewComplete={(upd) => { 
             const final = { ...upd, reviewedAt: new Date().toISOString(), status: 'reviewed' as const };
             setAssessments(prev => prev.map(a => a.id === upd.id ? final : a)); 
+            latestAssessmentRef.current = final;
+            if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
             syncSingleToCloud(final).then((s) => s && alert("Assessment Finalized.")); 
           }} 
           onUpdate={(upd, immediate) => {
