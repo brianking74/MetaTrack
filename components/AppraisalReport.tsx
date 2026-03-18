@@ -81,16 +81,20 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
     return true;
   };
 
-  const isFinalReviewLocked = isEditable && assessment.midYearStatus !== 'reviewed';
-  const isMidYearEditable = isEditable && assessment.midYearStatus === 'submitted';
+  const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted' && assessment.status === 'draft';
+  const isMidYearEditable = isEditable && (assessment.midYearStatus === 'submitted' || assessment.midYearStatus === 'draft');
   const hasMidYearContent = (item: any) => !!(item.midYearSelfComments || item.midYearManagerComments);
-  const shouldShowMidYear = (item: any) => assessment.midYearStatus === 'submitted' || assessment.midYearStatus === 'reviewed' || hasMidYearContent(item);
+  const shouldShowMidYear = (item: any) => assessment.midYearStatus === 'submitted' || assessment.midYearStatus === 'reviewed' || hasMidYearContent(item) || isMidYearEditable;
 
   // Debug logging for mid-year comments
   useEffect(() => {
-    const midYearComments = assessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments }));
-    console.log(`[AppraisalReport] Render for ${assessment.id}. Mid-year status: ${assessment.midYearStatus}. Comments:`, midYearComments);
-  }, [assessment.id, assessment.midYearStatus, assessment.kpis]);
+    const midYearKpiComments = assessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments }));
+    console.log(`[AppraisalReport] Render for ${assessment.id}. Mid-year status: ${assessment.midYearStatus}. Overall status: ${assessment.status}. Comments:`, {
+      kpis: midYearKpiComments,
+      devPlan: assessment.developmentPlan.midYearManagerComments,
+      overall: assessment.overallPerformance.midYearManagerComments
+    });
+  }, [assessment.id, assessment.midYearStatus, assessment.status, assessment.kpis, assessment.developmentPlan, assessment.overallPerformance]);
 
   const handleAiAnalysis = async () => {
     setIsAnalyzing(true);

@@ -216,10 +216,20 @@ const App: React.FC = () => {
           kpis: entry.kpis.map(newKpi => {
             const existingKpi = existing.kpis.find(ek => ek.id === newKpi.id || ek.title === newKpi.title);
             if (existingKpi) {
-              return { ...existingKpi, ...newKpi };
+              // Preserve EVERYTHING from existing except title and description
+              return { 
+                ...existingKpi, 
+                title: newKpi.title, 
+                description: newKpi.description 
+              };
             }
             return newKpi;
           }),
+          // Preserve these entirely from existing if they have content
+          developmentPlan: existing.developmentPlan,
+          overallPerformance: existing.overallPerformance,
+          midYearStatus: existing.midYearStatus || entry.midYearStatus,
+          status: existing.status || entry.status,
           updatedAt: new Date().toISOString()
         };
       }
@@ -351,7 +361,12 @@ const App: React.FC = () => {
               debouncedSync(updatedWithTimestamp); 
             }} 
             onSubmit={(d) => { 
-              const final = {...d, status: 'submitted' as const, submittedAt: new Date().toISOString()};
+              const final = {
+                ...d, 
+                status: 'submitted' as const, 
+                submittedAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              };
               setAssessments(prev => prev.map(a => a.id === d.id ? final : a)); 
               latestAssessmentRef.current.set(d.id, final);
               const existingTimeout = syncTimeoutRef.current.get(d.id);
@@ -369,7 +384,12 @@ const App: React.FC = () => {
           currentUserEmail={currentUserEmail} 
           role={role} 
           onReviewComplete={(upd) => { 
-            const final = { ...upd, reviewedAt: new Date().toISOString(), status: 'reviewed' as const };
+            const final = { 
+              ...upd, 
+              reviewedAt: new Date().toISOString(), 
+              updatedAt: new Date().toISOString(),
+              status: 'reviewed' as const 
+            };
             setAssessments(prev => prev.map(a => a.id === upd.id ? final : a)); 
             latestAssessmentRef.current.set(upd.id, final);
             const existingTimeout = syncTimeoutRef.current.get(upd.id);
