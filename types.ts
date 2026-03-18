@@ -9,6 +9,7 @@ export enum Rating {
 }
 
 export type RoleType = 'staff' | 'manager' | 'admin';
+export type ReviewType = 'mid-year' | 'final';
 
 export interface KPI {
   id: string;
@@ -52,6 +53,7 @@ export interface Assessment {
   managerEmail: string;
   managerPassword?: string;
   employeePassword?: string;
+  reviewType: ReviewType;
   kpis: KPI[];
   developmentPlan: {
     developmentGoal: string;

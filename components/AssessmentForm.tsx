@@ -10,15 +10,25 @@ interface AssessmentFormProps {
   onSubmit: (data: Assessment) => void;
 }
 
-const STAGES = [
-  'Overview',
-  'Key Performance Indicators',
-  'Individual Development',
-  'Core Competencies',
-  'Final Review'
-];
+const STAGES = {
+  'mid-year': [
+    'Overview',
+    'Key Performance Indicators',
+    'Individual Development',
+    'Final Review'
+  ],
+  'final': [
+    'Overview',
+    'Key Performance Indicators',
+    'Individual Development',
+    'Core Competencies',
+    'Final Review'
+  ]
+};
 
 const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, onSubmit }) => {
+  const reviewType = initialData?.reviewType || 'mid-year';
+  const currentStages = STAGES[reviewType];
   const [currentStage, setCurrentStage] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -54,7 +64,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     const missingOverall = !data.overallPerformance.midYearSelfComments?.trim();
     
     if (missingKPIs || missingDev || missingOverall) {
-      alert("Please ensure you have answered all questions before submitting.");
+      alert("Please ensure you have answered all mid-year questions before submitting.");
       return false;
     }
     return true;
@@ -68,47 +78,47 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     const missingOverall = !data.overallPerformance.selfRating || !data.overallPerformance.selfComments?.trim();
 
     if (missingKPIs || missingDev || missingComps || missingOverall) {
-      alert("Please ensure you have answered all questions before submitting.");
+      alert("Please ensure you have answered all final review questions before submitting.");
       return false;
     }
     return true;
   };
 
   const validateStage = (stage: number) => {
-    const isMidYear = formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed';
+    const stageName = currentStages[stage];
     
-    if (stage === 1) { // Key Performance Indicators
-      if (isMidYear) {
+    if (stageName === 'Key Performance Indicators') {
+      if (reviewType === 'mid-year') {
         return formData.kpis.every(k => k.midYearSelfComments?.trim());
       } else {
         return formData.kpis.every(k => k.selfRating && k.selfComments?.trim());
       }
     }
     
-    if (stage === 2) { // Individual Development
-      if (isMidYear) {
+    if (stageName === 'Individual Development') {
+      if (reviewType === 'mid-year') {
         return !!formData.developmentPlan.midYearSelfComments?.trim();
       } else {
         return !!formData.developmentPlan.selfComments?.trim();
       }
     }
     
-    if (stage === 3) { // Core Competencies
-      if (isMidYear) return true; // Locked in mid-year
+    if (stageName === 'Core Competencies') {
       return formData.coreCompetencies.every(c => !!c.selfRating);
     }
     
-    if (stage === 4) { // Final Review
-      if (isMidYear) return true; // Exception requested by user
-      return !!formData.overallPerformance.selfRating && !!formData.overallPerformance.selfComments?.trim();
+    if (stageName === 'Final Review') {
+      if (reviewType === 'mid-year') {
+        return !!formData.overallPerformance.midYearSelfComments?.trim();
+      } else {
+        return !!formData.overallPerformance.selfRating && !!formData.overallPerformance.selfComments?.trim();
+      }
     }
     
     return true;
   };
 
   const isReadOnly = formData.status !== 'draft';
-  const isMidYearReadOnly = isReadOnly || formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed';
-  const isFinalReviewReadOnly = isReadOnly || (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed');
 
   // Auto-save effect
   useEffect(() => {
@@ -141,7 +151,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
       return;
     }
     saveToDraft();
-    if (currentStage < STAGES.length - 1) setCurrentStage(prev => prev + 1);
+    if (currentStage < currentStages.length - 1) setCurrentStage(prev => prev + 1);
   };
 
   const handlePrev = () => {
@@ -227,13 +237,13 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
         <div className="flex justify-between items-center mb-4">
-          <span className="text-sm font-medium text-slate-500">Stage {currentStage + 1} of {STAGES.length}</span>
-          <span className="text-sm font-bold text-brand-600 uppercase tracking-tight">{STAGES[currentStage]}</span>
+          <span className="text-sm font-medium text-slate-500">Stage {currentStage + 1} of {currentStages.length}</span>
+          <span className="text-sm font-bold text-brand-600 uppercase tracking-tight">{currentStages[currentStage]}</span>
         </div>
         <div className="w-full bg-slate-200 rounded-full h-2">
           <div 
             className="bg-brand-600 h-2 rounded-full transition-all duration-300" 
-            style={{ width: `${((currentStage + 1) / STAGES.length) * 100}%` }}
+            style={{ width: `${((currentStage + 1) / currentStages.length) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -261,7 +271,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           </div>
         )}
 
-        {currentStage === 1 && (
+        {currentStages[currentStage] === 'Key Performance Indicators' && (
           <div className="space-y-16">
             {formData.kpis.map((kpi, idx) => (
               <div key={kpi.id} className="p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
@@ -277,56 +287,46 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   </div>
                 </div>
 
-                <div className="mb-10 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <SectionBadge text="Mid-Year Review" />
-                    {(formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') && (
-                      <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        Locked
-                      </span>
-                    )}
+                {reviewType === 'mid-year' ? (
+                  <div className="mb-10 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <SectionBadge text="Mid-Year Review" />
+                    </div>
+                    <DebouncedTextarea 
+                      value={kpi.midYearSelfComments || ''}
+                      readOnly={isReadOnly}
+                      onChange={(val) => updateKPI(kpi.id, { midYearSelfComments: val })}
+                      className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                      placeholder="Enter your mid-year progress comments here..."
+                    />
                   </div>
-                  <DebouncedTextarea 
-                    value={kpi.midYearSelfComments || ''}
-                    readOnly={isMidYearReadOnly}
-                    onChange={(val) => updateKPI(kpi.id, { midYearSelfComments: val })}
-                    className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-24 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
-                    placeholder="Enter your mid-year progress comments here..."
-                  />
-                  {kpi.midYearManagerComments && (
-                    <div className="mt-2 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
-                      <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest block mb-1">Manager Mid-Year Feedback</span>
-                      <p className="text-xs text-slate-700 italic leading-relaxed">{kpi.midYearManagerComments}</p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-10">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 border-b pb-2">Final Review</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="space-y-4">
-                      <SectionBadge text="Self Rating" />
-                      {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }), isFinalReviewReadOnly)}
-                    </div>
-                    <div className="md:col-span-2 space-y-4">
-                      <SectionBadge text="Achievement Comments" />
-                      <DebouncedTextarea 
-                        value={kpi.selfComments || ''}
-                        readOnly={isFinalReviewReadOnly}
-                        onChange={(val) => updateKPI(kpi.id, { selfComments: val })}
-                        className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                        placeholder={isFinalReviewReadOnly && (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') ? "Locked until Mid-Year is submitted..." : "Describe your actual performance against this KPI..."}
-                      />
+                ) : (
+                  <div className="space-y-10">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 border-b pb-2">Final Review</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div className="space-y-4">
+                        <SectionBadge text="Self Rating" />
+                        {renderRatingSelect(kpi.selfRating, (r) => updateKPI(kpi.id, { selfRating: r }))}
+                      </div>
+                      <div className="md:col-span-2 space-y-4">
+                        <SectionBadge text="Achievement Comments" />
+                        <DebouncedTextarea 
+                          value={kpi.selfComments || ''}
+                          readOnly={isReadOnly}
+                          onChange={(val) => updateKPI(kpi.id, { selfComments: val })}
+                          className={`w-full border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                          placeholder="Describe your actual performance against this KPI..."
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {currentStage === 2 && (
+        {currentStages[currentStage] === 'Individual Development' && (
           <div className="space-y-12">
             <h3 className="text-xl font-bold text-slate-800 border-b pb-2">Individual Development</h3>
             
@@ -338,110 +338,86 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
             </div>
 
             <div className="space-y-8">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
+              {reviewType === 'mid-year' ? (
+                <div className="space-y-2">
                   <SectionBadge text="Mid-Year Review" />
-                  {(formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') && (
-                    <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      Locked
-                    </span>
-                  )}
+                  <DebouncedTextarea 
+                    value={formData.developmentPlan.midYearSelfComments || ''}
+                    readOnly={isReadOnly}
+                    onChange={(val) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, midYearSelfComments: val } }))}
+                    className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                    placeholder="Mid-year growth reflection..."
+                  />
                 </div>
-                <DebouncedTextarea 
-                  value={formData.developmentPlan.midYearSelfComments || ''}
-                  readOnly={isMidYearReadOnly}
-                  onChange={(val) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, midYearSelfComments: val } }))}
-                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-sm ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                  placeholder="Mid-year growth reflection..."
-                />
-                {formData.developmentPlan.midYearManagerComments && (
-                  <div className="mt-2 p-4 bg-blue-50 border border-blue-100 rounded-2xl animate-in fade-in slide-in-from-top-1 duration-300">
-                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest block mb-1">Manager Mid-Year Feedback</span>
-                    <p className="text-xs text-slate-700 italic leading-relaxed">{formData.developmentPlan.midYearManagerComments}</p>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <SectionBadge text="Final Development Review" />
-                <DebouncedTextarea 
-                  value={formData.developmentPlan.selfComments}
-                  readOnly={isFinalReviewReadOnly}
-                  onChange={(val) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: val } }))}
-                  className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                  placeholder={isFinalReviewReadOnly && (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') ? "Locked until Mid-Year is submitted..." : "Reflect on your growth during this cycle..."}
-                />
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  <SectionBadge text="Final Development Review" />
+                  <DebouncedTextarea 
+                    value={formData.developmentPlan.selfComments}
+                    readOnly={isReadOnly}
+                    onChange={(val) => setFormData(prev => ({ ...prev, developmentPlan: { ...prev.developmentPlan, selfComments: val } }))}
+                    className={`w-full border border-slate-300 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-sm ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                    placeholder="Reflect on your growth during this cycle..."
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {currentStage === 3 && (
+        {currentStages[currentStage] === 'Core Competencies' && (
           <div className="space-y-8">
-            {(formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') && (
-              <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl text-blue-700 text-sm font-semibold shadow-sm flex items-center gap-3">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Only to be completed in Final Review, click Next Step below
-              </div>
-            )}
             {formData.coreCompetencies.map((comp, idx) => (
               <div key={comp.id} className="p-8 bg-white rounded-[2rem] border border-slate-200 shadow-sm">
                 <h4 className="text-xl font-black text-slate-800 mb-2">{idx + 1}. {comp.name}</h4>
                 <p className="text-sm text-slate-500 mb-6 leading-relaxed">{comp.description}</p>
-                <div className={`max-w-md ${isFinalReviewReadOnly ? 'opacity-50 grayscale' : ''}`}>
+                <div className={`max-w-md ${isReadOnly ? 'opacity-50 grayscale' : ''}`}>
                   <SectionBadge text="Self-Rating" />
-                  {renderRatingSelect(comp.selfRating, (r) => updateCompetency(comp.id, { selfRating: r }), isFinalReviewReadOnly)}
+                  {renderRatingSelect(comp.selfRating, (r) => updateCompetency(comp.id, { selfRating: r }))}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {currentStage === 4 && (
+        {currentStages[currentStage] === 'Final Review' && (
           <div className="space-y-10">
              <div className="bg-brand-900 text-white p-10 rounded-[2.5rem] shadow-xl">
-               <h3 className="text-2xl font-bold mb-3">Staff Submission Summary</h3>
-               <p className="text-sm opacity-80 leading-relaxed">Provide a final overview of your annual performance highlights.</p>
+               <h3 className="text-2xl font-bold mb-3">{reviewType === 'mid-year' ? 'Mid-Year Submission Summary' : 'Final Submission Summary'}</h3>
+               <p className="text-sm opacity-80 leading-relaxed">
+                 {reviewType === 'mid-year' ? 'Provide a summary of your progress so far.' : 'Provide a final overview of your annual performance highlights.'}
+               </p>
              </div>
              <div className="space-y-8">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                {reviewType === 'mid-year' ? (
+                  <div className="space-y-2">
                     <SectionBadge text="Mid-Year Review Summary" />
-                    {(formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') && (
-                      <span className="text-[8px] font-bold text-green-600 uppercase tracking-tight flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        Locked
-                      </span>
-                    )}
+                    <DebouncedTextarea 
+                      value={formData.overallPerformance.midYearSelfComments || ''}
+                      readOnly={isReadOnly}
+                      onChange={(val) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, midYearSelfComments: val } }))}
+                      className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                      placeholder="Mid-year summary of achievements..."
+                    />
                   </div>
-                  <DebouncedTextarea 
-                    value={formData.overallPerformance.midYearSelfComments || ''}
-                    readOnly={isMidYearReadOnly}
-                    onChange={(val) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, midYearSelfComments: val } }))}
-                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-32 shadow-md ${isMidYearReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                    placeholder="Mid-year summary of achievements..."
-                  />
-                  {formData.overallPerformance.midYearManagerComments && (
-                    <div className="mt-4 p-6 bg-blue-50 border border-blue-100 rounded-[2rem] animate-in fade-in slide-in-from-top-1 duration-300">
-                      <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest block mb-1">Manager Mid-Year Feedback</span>
-                      <p className="text-xs text-slate-700 italic leading-relaxed">{formData.overallPerformance.midYearManagerComments}</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <SectionBadge text="Final Review Summary" />
+                      <DebouncedTextarea 
+                        value={formData.overallPerformance.selfComments}
+                        readOnly={isReadOnly}
+                        onChange={(val) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: val } }))}
+                        className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
+                        placeholder="Summarize your key highlights..."
+                      />
                     </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <SectionBadge text="Final Review Summary" />
-                  <DebouncedTextarea 
-                    value={formData.overallPerformance.selfComments}
-                    readOnly={isFinalReviewReadOnly}
-                    onChange={(val) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfComments: val } }))}
-                    className={`w-full border border-slate-300 rounded-[2.5rem] p-8 text-sm focus:ring-2 focus:ring-brand-500 outline-none h-64 shadow-md ${isFinalReviewReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-50 grayscale' : 'bg-white'}`}
-                    placeholder={isFinalReviewReadOnly && (formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed') ? "Locked until Mid-Year is submitted..." : "Summarize your key highlights..."}
-                  />
-                </div>
-                <div className={`max-w-md space-y-2 ${isFinalReviewReadOnly ? 'opacity-50 grayscale' : ''}`}>
-                  <SectionBadge text="Performance Rating" />
-                  {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })), isFinalReviewReadOnly)}
-                </div>
+                    <div className={`max-w-md space-y-2 ${isReadOnly ? 'opacity-50 grayscale' : ''}`}>
+                      <SectionBadge text="Performance Rating" />
+                      {renderRatingSelect(formData.overallPerformance.selfRating, (r) => setFormData(prev => ({ ...prev, overallPerformance: { ...prev.overallPerformance, selfRating: r } })))}
+                    </div>
+                  </>
+                )}
              </div>
           </div>
         )}
@@ -460,18 +436,18 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
           <div className="flex gap-4">
             {!isReadOnly && (
               <>
-                {formData.midYearStatus !== 'submitted' && formData.midYearStatus !== 'reviewed' && currentStage === STAGES.length - 1 && (
+                {reviewType === 'mid-year' && currentStage === currentStages.length - 1 && (
                   <button 
                     onClick={() => {
                       if (!validateMidYear()) return;
                       const updated = { 
                         ...latestFormDataRef.current, 
-                        midYearStatus: 'submitted' as const, 
-                        midYearSubmittedAt: new Date().toISOString(),
+                        status: 'submitted' as const, 
+                        submittedAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString() 
                       };
                       setFormData(updated);
-                      onSave(updated);
+                      onSubmit(updated);
                       setIsSubmitted(true);
                     }}
                     className="px-8 py-3 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
@@ -487,8 +463,8 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 </button>
               </>
             )}
-            {currentStage === STAGES.length - 1 ? (
-              !isReadOnly && (formData.midYearStatus === 'submitted' || formData.midYearStatus === 'reviewed') ? (
+            {currentStage === currentStages.length - 1 ? (
+              !isReadOnly && reviewType === 'final' ? (
                 <button 
                   onClick={() => {
                     if (!validateFinal()) return;
@@ -497,7 +473,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   }}
                   className="px-12 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all transform active:scale-95"
                 >
-                  Submit Now
+                  Submit Final Review
                 </button>
               ) : isReadOnly ? (
                 <div className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-xs uppercase tracking-[0.2em] border flex items-center gap-2">

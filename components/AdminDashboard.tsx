@@ -41,7 +41,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     ? assessments 
     : assessments.filter(a => a.managerEmail.toLowerCase().trim() === currentUserEmail.toLowerCase().trim());
 
-  const submissionsCount = filteredAssessments.filter(a => a.status !== 'draft' || a.midYearStatus === 'submitted').length;
+  const submissionsCount = filteredAssessments.filter(a => a.status === 'submitted').length;
   const registryCount = filteredAssessments.length;
 
   const parseCSV = (text: string): string[][] => {
@@ -196,7 +196,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     link.click();
   };
 
-  const handleDownloadPDF = (name: string) => {
+  const handleDownloadPDF = (name: string, type: string) => {
     const element = document.getElementById('appraisal-report');
     if (!element) return;
     setIsDownloading(true);
@@ -204,7 +204,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     // @ts-ignore
     const opt = {
       margin: 10,
-      filename: `Appraisal_${name.replace(/\s+/g, '_')}.pdf`,
+      filename: `Appraisal_${name.replace(/\s+/g, '_')}_${type}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -225,7 +225,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
           <div className="flex gap-4 items-center">
             {isReviewed && (
-              <button onClick={() => handleDownloadPDF(selectedAssessment.employeeDetails.fullName)} disabled={isDownloading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50">
+              <button onClick={() => handleDownloadPDF(selectedAssessment.employeeDetails.fullName, selectedAssessment.reviewType)} disabled={isDownloading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50">
                 {isDownloading ? 'Preparing PDF...' : 'Download PDF'}
               </button>
             )}
@@ -292,14 +292,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </thead>
           <tbody className="divide-y">
             {(activeTab === 'submissions' 
-              ? filteredAssessments.filter(a => a.status !== 'draft' || a.midYearStatus === 'submitted' || a.midYearStatus === 'reviewed') 
+              ? filteredAssessments.filter(a => a.status === 'submitted' || a.status === 'reviewed') 
               : filteredAssessments
             ).map(a => {
               const getStatusDisplay = () => {
-                if (a.status === 'reviewed') return { text: 'Reviewed', classes: 'bg-green-50 text-green-700 border-green-200' };
-                if (a.status === 'submitted') return { text: 'Final Submitted', classes: 'bg-brand-50 text-brand-700 border-brand-200' };
-                if (a.midYearStatus === 'reviewed') return { text: 'Mid-Year Reviewed', classes: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
-                if (a.midYearStatus === 'submitted') return { text: 'Mid-Year Submitted', classes: 'bg-blue-50 text-blue-700 border-blue-200' };
+                if (a.status === 'reviewed') return { text: 'Completed', classes: 'bg-green-50 text-green-700 border-green-200' };
+                if (a.status === 'submitted') {
+                  const isMidYear = a.reviewType === 'mid-year';
+                  return { 
+                    text: isMidYear ? 'Mid-Year Submitted' : 'Final Submitted', 
+                    classes: isMidYear ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-brand-50 text-brand-700 border-brand-200' 
+                  };
+                }
                 return { text: 'Draft', classes: 'bg-slate-50 text-slate-400 border-slate-200' };
               };
               const status = getStatusDisplay();
@@ -307,7 +311,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               return (
                 <tr key={a.id} className="hover:bg-slate-50 group">
                   <td className="px-8 py-6">
-                    <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
+                    <div className="flex flex-col">
+                      <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
+                      <p className="text-[10px] font-black text-brand-600 uppercase tracking-tight">{a.reviewType === 'mid-year' ? 'Mid-Year' : 'Final Year'}</p>
+                    </div>
                     <p className="text-[11px] text-slate-400">{a.employeeDetails.email}</p>
                   </td>
                   <td className="px-8 py-6">
@@ -320,18 +327,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </span>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    {a.overallPerformance.managerRating ? (
+                    {a.reviewType === 'final' && a.overallPerformance.managerRating ? (
                       <span className="text-sm font-black text-slate-800">
                         {a.overallPerformance.managerRating.split(' - ')[0]}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Pending</span>
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">N/A</span>
                     )}
                   </td>
                   <td className="px-8 py-6 text-right">
                      <div className="flex justify-end gap-3">
                       <button onClick={() => setSelectedAssessment(a)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">
-                        {a.status === 'draft' && a.midYearStatus !== 'submitted' ? 'View Details' : a.status === 'reviewed' ? 'View Report' : 'Review & Rate'}
+                        {a.status === 'submitted' ? 'Review & Rate' : a.status === 'reviewed' ? 'View Report' : 'View Details'}
                       </button>
                       {role === 'admin' && (
                         <button onClick={() => onDeleteAssessment(a.id)} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">

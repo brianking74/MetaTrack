@@ -14,6 +14,7 @@ const SUPER_ADMIN_EMAIL = "admin@metabev.com";
 const App: React.FC = () => {
   const [role, setRole] = useState<RoleType | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
+  const [selectedReviewType, setSelectedReviewType] = useState<'mid-year' | 'final' | null>(null);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const syncTimeoutRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -88,15 +89,15 @@ const App: React.FC = () => {
   const handleStaffLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const email = staffEmailInput.trim().toLowerCase();
-    const userRecord = assessments.find(a => a.employeeDetails.email.toLowerCase() === email);
-    if (!userRecord && email !== SUPER_ADMIN_EMAIL) {
+    const userRecords = assessments.filter(a => a.employeeDetails.email.toLowerCase() === email);
+    if (userRecords.length === 0 && email !== SUPER_ADMIN_EMAIL) {
       setAuthError(`Email "${email}" not found in registry.`);
       return;
     }
     
     // Check password if not super admin
     if (email !== SUPER_ADMIN_EMAIL) {
-      const expectedPassword = userRecord?.employeePassword || 'metabev2025';
+      const expectedPassword = userRecords[0]?.employeePassword || 'metabev2025';
       if (staffPasswordInput !== expectedPassword) {
         setAuthError("Invalid password please try again or contact your manager/administrator.");
         return;
@@ -105,6 +106,7 @@ const App: React.FC = () => {
 
     setCurrentUserEmail(email);
     setRole('staff');
+    setSelectedReviewType(null);
     setAuthError("");
   };
 
@@ -125,7 +127,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => { setRole(null); setCurrentUserEmail(""); setAuthError(""); };
+  const handleLogout = () => { 
+    setRole(null); 
+    setCurrentUserEmail(""); 
+    setSelectedReviewType(null);
+    setAuthError(""); 
+  };
 
   const syncToCloud = async (updatedAssessments: Assessment[]): Promise<boolean> => {
     setIsSyncing(true);
@@ -199,40 +206,55 @@ const App: React.FC = () => {
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
     const merged = [...assessments];
+    
+    // For each entry in the CSV, we want to ensure both a mid-year and a final record exist
     newEntries.forEach(entry => {
       const email = entry.employeeDetails.email.toLowerCase();
-      const existingIdx = merged.findIndex(m => m.employeeDetails.email.toLowerCase() === email);
       
-      if (existingIdx === -1) {
-        // New entry
-        merged.push(entry);
-      } else {
-        // Update existing entry but preserve comments and status
-        const existing = merged[existingIdx];
-        merged[existingIdx] = {
-          ...existing,
-          employeeDetails: { ...existing.employeeDetails, ...entry.employeeDetails },
-          // Merge KPIs to preserve comments
-          kpis: entry.kpis.map(newKpi => {
-            const existingKpi = existing.kpis.find(ek => ek.id === newKpi.id || ek.title === newKpi.title);
-            if (existingKpi) {
-              // Preserve EVERYTHING from existing except title and description
-              return { 
-                ...existingKpi, 
-                title: newKpi.title, 
-                description: newKpi.description 
-              };
-            }
-            return newKpi;
-          }),
-          // Preserve these entirely from existing if they have content
-          developmentPlan: existing.developmentPlan,
-          overallPerformance: existing.overallPerformance,
-          midYearStatus: existing.midYearStatus || entry.midYearStatus,
-          status: existing.status || entry.status,
-          updatedAt: new Date().toISOString()
-        };
-      }
+      ['mid-year', 'final'].forEach((type) => {
+        const reviewType = type as 'mid-year' | 'final';
+        const existingIdx = merged.findIndex(m => 
+          m.employeeDetails.email.toLowerCase() === email && 
+          m.reviewType === reviewType
+        );
+        
+        if (existingIdx === -1) {
+          // Create new record for this type
+          merged.push({
+            ...entry,
+            id: `mb-${reviewType}-${Math.random().toString(36).substr(2, 9)}`,
+            reviewType: reviewType
+          });
+        } else {
+          // Update existing entry but preserve comments and status
+          const existing = merged[existingIdx];
+          merged[existingIdx] = {
+            ...existing,
+            employeeDetails: { ...existing.employeeDetails, ...entry.employeeDetails },
+            managerName: entry.managerName,
+            managerEmail: entry.managerEmail,
+            managerPassword: entry.managerPassword || existing.managerPassword,
+            employeePassword: entry.employeePassword || existing.employeePassword,
+            // Merge KPIs to preserve comments
+            kpis: entry.kpis.map(newKpi => {
+              const existingKpi = existing.kpis.find(ek => ek.id === newKpi.id || ek.title === newKpi.title);
+              if (existingKpi) {
+                return { 
+                  ...existingKpi, 
+                  title: newKpi.title, 
+                  description: newKpi.description 
+                };
+              }
+              return newKpi;
+            }),
+            developmentPlan: {
+              ...existing.developmentPlan,
+              developmentGoal: entry.developmentPlan.developmentGoal
+            },
+            updatedAt: new Date().toISOString()
+          };
+        }
+      });
     });
     
     setAssessments(merged);
@@ -240,7 +262,12 @@ const App: React.FC = () => {
     await syncToCloud(merged);
   };
 
-  const currentAssessment = assessments.find(a => a.employeeDetails.email.toLowerCase() === currentUserEmail.toLowerCase());
+  const currentAssessments = assessments.filter(a => a.employeeDetails.email.toLowerCase() === currentUserEmail.toLowerCase());
+  const midYearAssessment = currentAssessments.find(a => a.reviewType === 'mid-year');
+  const finalAssessment = currentAssessments.find(a => a.reviewType === 'final');
+
+  const isMidYearCompleted = midYearAssessment?.status === 'reviewed';
+  const isMidYearSubmitted = midYearAssessment?.status === 'submitted';
 
   if (isLoading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-900 p-4">
@@ -348,35 +375,129 @@ const App: React.FC = () => {
     );
   }
 
+  const currentAssessment = selectedReviewType === 'mid-year' ? midYearAssessment : finalAssessment;
+
   return (
     <Layout title={role === 'staff' ? 'Performance Review' : 'Manager Hub'} role={role === 'staff' ? 'employee' : 'admin'} onRoleSwitch={handleLogout} isSyncing={isSyncing}>
       {role === 'staff' ? (
-        currentAssessment && (
-          <AssessmentForm 
-            initialData={currentAssessment} 
-            onSave={(d) => { 
-              const updatedWithTimestamp = { ...d, updatedAt: new Date().toISOString() };
-              setAssessments(prev => prev.map(a => a.id === d.id ? updatedWithTimestamp : a)); 
-              latestAssessmentRef.current.set(d.id, updatedWithTimestamp);
-              debouncedSync(updatedWithTimestamp); 
-            }} 
-            onSubmit={(d) => { 
-              const final = {
-                ...d, 
-                status: 'submitted' as const, 
-                submittedAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              };
-              setAssessments(prev => prev.map(a => a.id === d.id ? final : a)); 
-              latestAssessmentRef.current.set(d.id, final);
-              const existingTimeout = syncTimeoutRef.current.get(d.id);
-              if (existingTimeout) {
-                clearTimeout(existingTimeout);
-                syncTimeoutRef.current.delete(d.id);
-              }
-              syncSingleToCloud(final).then((s) => s && (confetti(), alert("Assessment submitted successfully!"))); 
-            }} 
-          />
+        !selectedReviewType ? (
+          <div className="max-w-4xl mx-auto py-12 px-6">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-black text-slate-900 mb-4">Select Review Stage</h2>
+              <p className="text-slate-500">Please select the review stage you wish to complete.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Mid-Year Card */}
+              <div 
+                onClick={() => !isMidYearCompleted && setSelectedReviewType('mid-year')}
+                className={`p-10 rounded-[2.5rem] border-2 transition-all cursor-pointer group relative overflow-hidden ${
+                  isMidYearCompleted 
+                    ? 'bg-slate-50 border-slate-200 opacity-75 grayscale cursor-not-allowed' 
+                    : 'bg-white border-blue-100 hover:border-blue-500 hover:shadow-2xl shadow-lg'
+                }`}
+              >
+                <div className="relative z-10">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${isMidYearCompleted ? 'bg-slate-200 text-slate-400' : 'bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors'}`}>
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 mb-2">Mid-Year Review</h3>
+                  <p className="text-sm text-slate-500 mb-6">Reflection on progress and goals for the first half of the year.</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                      isMidYearCompleted ? 'bg-green-50 text-green-600 border-green-200' : 
+                      isMidYearSubmitted ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                      'bg-slate-50 text-slate-400 border-slate-200'
+                    }`}>
+                      {isMidYearCompleted ? 'Completed' : isMidYearSubmitted ? 'Submitted' : 'Available'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Final Year Card */}
+              <div 
+                onClick={() => isMidYearCompleted && setSelectedReviewType('final')}
+                className={`p-10 rounded-[2.5rem] border-2 transition-all group relative overflow-hidden ${
+                  !isMidYearCompleted 
+                    ? 'bg-slate-50 border-slate-200 opacity-50 grayscale cursor-not-allowed' 
+                    : 'bg-white border-brand-100 hover:border-brand-500 hover:shadow-2xl shadow-lg cursor-pointer'
+                }`}
+              >
+                <div className="relative z-10">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${!isMidYearCompleted ? 'bg-slate-200 text-slate-400' : 'bg-brand-100 text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors'}`}>
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 mb-2">Final Year Review</h3>
+                  <p className="text-sm text-slate-500 mb-6">Comprehensive annual performance evaluation and core competencies.</p>
+                  <div className="flex items-center gap-2">
+                    {!isMidYearCompleted ? (
+                      <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Locked until Mid-Year is Completed
+                      </span>
+                    ) : (
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                        finalAssessment?.status === 'reviewed' ? 'bg-green-50 text-green-600 border-green-200' : 
+                        finalAssessment?.status === 'submitted' ? 'bg-brand-50 text-brand-600 border-brand-200' :
+                        'bg-slate-50 text-slate-400 border-slate-200'
+                      }`}>
+                        {finalAssessment?.status === 'reviewed' ? 'Completed' : finalAssessment?.status === 'submitted' ? 'Submitted' : 'Available'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-12 text-center">
+              <button 
+                onClick={handleLogout}
+                className="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        ) : (
+          currentAssessment && (
+            <div className="space-y-6">
+              <button 
+                onClick={() => setSelectedReviewType(null)}
+                className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline flex items-center gap-2 mb-4"
+              >
+                &larr; Back to Selection
+              </button>
+              <AssessmentForm 
+                initialData={currentAssessment} 
+                onSave={(d) => { 
+                  const updatedWithTimestamp = { ...d, updatedAt: new Date().toISOString() };
+                  setAssessments(prev => prev.map(a => a.id === d.id ? updatedWithTimestamp : a)); 
+                  latestAssessmentRef.current.set(d.id, updatedWithTimestamp);
+                  debouncedSync(updatedWithTimestamp); 
+                }} 
+                onSubmit={(d) => { 
+                  const final = {
+                    ...d, 
+                    status: 'submitted' as const, 
+                    submittedAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  };
+                  setAssessments(prev => prev.map(a => a.id === d.id ? final : a)); 
+                  latestAssessmentRef.current.set(d.id, final);
+                  const existingTimeout = syncTimeoutRef.current.get(d.id);
+                  if (existingTimeout) {
+                    clearTimeout(existingTimeout);
+                    syncTimeoutRef.current.delete(d.id);
+                  }
+                  syncSingleToCloud(final).then((s) => s && (confetti(), alert(`${d.reviewType === 'mid-year' ? 'Mid-Year' : 'Final'} Review submitted successfully!`))); 
+                }} 
+              />
+            </div>
+          )
         )
       ) : (
         <AdminDashboard 
