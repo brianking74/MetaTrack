@@ -27,9 +27,10 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
 }) => {
   const latestAssessmentRef = useRef(assessment);
   
-  useEffect(() => {
+  // Update ref synchronously if we switch to a different assessment
+  if (latestAssessmentRef.current.id !== assessment.id) {
     latestAssessmentRef.current = assessment;
-  }, [assessment]);
+  }
 
   const handleUpdate = (updated: Assessment, immediate = false) => {
     latestAssessmentRef.current = updated;
@@ -40,25 +41,27 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const validateMidYearFeedback = () => {
-    const missingKPIs = assessment.kpis.some(k => !k.midYearManagerComments?.trim());
-    const missingDev = !assessment.developmentPlan.midYearManagerComments?.trim();
-    const missingOverall = !assessment.overallPerformance.midYearManagerComments?.trim();
+    const current = latestAssessmentRef.current;
+    const missingKPIs = current.kpis.some(k => !k.midYearManagerComments?.trim());
+    const missingDev = !current.developmentPlan.midYearManagerComments?.trim();
+    const missingOverall = !current.overallPerformance.midYearManagerComments?.trim();
 
     if (missingKPIs || missingDev || missingOverall) {
-      alert("Please ensure you have answered all questions before moving to the next stage.");
+      alert("Please ensure you have answered all questions before submitting mid-year feedback.");
       return false;
     }
     return true;
   };
 
   const validateFinalReview = () => {
-    const missingKPIs = assessment.kpis.some(k => !k.managerRating || !k.managerComments?.trim());
-    const missingDev = !assessment.developmentPlan.managerComments?.trim();
-    const missingComps = assessment.coreCompetencies.some(c => !c.managerRating || !c.managerComments?.trim());
-    const missingOverall = !assessment.overallPerformance.managerRating || !assessment.overallPerformance.managerComments?.trim();
+    const current = latestAssessmentRef.current;
+    const missingKPIs = current.kpis.some(k => !k.managerRating || !k.managerComments?.trim());
+    const missingDev = !current.developmentPlan.managerComments?.trim();
+    const missingComps = current.coreCompetencies.some(c => !c.managerRating || !c.managerComments?.trim());
+    const missingOverall = !current.overallPerformance.managerRating || !current.overallPerformance.managerComments?.trim();
 
     if (missingKPIs || missingDev || missingComps || missingOverall) {
-      alert("Please ensure you have answered all questions before moving to the next stage.");
+      alert("Please ensure you have answered all questions and provided ratings before completing the review.");
       return false;
     }
     return true;
@@ -466,11 +469,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     <button 
                       onClick={() => {
                         if (!validateMidYearFeedback()) return;
-                        if(confirm("Submit mid-year feedback? This will unlock the final review sections for later in the year.")) {
-                          const current = latestAssessmentRef.current;
-                          handleUpdate({...current, midYearStatus: 'reviewed'}, true);
-                          alert("Mid-year feedback submitted. Final review sections are now unlocked.");
-                        }
+                        const current = latestAssessmentRef.current;
+                        handleUpdate({...current, midYearStatus: 'reviewed'}, true);
+                        alert("Mid-year feedback submitted. Final review sections are now unlocked.");
                       }} 
                       className="bg-blue-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-blue-700"
                     >
@@ -480,7 +481,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     <button onClick={() => {
                       if (!validateFinalReview()) return;
                       const current = latestAssessmentRef.current;
-                      if(confirm("Submit and finalize this review?")) onFinalize?.({...current, status: 'reviewed'});
+                      onFinalize?.({...current, status: 'reviewed'});
                     }} className="bg-brand-600 text-white px-14 py-6 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-brand-700">Complete Review</button>
                   )}
                 </div>

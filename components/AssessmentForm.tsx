@@ -37,6 +37,10 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
     overallPerformance: { selfComments: '', managerComments: '' },
     status: 'draft'
   });
+  const latestFormDataRef = useRef(formData);
+  useEffect(() => {
+    latestFormDataRef.current = formData;
+  }, [formData]);
 
   // Ensure user is scrolled to top when switching stages
   useEffect(() => {
@@ -44,25 +48,27 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   }, [currentStage]);
 
   const validateMidYear = () => {
-    const missingKPIs = formData.kpis.some(k => !k.midYearSelfComments?.trim());
-    const missingDev = !formData.developmentPlan.midYearSelfComments?.trim();
-    const missingOverall = !formData.overallPerformance.midYearSelfComments?.trim();
+    const data = latestFormDataRef.current;
+    const missingKPIs = data.kpis.some(k => !k.midYearSelfComments?.trim());
+    const missingDev = !data.developmentPlan.midYearSelfComments?.trim();
+    const missingOverall = !data.overallPerformance.midYearSelfComments?.trim();
     
     if (missingKPIs || missingDev || missingOverall) {
-      alert("Please ensure you have answered all questions before moving to the next stage.");
+      alert("Please ensure you have answered all questions before submitting.");
       return false;
     }
     return true;
   };
 
   const validateFinal = () => {
-    const missingKPIs = formData.kpis.some(k => !k.selfRating || !k.selfComments?.trim());
-    const missingDev = !formData.developmentPlan.selfComments?.trim();
-    const missingComps = formData.coreCompetencies.some(c => !c.selfRating);
-    const missingOverall = !formData.overallPerformance.selfRating || !formData.overallPerformance.selfComments?.trim();
+    const data = latestFormDataRef.current;
+    const missingKPIs = data.kpis.some(k => !k.selfRating || !k.selfComments?.trim());
+    const missingDev = !data.developmentPlan.selfComments?.trim();
+    const missingComps = data.coreCompetencies.some(c => !c.selfRating);
+    const missingOverall = !data.overallPerformance.selfRating || !data.overallPerformance.selfComments?.trim();
 
     if (missingKPIs || missingDev || missingComps || missingOverall) {
-      alert("Please ensure you have answered all questions before moving to the next stage.");
+      alert("Please ensure you have answered all questions before submitting.");
       return false;
     }
     return true;
@@ -458,17 +464,15 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                   <button 
                     onClick={() => {
                       if (!validateMidYear()) return;
-                      if (confirm("Submit your Mid-Year Review? This will lock the mid-year sections but allow you to continue with the annual appraisal later.")) {
-                        const updated = { 
-                          ...formData, 
-                          midYearStatus: 'submitted' as const, 
-                          midYearSubmittedAt: new Date().toISOString(),
-                          updatedAt: new Date().toISOString() 
-                        };
-                        setFormData(updated);
-                        onSave(updated);
-                        setIsSubmitted(true);
-                      }
+                      const updated = { 
+                        ...latestFormDataRef.current, 
+                        midYearStatus: 'submitted' as const, 
+                        midYearSubmittedAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString() 
+                      };
+                      setFormData(updated);
+                      onSave(updated);
+                      setIsSubmitted(true);
                     }}
                     className="px-8 py-3 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
                   >
@@ -488,10 +492,8 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 <button 
                   onClick={() => {
                     if (!validateFinal()) return;
-                    if (confirm("Submit your self-appraisal? This action will finalize your input for manager review.")) {
-                      onSubmit({ ...formData, submittedAt: new Date().toISOString() });
-                      setIsSubmitted(true);
-                    }
+                    onSubmit({ ...latestFormDataRef.current, submittedAt: new Date().toISOString() });
+                    setIsSubmitted(true);
                   }}
                   className="px-12 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all transform active:scale-95"
                 >

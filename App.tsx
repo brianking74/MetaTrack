@@ -16,8 +16,8 @@ const App: React.FC = () => {
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const syncTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const latestAssessmentRef = React.useRef<Assessment | null>(null);
+  const syncTimeoutRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const latestAssessmentRef = React.useRef<Map<string, Assessment>>(new Map());
   
   const [isLoading, setIsLoading] = useState(true);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; error?: string }>({ connected: true });
@@ -30,7 +30,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     return () => {
-      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current.forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
@@ -180,16 +180,21 @@ const App: React.FC = () => {
   };
 
   const debouncedSync = (updatedAssessment: Assessment) => {
-    latestAssessmentRef.current = updatedAssessment;
+    const id = updatedAssessment.id;
+    const existingTimeout = syncTimeoutRef.current.get(id);
+    if (existingTimeout) clearTimeout(existingTimeout);
     
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    
-    syncTimeoutRef.current = setTimeout(async () => {
-      if (latestAssessmentRef.current) {
-        // We use the ref value to ensure we always sync the most recent state
-        await syncSingleToCloud(latestAssessmentRef.current);
+    const timeout = setTimeout(async () => {
+      const latest = latestAssessmentRef.current.get(id);
+      if (latest) {
+        await syncSingleToCloud(latest);
+      } else {
+        await syncSingleToCloud(updatedAssessment);
       }
-    }, 300); // Reduced to 300ms for better responsiveness
+      syncTimeoutRef.current.delete(id);
+    }, 1000); // 1 second debounce
+    
+    syncTimeoutRef.current.set(id, timeout);
   };
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
@@ -322,13 +327,18 @@ const App: React.FC = () => {
             onSave={(d) => { 
               const updatedWithTimestamp = { ...d, updatedAt: new Date().toISOString() };
               setAssessments(prev => prev.map(a => a.id === d.id ? updatedWithTimestamp : a)); 
+              latestAssessmentRef.current.set(d.id, updatedWithTimestamp);
               debouncedSync(updatedWithTimestamp); 
             }} 
             onSubmit={(d) => { 
               const final = {...d, status: 'submitted' as const, submittedAt: new Date().toISOString()};
               setAssessments(prev => prev.map(a => a.id === d.id ? final : a)); 
-              latestAssessmentRef.current = final;
-              if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+              latestAssessmentRef.current.set(d.id, final);
+              const existingTimeout = syncTimeoutRef.current.get(d.id);
+              if (existingTimeout) {
+                clearTimeout(existingTimeout);
+                syncTimeoutRef.current.delete(d.id);
+              }
               syncSingleToCloud(final).then((s) => s && (confetti(), alert("Assessment submitted successfully!"))); 
             }} 
           />
@@ -341,20 +351,27 @@ const App: React.FC = () => {
           onReviewComplete={(upd) => { 
             const final = { ...upd, reviewedAt: new Date().toISOString(), status: 'reviewed' as const };
             setAssessments(prev => prev.map(a => a.id === upd.id ? final : a)); 
-            latestAssessmentRef.current = final;
-            if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+            latestAssessmentRef.current.set(upd.id, final);
+            const existingTimeout = syncTimeoutRef.current.get(upd.id);
+            if (existingTimeout) {
+              clearTimeout(existingTimeout);
+              syncTimeoutRef.current.delete(upd.id);
+            }
             syncSingleToCloud(final).then((s) => s && alert("Assessment Finalized.")); 
           }} 
           onUpdate={(upd, immediate) => {
             const updatedWithTimestamp = { ...upd, updatedAt: new Date().toISOString() };
             setAssessments(prev => prev.map(a => a.id === upd.id ? updatedWithTimestamp : a));
             
-            // Always update the ref so any pending debounced sync uses the latest data
-            latestAssessmentRef.current = updatedWithTimestamp;
+            // Always update the ref for this specific assessment
+            latestAssessmentRef.current.set(upd.id, updatedWithTimestamp);
             
             if (immediate) {
-              // Clear any pending debounced sync to avoid overwriting the immediate sync
-              if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+              const existingTimeout = syncTimeoutRef.current.get(upd.id);
+              if (existingTimeout) {
+                clearTimeout(existingTimeout);
+                syncTimeoutRef.current.delete(upd.id);
+              }
               syncSingleToCloud(updatedWithTimestamp);
             } else {
               debouncedSync(updatedWithTimestamp);
