@@ -201,8 +201,28 @@ const App: React.FC = () => {
     const merged = [...assessments];
     newEntries.forEach(entry => {
       const email = entry.employeeDetails.email.toLowerCase();
-      const idx = merged.findIndex(m => m.employeeDetails.email.toLowerCase() === email);
-      if (idx === -1) merged.push(entry);
+      const existingIdx = merged.findIndex(m => m.employeeDetails.email.toLowerCase() === email);
+      
+      if (existingIdx === -1) {
+        // New entry
+        merged.push(entry);
+      } else {
+        // Update existing entry but preserve comments and status
+        const existing = merged[existingIdx];
+        merged[existingIdx] = {
+          ...existing,
+          employeeDetails: { ...existing.employeeDetails, ...entry.employeeDetails },
+          // Merge KPIs to preserve comments
+          kpis: entry.kpis.map(newKpi => {
+            const existingKpi = existing.kpis.find(ek => ek.id === newKpi.id || ek.title === newKpi.title);
+            if (existingKpi) {
+              return { ...existingKpi, ...newKpi };
+            }
+            return newKpi;
+          }),
+          updatedAt: new Date().toISOString()
+        };
+      }
     });
     
     setAssessments(merged);

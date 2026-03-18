@@ -29,10 +29,22 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   
   // Update ref synchronously if we switch to a different assessment
   // or if the incoming prop is strictly newer than our current ref (e.g. from a background sync)
-  if (latestAssessmentRef.current.id !== assessment.id || 
-      (assessment.updatedAt && (!latestAssessmentRef.current.updatedAt || assessment.updatedAt > latestAssessmentRef.current.updatedAt))) {
-    latestAssessmentRef.current = assessment;
-  }
+  const updateRefIfNewer = () => {
+    if (latestAssessmentRef.current.id !== assessment.id) {
+      latestAssessmentRef.current = assessment;
+      return;
+    }
+    
+    const propTime = assessment.updatedAt ? new Date(assessment.updatedAt).getTime() : 0;
+    const refTime = latestAssessmentRef.current.updatedAt ? new Date(latestAssessmentRef.current.updatedAt).getTime() : 0;
+    
+    // If the prop is strictly newer, update the ref
+    if (propTime > refTime) {
+      console.log(`[AppraisalReport] Updating ref for ${assessment.id} because prop is newer (${assessment.updatedAt} > ${latestAssessmentRef.current.updatedAt})`);
+      latestAssessmentRef.current = assessment;
+    }
+  };
+  updateRefIfNewer();
 
   const handleUpdate = (updated: Assessment, immediate = false) => {
     latestAssessmentRef.current = updated;
@@ -69,10 +81,16 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
     return true;
   };
 
-  const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted' && assessment.status !== 'submitted' && assessment.status !== 'reviewed';
+  const isFinalReviewLocked = isEditable && assessment.midYearStatus !== 'reviewed';
   const isMidYearEditable = isEditable && assessment.midYearStatus === 'submitted';
   const hasMidYearContent = (item: any) => !!(item.midYearSelfComments || item.midYearManagerComments);
   const shouldShowMidYear = (item: any) => assessment.midYearStatus === 'submitted' || assessment.midYearStatus === 'reviewed' || hasMidYearContent(item);
+
+  // Debug logging for mid-year comments
+  useEffect(() => {
+    const midYearComments = assessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments }));
+    console.log(`[AppraisalReport] Render for ${assessment.id}. Mid-year status: ${assessment.midYearStatus}. Comments:`, midYearComments);
+  }, [assessment.id, assessment.midYearStatus, assessment.kpis]);
 
   const handleAiAnalysis = async () => {
     setIsAnalyzing(true);
@@ -337,7 +355,13 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                           value={assessment.developmentPlan.midYearManagerComments || ''} 
                           onChange={(val) => {
                             const current = latestAssessmentRef.current;
-                            handleUpdate({...current, developmentPlan: {...current.developmentPlan, midYearManagerComments: val}});
+                            handleUpdate({
+                              ...current, 
+                              developmentPlan: {
+                                ...current.developmentPlan, 
+                                midYearManagerComments: val
+                              }
+                            });
                           }}
                           className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
                           placeholder="Enter mid-year feedback for development plan..."
@@ -369,7 +393,13 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                         value={assessment.developmentPlan.managerComments || ''} 
                         onChange={(val) => {
                           const current = latestAssessmentRef.current;
-                          handleUpdate({...current, developmentPlan: {...current.developmentPlan, managerComments: val}});
+                          handleUpdate({
+                            ...current, 
+                            developmentPlan: {
+                              ...current.developmentPlan, 
+                              managerComments: val
+                            }
+                          });
                         }}
                         className="w-full text-xs border-none p-0 bg-transparent outline-none h-32 resize-none focus:ring-0"
                         placeholder="Enter final manager feedback for development plan..."
@@ -404,7 +434,13 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                           value={assessment.overallPerformance.midYearManagerComments || ''} 
                           onChange={(val) => {
                             const current = latestAssessmentRef.current;
-                            handleUpdate({...current, overallPerformance: {...current.overallPerformance, midYearManagerComments: val}});
+                            handleUpdate({
+                              ...current, 
+                              overallPerformance: {
+                                ...current.overallPerformance, 
+                                midYearManagerComments: val
+                              }
+                            });
                           }}
                           className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
                           placeholder="Enter mid-year executive summary feedback..."
@@ -447,7 +483,13 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       value={assessment.overallPerformance.managerComments || ''} 
                       onChange={(val) => {
                         const current = latestAssessmentRef.current;
-                        handleUpdate({...current, overallPerformance: {...current.overallPerformance, managerComments: val}});
+                        handleUpdate({
+                          ...current, 
+                          overallPerformance: {
+                            ...current.overallPerformance, 
+                            managerComments: val
+                          }
+                        });
                       }} 
                       className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg leading-normal" 
                       placeholder="Enter final executive evaluation..." 
@@ -457,7 +499,13 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     <div className="flex-1 w-full">
                       <select value={assessment.overallPerformance.managerRating || ''} onChange={(e) => {
                         const current = latestAssessmentRef.current;
-                        handleUpdate({...current, overallPerformance: {...current.overallPerformance, managerRating: e.target.value as Rating}});
+                        handleUpdate({
+                          ...current, 
+                          overallPerformance: {
+                            ...current.overallPerformance, 
+                            managerRating: e.target.value as Rating
+                          }
+                        });
                       }} className="w-full bg-white p-4 rounded-xl border font-bold">
                         <option value="">Select Official Result...</option>
                         {Object.values(Rating).map(r => <option key={r} value={r}>{r}</option>)}
