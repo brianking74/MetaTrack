@@ -28,7 +28,9 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
   const latestAssessmentRef = useRef(assessment);
   
   // Update ref synchronously if we switch to a different assessment
-  if (latestAssessmentRef.current.id !== assessment.id) {
+  // or if the incoming prop is strictly newer than our current ref (e.g. from a background sync)
+  if (latestAssessmentRef.current.id !== assessment.id || 
+      (assessment.updatedAt && (!latestAssessmentRef.current.updatedAt || assessment.updatedAt > latestAssessmentRef.current.updatedAt))) {
     latestAssessmentRef.current = assessment;
   }
 
@@ -67,7 +69,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
     return true;
   };
 
-  const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted' && assessment.status !== 'submitted';
+  const isFinalReviewLocked = isEditable && assessment.midYearStatus === 'submitted' && assessment.status !== 'submitted' && assessment.status !== 'reviewed';
   const isMidYearEditable = isEditable && assessment.midYearStatus === 'submitted';
   const hasMidYearContent = (item: any) => !!(item.midYearSelfComments || item.midYearManagerComments);
   const shouldShowMidYear = (item: any) => assessment.midYearStatus === 'submitted' || assessment.midYearStatus === 'reviewed' || hasMidYearContent(item);
