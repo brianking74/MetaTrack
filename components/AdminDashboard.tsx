@@ -134,6 +134,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     
     const headers = [
       'Staff Name', 'Staff Email', 'Staff Password', 'Position', 'Division', 'Manager',
+      'Review Type',
       'KPI 1 Title', 'KPI 1 Self Rating', 'KPI 1 Self Comments', 'KPI 1 Mgr Rating', 'KPI 1 Mgr Comments',
       'KPI 2 Title', 'KPI 2 Self Rating', 'KPI 2 Self Comments', 'KPI 2 Mgr Rating', 'KPI 2 Mgr Comments',
       'KPI 3 Title', 'KPI 3 Self Rating', 'KPI 3 Self Comments', 'KPI 3 Mgr Rating', 'KPI 3 Mgr Comments',
@@ -157,7 +158,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         a.employeePassword || 'metabev2025',
         a.employeeDetails.position,
         a.employeeDetails.division,
-        a.managerName
+        a.managerName,
+        a.reviewType === 'mid-year' ? 'Mid-Year Review' : 'Final Year Review'
       ];
 
       for (let i = 0; i < 5; i++) {
@@ -313,7 +315,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
                       <p className="text-sm font-bold text-slate-800">{a.employeeDetails.fullName}</p>
-                      <p className="text-[10px] font-black text-brand-600 uppercase tracking-tight">{a.reviewType === 'mid-year' ? 'Mid-Year' : 'Final Year'}</p>
+                      <p className={`text-[10px] font-black uppercase tracking-tight ${a.reviewType === 'mid-year' ? 'text-brand-600' : 'text-blue-600'}`}>
+                        {a.reviewType === 'mid-year' ? 'Mid-Year' : 'Final Year'}
+                      </p>
                     </div>
                     <p className="text-[11px] text-slate-400">{a.employeeDetails.email}</p>
                   </td>

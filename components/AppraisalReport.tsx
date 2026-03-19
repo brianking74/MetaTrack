@@ -196,8 +196,8 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                     <h6 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.4em] mb-6">Final Review</h6>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       <div className="space-y-2">
-                         <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Rating</span>
-                         <div className="p-3 bg-white border rounded-xl text-sm font-bold text-slate-700">{kpi.selfRating ? kpi.selfRating.split(' - ')[0] : 'N/A'}</div>
+                         <span className="text-[9px] font-black uppercase tracking-widest text-blue-600">Staff Rating</span>
+                         <div className="p-3 bg-white border rounded-xl text-lg font-black text-blue-700">{kpi.selfRating ? kpi.selfRating.split(' - ')[0] : 'N/A'}</div>
                       </div>
                       <div className="md:col-span-2 space-y-2">
                          <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Comments</span>
@@ -254,7 +254,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                   <div className="flex justify-between items-start mb-6">
                      <h5 className="text-xl font-black text-slate-900">{idx + 1}. {comp.name}</h5>
                      <div className="text-right">
-                      <span className="text-[9px] font-black text-brand-600 block">Self: {comp.selfRating ? comp.selfRating.split(' - ')[0] : 'N/A'}</span>
+                      <span className="text-[14px] font-black text-blue-600 block">Self: {comp.selfRating ? comp.selfRating.split(' - ')[0] : 'N/A'}</span>
                      </div>
                   </div>
 
@@ -350,7 +350,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 
                 <div className="pt-10 mt-10 border-t-2 border-slate-200 bg-white p-8 rounded-[2rem] border-2 shadow-sm break-inside-avoid">
                   <div className="space-y-4">
-                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Manager Final Feedback</span>
+                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Manager Development Feedback</span>
                     <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-sm text-slate-700 leading-normal min-h-[120px]">
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.developmentPlan.managerComments || 'No feedback provided.'}</p>
