@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Assessment, Rating } from '../types.ts';
-import { analyzeAssessment } from '../services/geminiService.ts';
 import DebouncedTextarea from './DebouncedTextarea.tsx';
 
 interface AppraisalReportProps {
@@ -51,9 +50,6 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
     onUpdate?.(updated, immediate);
   };
 
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
   const validateReview = () => {
     const current = latestAssessmentRef.current;
     if (current.reviewType === 'mid-year') {
@@ -89,18 +85,6 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
       overall: assessment.overallPerformance.midYearManagerComments
     });
   }, [assessment.id, assessment.midYearStatus, assessment.status, assessment.kpis, assessment.developmentPlan, assessment.overallPerformance]);
-
-  const handleAiAnalysis = async () => {
-    setIsAnalyzing(true);
-    try {
-      const insight = await analyzeAssessment(assessment);
-      setAiInsight(insight);
-    } catch (err) {
-      alert("AI analysis failed.");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   const renderRatingSelect = (currentRating: Rating | undefined, onChange: (r: Rating) => void) => (
     <select 
@@ -142,11 +126,6 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
         <section>
           <div className="flex justify-between items-center mb-8">
             <SectionTitle>Key Performance Indicators</SectionTitle>
-            {isEditable && !aiInsight && (
-              <button onClick={handleAiAnalysis} disabled={isAnalyzing} className="text-[10px] font-black uppercase tracking-widest text-brand-600 border border-brand-200 px-4 py-2 rounded-full hover:bg-brand-50 transition-all flex items-center gap-2">
-                {isAnalyzing ? 'Analyzing...' : '✨ AI Insight'}
-              </button>
-            )}
           </div>
           <div className="space-y-16">
             {assessment.kpis.map((kpi, idx) => (
@@ -381,7 +360,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
 
         {/* Executive Summary Section */}
         <section className="break-inside-avoid">
-          <SectionTitle>Executive Summary & Final Grade</SectionTitle>
+          <SectionTitle>{isMidYear ? 'Mid-Year Review Summary' : 'Executive Summary & Final Grade'}</SectionTitle>
           <div className="space-y-12">
             {isMidYear ? (
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
