@@ -137,7 +137,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 
                 <div className="mb-10">
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-2 opacity-60">KPI Description</span>
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-normal italic shadow-inner">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-normal italic shadow-inner break-words whitespace-pre-wrap">
                     {kpi.description}
                   </div>
                 </div>
@@ -148,11 +148,11 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block">Mid-Year Review</span>
                     </div>
                     <div className="space-y-4">
-                      <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal italic">
+                      <div className="bg-blue-50/30 p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal italic break-words whitespace-pre-wrap">
                         <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Staff Reflection</span>
                         {kpi.midYearSelfComments ? `"${kpi.midYearSelfComments}"` : <span className="text-slate-400 italic">No reflection provided.</span>}
                       </div>
-                      <div className="bg-white p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal shadow-sm">
+                      <div className="bg-white p-5 rounded-2xl border border-blue-100 text-sm text-slate-700 leading-normal shadow-sm break-words whitespace-pre-wrap">
                         <span className="text-[8px] font-bold text-blue-400 uppercase block mb-1">Manager Mid-Year Feedback</span>
                         {!isEditable ? (
                           <p className="italic text-slate-500">{kpi.midYearManagerComments || 'No feedback provided.'}</p>
@@ -163,7 +163,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                               const current = latestAssessmentRef.current;
                               handleUpdate({...current, kpis: current.kpis.map(k => k.id === kpi.id ? {...k, midYearManagerComments: val} : k)});
                             }}
-                            className="w-full text-xs border-none p-0 bg-transparent outline-none h-20 resize-none focus:ring-0"
+                            className="w-full text-xs border-none p-0 bg-transparent outline-none h-20 resize-none focus:ring-0 break-words"
                             placeholder="Enter mid-year feedback for this KPI..."
                           />
                         )}
@@ -180,7 +180,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                       </div>
                       <div className="md:col-span-2 space-y-2">
                          <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Staff Comments</span>
-                         <div className="p-4 bg-white border rounded-xl text-xs text-slate-600 italic">
+                         <div className="p-4 bg-white border rounded-xl text-xs text-slate-600 italic break-words whitespace-pre-wrap">
                            {kpi.selfComments ? `"${kpi.selfComments}"` : <span className="text-slate-300 italic">No comments provided.</span>}
                          </div>
                       </div>
@@ -201,7 +201,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                         <div className="md:col-span-2 space-y-2">
                           <span className="text-[9px] font-black uppercase tracking-widest text-brand-600">Manager Comments</span>
                           {!isEditable ? (
-                             <div className="p-5 bg-slate-50 border rounded-2xl text-xs text-slate-700 italic leading-normal">{kpi.managerComments || ''}</div>
+                             <div className="p-5 bg-slate-50 border rounded-2xl text-xs text-slate-700 italic leading-normal break-words whitespace-pre-wrap">{kpi.managerComments || ''}</div>
                           ) : (
                              <DebouncedTextarea 
                             value={kpi.managerComments || ''} 
@@ -209,7 +209,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                                const current = latestAssessmentRef.current;
                                handleUpdate({...current, kpis: current.kpis.map(k => k.id === kpi.id ? {...k, managerComments: val} : k)});
                              }} 
-                            className="w-full text-xs border rounded-2xl p-5 h-36 outline-none bg-slate-50/50 focus:ring-2 focus:ring-brand-500 leading-normal" 
+                            className="w-full text-xs border rounded-2xl p-5 h-36 outline-none bg-slate-50/50 focus:ring-2 focus:ring-brand-500 leading-normal break-words" 
                             placeholder="Evaluate performance..." 
                           />
                           )}
@@ -250,7 +250,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                      </div>
                      <div className="md:col-span-2">
                       {!isEditable ? (
-                        <div className="p-4 bg-white border rounded-2xl text-xs">{comp.managerComments || ''}</div>
+                        <div className="p-4 bg-white border rounded-2xl text-xs break-words whitespace-pre-wrap">{comp.managerComments || ''}</div>
                       ) : (
                         <DebouncedTextarea 
                         value={comp.managerComments || ''} 
@@ -258,7 +258,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                           const current = latestAssessmentRef.current;
                           handleUpdate({...current, coreCompetencies: current.coreCompetencies.map(c => c.id === comp.id ? {...c, managerComments: val} : c)});
                         }} 
-                        className="w-full text-xs border rounded-2xl p-4 h-24 outline-none focus:ring-2 focus:ring-brand-500" 
+                        className="w-full text-xs border rounded-2xl p-4 h-24 outline-none focus:ring-2 focus:ring-brand-500 break-words" 
                         placeholder="Comment..." 
                       />
                       )}
@@ -276,7 +276,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           
           <div className="mb-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-200">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Individual Development Goal</span>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-relaxed italic shadow-inner">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 text-sm text-slate-700 leading-relaxed italic shadow-inner break-words whitespace-pre-wrap">
               {assessment.developmentPlan.developmentGoal}
             </div>
           </div>
@@ -284,15 +284,15 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
           <div className="space-y-8">
             {isMidYear ? (
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
-                 <div className="space-y-4">
+                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Reflection</span>
-                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-normal min-h-[80px]">
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-normal min-h-[80px] break-words whitespace-pre-wrap">
                       {assessment.developmentPlan.midYearSelfComments ? `"${assessment.developmentPlan.midYearSelfComments}"` : <span className="text-slate-400 italic">No reflection provided.</span>}
                     </div>
                  </div>
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
-                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal min-h-[80px]">
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal min-h-[80px] break-words whitespace-pre-wrap">
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.developmentPlan.midYearManagerComments || 'No feedback provided.'}</p>
                       ) : (
@@ -308,7 +308,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                               }
                             });
                           }}
-                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
+                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0 break-words"
                           placeholder="Enter mid-year feedback for development plan..."
                         />
                       )}
@@ -321,7 +321,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 <div className="p-8 md:p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                    <div className="space-y-4">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Reflection</span>
-                      <div className="bg-white p-8 rounded-[2rem] border border-slate-200 text-sm text-slate-700 italic leading-normal min-h-[120px]">
+                      <div className="bg-white p-8 rounded-[2rem] border border-slate-200 text-sm text-slate-700 italic leading-normal min-h-[120px] break-words whitespace-pre-wrap">
                         {assessment.developmentPlan.selfComments ? `"${assessment.developmentPlan.selfComments}"` : ""}
                       </div>
                    </div>
@@ -330,7 +330,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 <div className="pt-10 mt-10 border-t-2 border-slate-200 bg-white p-8 rounded-[2rem] border-2 shadow-sm break-inside-avoid">
                   <div className="space-y-4">
                     <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Manager Development Feedback</span>
-                    <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-sm text-slate-700 leading-normal min-h-[120px]">
+                    <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-sm text-slate-700 leading-normal min-h-[120px] break-words whitespace-pre-wrap">
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.developmentPlan.managerComments || 'No feedback provided.'}</p>
                       ) : (
@@ -346,7 +346,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                               }
                             });
                           }}
-                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-32 resize-none focus:ring-0"
+                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-32 resize-none focus:ring-0 break-words"
                           placeholder="Enter final manager feedback for development plan..."
                         />
                       )}
@@ -366,13 +366,13 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
               <div className="p-8 md:p-10 bg-blue-50/30 rounded-[2.5rem] border border-blue-100 space-y-6">
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Mid-Year Summary</span>
-                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-normal">
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 italic leading-normal break-words whitespace-pre-wrap">
                       {assessment.overallPerformance.midYearSelfComments ? `"${assessment.overallPerformance.midYearSelfComments}"` : <span className="text-slate-400 italic">No summary provided.</span>}
                     </div>
                  </div>
                  <div className="space-y-4">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Manager Mid-Year Feedback</span>
-                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal">
+                    <div className="bg-white p-8 rounded-[2rem] border border-blue-50 text-sm text-slate-700 leading-normal break-words whitespace-pre-wrap">
                       {!isEditable ? (
                         <p className="italic text-slate-500">{assessment.overallPerformance.midYearManagerComments || 'No feedback provided.'}</p>
                       ) : (
@@ -388,7 +388,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                               }
                             });
                           }}
-                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0"
+                          className="w-full text-xs border-none p-0 bg-transparent outline-none h-24 resize-none focus:ring-0 break-words"
                           placeholder="Enter mid-year executive summary feedback..."
                         />
                       )}
@@ -400,7 +400,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-4">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Staff Summary</span>
-                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic">
+                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border text-sm italic break-words whitespace-pre-wrap">
                        {assessment.overallPerformance.selfComments ? `"${assessment.overallPerformance.selfComments}"` : ""}
                     </div>
                   </div>
@@ -415,7 +415,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                 {!isEditable && (
                   <div className="space-y-4">
                     <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest block">Final Evaluation</span>
-                    <div className="p-8 bg-brand-50 rounded-[2.5rem] border border-brand-100 text-sm font-medium text-slate-800 leading-normal">
+                    <div className="p-8 bg-brand-50 rounded-[2.5rem] border border-brand-100 text-sm font-medium text-slate-800 leading-normal break-words whitespace-pre-wrap">
                       {assessment.overallPerformance.managerComments || ''}
                     </div>
                   </div>
@@ -441,7 +441,7 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
                             }
                           });
                         }} 
-                        className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg leading-normal" 
+                        className="w-full bg-white text-slate-800 p-8 rounded-[2rem] border-slate-200 outline-none text-sm h-56 focus:ring-2 focus:ring-brand-500 shadow-lg leading-normal break-words" 
                         placeholder="Enter final executive evaluation..." 
                       />
                     </div>
