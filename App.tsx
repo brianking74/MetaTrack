@@ -206,11 +206,16 @@ const App: React.FC = () => {
 
   const handleBulkUpload = async (newEntries: Assessment[]) => {
     const merged = [...assessments];
+    let addedCount = 0;
+    let skippedCount = 0;
     
     // For each entry in the CSV, we want to ensure both a mid-year and a final record exist
     newEntries.forEach(entry => {
       const email = entry.employeeDetails.email.toLowerCase();
       
+      let isNewUser = false;
+      let isExistingUser = false;
+
       ['mid-year', 'final'].forEach((type) => {
         const reviewType = type as 'mid-year' | 'final';
         const existingIdx = merged.findIndex(m => 
@@ -225,41 +230,21 @@ const App: React.FC = () => {
             id: `mb-${reviewType}-${Math.random().toString(36).substr(2, 9)}`,
             reviewType: reviewType
           });
+          isNewUser = true;
         } else {
-          // Update existing entry but preserve comments and status
-          const existing = merged[existingIdx];
-          merged[existingIdx] = {
-            ...existing,
-            employeeDetails: { ...existing.employeeDetails, ...entry.employeeDetails },
-            managerName: entry.managerName,
-            managerEmail: entry.managerEmail,
-            managerPassword: entry.managerPassword || existing.managerPassword,
-            employeePassword: entry.employeePassword || existing.employeePassword,
-            // Merge KPIs to preserve comments
-            kpis: entry.kpis.map(newKpi => {
-              const existingKpi = existing.kpis.find(ek => ek.id === newKpi.id || ek.title === newKpi.title);
-              if (existingKpi) {
-                return { 
-                  ...existingKpi, 
-                  title: newKpi.title, 
-                  description: newKpi.description 
-                };
-              }
-              return newKpi;
-            }),
-            developmentPlan: {
-              ...existing.developmentPlan,
-              developmentGoal: entry.developmentPlan.developmentGoal
-            },
-            updatedAt: new Date().toISOString()
-          };
+          isExistingUser = true;
         }
       });
+      
+      if (isNewUser) addedCount++;
+      else if (isExistingUser) skippedCount++;
     });
     
     setAssessments(merged);
     localStorage.setItem('metabev-assessments-v2', JSON.stringify(merged));
     await syncToCloud(merged);
+    
+    alert(`Upload Complete:\n${addedCount} new users added.\n${skippedCount} existing users skipped.`);
   };
 
   const currentAssessments = assessments.filter(a => a.employeeDetails.email.toLowerCase() === currentUserEmail.toLowerCase());
