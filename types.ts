@@ -51,8 +51,8 @@ export interface Assessment {
   employeeDetails: EmployeeDetails;
   managerName: string;
   managerEmail: string;
-  managerPassword?: string;
-  employeePassword?: string;
+  // NOTE: passwords are NOT stored here anymore. Since the Supabase Auth
+  // migration they live only as salted hashes inside Supabase Auth.
   reviewType: ReviewType;
   kpis: KPI[];
   developmentPlan: {

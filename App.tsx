@@ -8,7 +8,9 @@ import { Assessment, RoleType } from './types.ts';
 import { supabaseService } from './services/supabase.ts';
 import confetti from 'canvas-confetti';
 
-const MASTER_ADMIN_PASSWORD = "metabevadmin"; // TODO: remove entirely once Supabase Auth migration is complete
+// The administrator account. Its password lives ONLY as a salted hash inside
+// Supabase Auth (provisioned by supabase/import-users.mjs) - it no longer
+// exists anywhere in this source code.
 const SUPER_ADMIN_EMAIL = "admin@metabev.com";
 
 // Local fallback cache holds ONLY the signed-in person's own records with
@@ -18,7 +20,10 @@ const MY_CACHE_KEY = 'metabev-my-reviews';
 const LEGACY_CACHE_KEY = 'metabev-assessments-v2';
 
 const sanitizeForCache = (a: Assessment): Assessment => {
-  const { managerPassword: _mp, employeePassword: _ep, ...rest } = a;
+  // Defensive: records fetched before strip_passwords.sql ran may still carry
+  // password fields - they must never be written into the local cache.
+  const legacy = a as Assessment & { managerPassword?: unknown; employeePassword?: unknown };
+  const { managerPassword: _mp, employeePassword: _ep, ...rest } = legacy;
   return rest as Assessment;
 };
 
@@ -62,6 +67,7 @@ const App: React.FC = () => {
   const [assessorEmailInput, setAssessorEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -74,101 +80,165 @@ const App: React.FC = () => {
   }, [role]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Shared post-login routine: RLS decides which rows the caller may see,
+    // and the role mirrors exactly what the database allows.
+    const enterWith = async (email: string) => {
+      const { data, error } = await supabaseService.getAllAssessments();
+      if (cancelled) return;
+
+      if (error) {
+        setAssessments(loadCachedReviews());
+        setDbStatus({ connected: false, error: `Fetch error: ${error}` });
+      } else {
+        setAssessments(data);
+        setDbStatus({ connected: true });
+        cacheRelevantReviews(email, data);
+      }
+
+      setCurrentUserEmail(email);
+      if (email === SUPER_ADMIN_EMAIL) {
+        setRole('admin');
+      } else if (!error && data.some(a => a.managerEmail.toLowerCase() === email)) {
+        setRole('manager');
+      } else {
+        setRole('staff');
+      }
+    };
+
     const initApp = async () => {
       setIsLoading(true);
-      
-      // Check database connection first
-      const conn = await supabaseService.checkConnection();
-      setDbStatus({ connected: conn.success, error: conn.error });
-      
+
       // Purge the legacy cache that stored the entire staff database (with passwords)
       localStorage.removeItem(LEGACY_CACHE_KEY);
 
-      const { data, error } = await supabaseService.getAllAssessments();
-      
-      if (error) {
-        // If fetch failed, fall back to the signed-in person's own cached records
-        setAssessments(loadCachedReviews());
-        setDbStatus(prev => ({ ...prev, connected: false, error: `Fetch error: ${error}` }));
-      } else {
-        // If fetch succeeded (even if empty), use it
-        setAssessments(data);
-        setDbStatus(prev => ({ ...prev, connected: true, error: undefined }));
-      }
+      const conn = await supabaseService.checkConnection();
+      if (cancelled) return;
+      setDbStatus({ connected: conn.success, error: conn.error });
+
+      // Restore a persisted Supabase Auth session (survives page refresh).
+      const { email } = await supabaseService.getSession();
+      if (cancelled) return;
+      if (email) await enterWith(email);
       setIsLoading(false);
     };
+
     initApp();
+
+    // If another browser tab signs out, reset this tab as well.
+    const unsubscribe = supabaseService.onSignedOut(() => {
+      setRole(null);
+      setCurrentUserEmail("");
+      setSelectedReviewType(null);
+      setAssessments([]);
+      localStorage.removeItem(MY_CACHE_KEY);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
-  const handleManualSync = async () => {
-    setIsSyncing(true);
-    const { data, error } = await supabaseService.getAllAssessments();
-    setIsSyncing(false);
-    
-    if (error) {
-      setAuthError(`Sync failed: ${error}`);
-    } else {
-      setAssessments(data);
-      cacheRelevantReviews(currentUserEmail, data);
-      setAuthError("");
-      alert(`Sync successful! Found ${data.length} records.`);
-    }
-  };
-
-  const handleStaffLogin = (e: React.FormEvent) => {
+  const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = staffEmailInput.trim().toLowerCase();
 
     // The administrator account has no staff records - it must go through
-    // the Manager Login form (previously any password was accepted here).
+    // the Manager Login form below.
     if (email === SUPER_ADMIN_EMAIL) {
       setAuthError('Administrator account detected. Please use the Manager Login form below.');
       return;
     }
 
-    const userRecords = assessments.filter(a => a.employeeDetails.email.toLowerCase() === email);
-    if (userRecords.length === 0) {
-      setAuthError(`Email "${email}" not found in registry.`);
-      return;
-    }
-    
-    const expectedPassword = userRecords[0]?.employeePassword || 'metabev2025';
-    if (staffPasswordInput !== expectedPassword) {
-      setAuthError("Invalid password please try again or contact your manager/administrator.");
-      return;
-    }
+    setIsSigningIn(true);
+    try {
+      // Real server-side authentication (password verified by Supabase Auth).
+      const result = await supabaseService.signIn(email, staffPasswordInput);
+      if (!result.success) {
+        setAuthError(result.error || 'Login failed.');
+        return;
+      }
 
-    setCurrentUserEmail(email);
-    setRole('staff');
-    setSelectedReviewType(null);
-    setAuthError("");
-    cacheRelevantReviews(email, assessments);
+      // With RLS this returns only rows this person is allowed to see.
+      const { data, error } = await supabaseService.getAllAssessments();
+      if (error) {
+        setAuthError(`Signed in, but could not load your reviews: ${error}`);
+        return;
+      }
+
+      const ownRows = data.filter(a => a.employeeDetails.email.toLowerCase() === email);
+      if (ownRows.length === 0) {
+        await supabaseService.signOut();
+        setAuthError(`No reviews are assigned to "${email}" yet. Please contact your administrator to be added to the registry.`);
+        return;
+      }
+
+      setAssessments(data);
+      setCurrentUserEmail(email);
+      setRole('staff');
+      setSelectedReviewType(null);
+      setStaffPasswordInput("");
+      cacheRelevantReviews(email, data);
+    } finally {
+      setIsSigningIn(false);
+    }
   };
 
-  const handleAssessorLogin = (e: React.FormEvent) => {
+  const handleAssessorLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = assessorEmailInput.trim().toLowerCase();
-    if (email === SUPER_ADMIN_EMAIL && passwordInput === MASTER_ADMIN_PASSWORD) {
-      setCurrentUserEmail(email);
-      setRole('admin');
-      return;
-    }
-    const validManagerRecord = assessments.find(a => a.managerEmail.toLowerCase() === email && (a.managerPassword === passwordInput || (!a.managerPassword && passwordInput === 'metabev2025')));
-    if (validManagerRecord) {
+
+    setIsSigningIn(true);
+    try {
+      const result = await supabaseService.signIn(email, passwordInput);
+      if (!result.success) {
+        setAuthError(result.error || 'Login failed.');
+        return;
+      }
+
+      const { data, error } = await supabaseService.getAllAssessments();
+      if (error) {
+        setAuthError(`Signed in, but could not load data: ${error}`);
+        return;
+      }
+
+      if (email === SUPER_ADMIN_EMAIL) {
+        setAssessments(data);
+        setCurrentUserEmail(email);
+        setRole('admin');
+        setPasswordInput("");
+        cacheRelevantReviews(email, data);
+        return;
+      }
+
+      const managedRows = data.filter(a => a.managerEmail.toLowerCase() === email);
+      if (managedRows.length === 0) {
+        await supabaseService.signOut();
+        setAuthError(`"${email}" has no team reports. If you are a team member, please use the Team Member Portal above.`);
+        return;
+      }
+
+      setAssessments(data);
       setCurrentUserEmail(email);
       setRole('manager');
-      setAuthError("");
-      cacheRelevantReviews(email, assessments);
-    } else {
-      setAuthError("Invalid credentials.");
+      setPasswordInput("");
+      cacheRelevantReviews(email, data);
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
-  const handleLogout = () => { 
-    setRole(null); 
-    setCurrentUserEmail(""); 
+  const handleLogout = async () => {
+    await supabaseService.signOut();
+    setRole(null);
+    setCurrentUserEmail("");
     setSelectedReviewType(null);
-    setAuthError(""); 
+    setAuthError("");
+    setAssessments([]);
+    // Shared-computer hygiene: drop the cached reviews on sign-out.
+    localStorage.removeItem(MY_CACHE_KEY);
   };
 
   const syncToCloud = async (updatedAssessments: Assessment[]): Promise<boolean> => {
@@ -187,36 +257,14 @@ const App: React.FC = () => {
   const syncSingleToCloud = async (updatedAssessment: Assessment): Promise<boolean> => {
     setIsSyncing(true);
     try {
-      console.log("%c[Sync] Attempting to save assessment...", "color: #2563eb; font-weight: bold;");
-      
-      // Log comments specifically for visibility
-      const syncDebugData = {
-        midYear: {
-          kpis: updatedAssessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments })),
-          devPlan: updatedAssessment.developmentPlan.midYearManagerComments,
-          overall: updatedAssessment.overallPerformance.midYearManagerComments
-        },
-        final: {
-          kpis: updatedAssessment.kpis.map(k => ({ id: k.id, comment: k.managerComments })),
-          comps: updatedAssessment.coreCompetencies.map(c => ({ id: c.id, comment: c.managerComments })),
-          devPlan: updatedAssessment.developmentPlan.managerComments,
-          overall: updatedAssessment.overallPerformance.managerComments
-        }
-      };
-      console.log("[Sync] Comments in payload:", syncDebugData);
-
       const result = await supabaseService.saveAssessment(updatedAssessment);
       if (!result.success) {
         setDbStatus({ connected: false, error: result.error });
-        console.error("%c[Sync] Cloud Sync Error:", "color: #dc2626; font-weight: bold;", result.error);
         return false;
-      } else {
-        setDbStatus({ connected: true });
-        console.log("%c[Sync] Cloud Sync Successful!", "color: #16a34a; font-weight: bold;");
-        return true;
       }
+      setDbStatus({ connected: true });
+      return true;
     } catch (err) {
-      console.error("%c[Sync] Fatal Sync Error:", "color: #dc2626; font-weight: bold;", err);
       return false;
     } finally {
       setIsSyncing(false);
@@ -261,10 +309,13 @@ const App: React.FC = () => {
         );
         
         if (existingIdx === -1) {
-          // Create new record for this type
+          // Create new record for this type (collision-resistant ID)
+          const uuid = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID().replace(/-/g, '')
+            : Math.random().toString(36).slice(2) + Date.now().toString(36);
           merged.push({
             ...entry,
-            id: `mb-${reviewType}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `mb-${reviewType}-${uuid.slice(0, 12)}`,
             reviewType: reviewType
           });
           isNewUser = true;
@@ -280,7 +331,7 @@ const App: React.FC = () => {
     setAssessments(merged);
     await syncToCloud(merged);
     
-    alert(`Upload Complete:\n${addedCount} new users added.\n${skippedCount} existing users skipped.`);
+    alert(`Upload Complete:\n${addedCount} new users added.\n${skippedCount} existing users skipped.\n\nIMPORTANT: brand-new users can only sign in once an Auth account exists for them - the administrator should re-run supabase/import-users.mjs to provision them.`);
   };
 
   const currentAssessments = assessments.filter(a => a.employeeDetails.email.toLowerCase() === currentUserEmail.toLowerCase());
@@ -356,19 +407,9 @@ const App: React.FC = () => {
                     />
                   </div>
                   <div className="flex flex-col gap-3">
-                    <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-black transition-all transform active:scale-[0.98]">
-                      Start Assessment
+                    <button type="submit" disabled={isSigningIn} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-black transition-all transform active:scale-[0.98] disabled:opacity-60">
+                      {isSigningIn ? 'Signing in...' : 'Start Assessment'}
                     </button>
-                    {assessments.length === 0 && (
-                      <button 
-                        type="button" 
-                        onClick={handleManualSync}
-                        disabled={isSyncing}
-                        className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline disabled:opacity-50"
-                      >
-                        {isSyncing ? 'Syncing...' : 'Registry empty? Click to Sync'}
-                      </button>
-                    )}
                   </div>
                 </form>
                 <div className="relative flex items-center">
@@ -381,7 +422,7 @@ const App: React.FC = () => {
                     <input type="email" placeholder="Manager Email" className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-blue-600 outline-none transition-all placeholder:text-slate-300" value={assessorEmailInput} onChange={(e) => setAssessorEmailInput(e.target.value)} required />
                     <input type="password" placeholder="Access Password" className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-blue-600 outline-none transition-all placeholder:text-slate-300" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} required />
                   </div>
-                  <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all transform active:scale-[0.98]">Manager Login</button>
+                  <button type="submit" disabled={isSigningIn} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all transform active:scale-[0.98] disabled:opacity-60">{isSigningIn ? 'Signing in...' : 'Manager Login'}</button>
                 </form>
                 {authError && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">

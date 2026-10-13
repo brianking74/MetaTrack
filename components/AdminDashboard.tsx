@@ -91,7 +91,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         dataRows.forEach((row, idx) => {
           if (row.length < 2 || !row[1].includes('@')) { invalidRows++; return; }
-          const [name, email, k1, k2, k3, k4, k5, devGoal, mName, mEmail, mPass, ePass] = row;
+          // Columns K/L (Manager/Employee Password) from the legacy template are
+          // accepted but IGNORED - passwords are provisioned via Supabase Auth,
+          // never stored in records.
+          const [name, email, k1, k2, k3, k4, k5, devGoal, mName, mEmail] = row;
           if (!mEmail || !mEmail.includes('@')) { invalidRows++; return; } // manager email is required for portal access
           newEntries.push(createBlankAssessment(
             name || "No Name", 
@@ -99,8 +102,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             mName || "No Manager", 
             mEmail.toLowerCase(), 
             [k1, k2, k3, k4, k5].filter(Boolean), 
-            mPass,
-            ePass,
             devGoal
           ));
         });

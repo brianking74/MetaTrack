@@ -38,8 +38,6 @@ export const createBlankAssessment = (
   managerName: string, 
   managerEmail: string, 
   kpiContents: string[],
-  managerPassword?: string,
-  employeePassword?: string,
   developmentGoal?: string,
   reviewType: 'mid-year' | 'final' = 'mid-year'
 ): Assessment => {
@@ -54,8 +52,7 @@ export const createBlankAssessment = (
     },
     managerName,
     managerEmail,
-    managerPassword: managerPassword || 'metabev2025', // Default if not provided
-    employeePassword: employeePassword || 'metabev2025', // Default if not provided
+    // No passwords here: accounts are provisioned by supabase/import-users.mjs
     reviewType,
     kpis: kpiContents.map((content, idx) => ({
       id: `kpi-${idx}-${randomId(4)}`,
