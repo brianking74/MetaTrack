@@ -5,70 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performance Appraisal Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        
-        /* PDF and Print Specific Fixes */
-        @media print {
-            .no-print { display: none !important; }
-            .break-inside-avoid {
-                break-inside: avoid !important;
-                page-break-inside: avoid !important;
-                display: block; /* Ensure it's not inline-flex or similar which can confuse break engines */
-            }
-        }
-        
-        /* Helper for the PDF generator to detect breaks even in preview mode */
-        .pdf-page-break-avoid {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-        }
-    </style>
-    <script>
-      window.process = window.process || { env: {} };
-      
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                50: '#fdf8f4',
-                100: '#f9eee3',
-                200: '#f1d6be',
-                300: '#e5b68f',
-                400: '#d58f5c',
-                500: '#c87a41',
-                600: '#a76d3a',
-                700: '#8b5830',
-                800: '#71482a',
-                900: '#5c3b25',
-                950: '#4a2f1e',
-              },
-            }
-          }
-        }
-      }
-    </script>
-<script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.3",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.3"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
-<script type="module" src="/index.tsx"></script>
 </body>
 </html>

@@ -1,0 +1,15 @@
+# Netlify deploy configuration - kept in version control so every deploy
+# uses the same build settings (no hidden UI-only config).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Single-page app: always serve index.html for unknown paths
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -8,8 +8,42 @@ import { Assessment, RoleType } from './types.ts';
 import { supabaseService } from './services/supabase.ts';
 import confetti from 'canvas-confetti';
 
-const MASTER_ADMIN_PASSWORD = "metabevadmin"; 
+const MASTER_ADMIN_PASSWORD = "metabevadmin"; // TODO: remove entirely once Supabase Auth migration is complete
 const SUPER_ADMIN_EMAIL = "admin@metabev.com";
+
+// Local fallback cache holds ONLY the signed-in person's own records with
+// password fields stripped, so a visitor's browser never stores the whole
+// staff database (the old 'metabev-assessments-v2' key did exactly that).
+const MY_CACHE_KEY = 'metabev-my-reviews';
+const LEGACY_CACHE_KEY = 'metabev-assessments-v2';
+
+const sanitizeForCache = (a: Assessment): Assessment => {
+  const { managerPassword: _mp, employeePassword: _ep, ...rest } = a;
+  return rest as Assessment;
+};
+
+const cacheRelevantReviews = (email: string, assessments: Assessment[]) => {
+  if (!email) return;
+  const mine = assessments.filter(a =>
+    a.employeeDetails.email.toLowerCase() === email.toLowerCase() ||
+    a.managerEmail.toLowerCase() === email.toLowerCase()
+  );
+  try {
+    localStorage.setItem(MY_CACHE_KEY, JSON.stringify(mine.map(sanitizeForCache)));
+  } catch (e) {
+    console.error('Failed to write local cache', e);
+  }
+};
+
+const loadCachedReviews = (): Assessment[] => {
+  try {
+    const saved = localStorage.getItem(MY_CACHE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    console.error('Failed to read local cache', e);
+    return [];
+  }
+};
 
 const App: React.FC = () => {
   const [role, setRole] = useState<RoleType | null>(null);
@@ -47,23 +81,18 @@ const App: React.FC = () => {
       const conn = await supabaseService.checkConnection();
       setDbStatus({ connected: conn.success, error: conn.error });
       
+      // Purge the legacy cache that stored the entire staff database (with passwords)
+      localStorage.removeItem(LEGACY_CACHE_KEY);
+
       const { data, error } = await supabaseService.getAllAssessments();
       
       if (error) {
-        // If fetch failed, try to load from local storage as fallback
-        const saved = localStorage.getItem('metabev-assessments-v2');
-        if (saved) { 
-          try { 
-            setAssessments(JSON.parse(saved)); 
-          } catch (e) {
-            console.error('Failed to parse local storage', e);
-          } 
-        }
+        // If fetch failed, fall back to the signed-in person's own cached records
+        setAssessments(loadCachedReviews());
         setDbStatus(prev => ({ ...prev, connected: false, error: `Fetch error: ${error}` }));
       } else {
         // If fetch succeeded (even if empty), use it
         setAssessments(data);
-        localStorage.setItem('metabev-assessments-v2', JSON.stringify(data));
         setDbStatus(prev => ({ ...prev, connected: true, error: undefined }));
       }
       setIsLoading(false);
@@ -80,7 +109,7 @@ const App: React.FC = () => {
       setAuthError(`Sync failed: ${error}`);
     } else {
       setAssessments(data);
-      localStorage.setItem('metabev-assessments-v2', JSON.stringify(data));
+      cacheRelevantReviews(currentUserEmail, data);
       setAuthError("");
       alert(`Sync successful! Found ${data.length} records.`);
     }
@@ -89,25 +118,31 @@ const App: React.FC = () => {
   const handleStaffLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const email = staffEmailInput.trim().toLowerCase();
+
+    // The administrator account has no staff records - it must go through
+    // the Manager Login form (previously any password was accepted here).
+    if (email === SUPER_ADMIN_EMAIL) {
+      setAuthError('Administrator account detected. Please use the Manager Login form below.');
+      return;
+    }
+
     const userRecords = assessments.filter(a => a.employeeDetails.email.toLowerCase() === email);
-    if (userRecords.length === 0 && email !== SUPER_ADMIN_EMAIL) {
+    if (userRecords.length === 0) {
       setAuthError(`Email "${email}" not found in registry.`);
       return;
     }
     
-    // Check password if not super admin
-    if (email !== SUPER_ADMIN_EMAIL) {
-      const expectedPassword = userRecords[0]?.employeePassword || 'metabev2025';
-      if (staffPasswordInput !== expectedPassword) {
-        setAuthError("Invalid password please try again or contact your manager/administrator.");
-        return;
-      }
+    const expectedPassword = userRecords[0]?.employeePassword || 'metabev2025';
+    if (staffPasswordInput !== expectedPassword) {
+      setAuthError("Invalid password please try again or contact your manager/administrator.");
+      return;
     }
 
     setCurrentUserEmail(email);
     setRole('staff');
     setSelectedReviewType(null);
     setAuthError("");
+    cacheRelevantReviews(email, assessments);
   };
 
   const handleAssessorLogin = (e: React.FormEvent) => {
@@ -122,6 +157,8 @@ const App: React.FC = () => {
     if (validManagerRecord) {
       setCurrentUserEmail(email);
       setRole('manager');
+      setAuthError("");
+      cacheRelevantReviews(email, assessments);
     } else {
       setAuthError("Invalid credentials.");
     }
@@ -241,7 +278,6 @@ const App: React.FC = () => {
     });
     
     setAssessments(merged);
-    localStorage.setItem('metabev-assessments-v2', JSON.stringify(merged));
     await syncToCloud(merged);
     
     alert(`Upload Complete:\n${addedCount} new users added.\n${skippedCount} existing users skipped.`);
@@ -294,7 +330,7 @@ const App: React.FC = () => {
           </div>
           <div className="md:w-7/12 p-16 flex flex-col justify-center bg-white">
             <div className="max-w-md mx-auto w-full">
-              <h2 className="text-2xl sm:text-[1.75rem] md:text-3xl font-black text-slate-900 mb-12 tracking-tight whitespace-nowrap">Performance Review Portal</h2>
+              <h2 className="text-2xl sm:text-[1.75rem] md:text-3xl font-black text-slate-900 mb-12 tracking-tight">Performance Review Portal</h2>
               <div className="space-y-12">
                 <form onSubmit={handleStaffLogin} className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -524,11 +560,16 @@ const App: React.FC = () => {
             }
           }}
           onBulkUpload={handleBulkUpload} 
-          onDeleteAssessment={(id) => { 
+          onDeleteAssessment={async (id) => { 
             if (confirm("Delete this record? This cannot be undone.")) {
-              const n = assessments.filter(a => a.id !== id); 
-              setAssessments(n); 
-              supabaseService.deleteAssessment(id); 
+              const result = await supabaseService.deleteAssessment(id);
+              if (result.success) {
+                const n = assessments.filter(a => a.id !== id); 
+                setAssessments(n);
+                cacheRelevantReviews(currentUserEmail, n);
+              } else {
+                alert(`Delete failed: ${result.error}\n\nThe record was NOT deleted.`);
+              }
             }
           }} 
           isSyncing={isSyncing} 

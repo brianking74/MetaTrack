@@ -24,6 +24,14 @@ export const INITIAL_KPIS: KPI[] = [
   { id: 'kpi-2', title: 'KPI 2', description: 'Defined by management.', startDate: '', targetDate: '', status: 'Active', midYearSelfComments: '', midYearManagerComments: '' }
 ];
 
+// Generates a collision-resistant ID like "mb-7x9z2k-3f2a"
+const randomId = (length: number) => {
+  const uuid = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().replace(/-/g, '')
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return uuid.slice(0, length);
+};
+
 export const createBlankAssessment = (
   name: string, 
   email: string, 
@@ -36,8 +44,7 @@ export const createBlankAssessment = (
   reviewType: 'mid-year' | 'final' = 'mid-year'
 ): Assessment => {
   return {
-    // Generates a string ID like "mb-7x9z2k"
-    id: `mb-${Math.random().toString(36).substr(2, 9)}`,
+    id: `mb-${randomId(9)}`,
     employeeId: email,
     employeeDetails: {
       fullName: name,
@@ -51,7 +58,7 @@ export const createBlankAssessment = (
     employeePassword: employeePassword || 'metabev2025', // Default if not provided
     reviewType,
     kpis: kpiContents.map((content, idx) => ({
-      id: `kpi-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+      id: `kpi-${idx}-${randomId(4)}`,
       title: `KPI ${idx + 1}`,
       description: content || 'Defined by management.',
       startDate: new Date().getFullYear().toString(),

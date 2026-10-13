@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { Assessment, Rating } from '../types.ts';
 import DebouncedTextarea from './DebouncedTextarea.tsx';
 
@@ -39,7 +39,6 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
     
     // If the prop is strictly newer, update the ref
     if (propTime > refTime) {
-      console.log(`[AppraisalReport] Updating ref for ${assessment.id} because prop is newer (${assessment.updatedAt} > ${latestAssessmentRef.current.updatedAt})`);
       latestAssessmentRef.current = assessment;
     }
   };
@@ -75,16 +74,6 @@ const AppraisalReport: React.FC<AppraisalReportProps> = ({
 
   const reviewType = assessment.reviewType || 'mid-year';
   const isMidYear = reviewType === 'mid-year';
-
-  // Debug logging for mid-year comments
-  useEffect(() => {
-    const midYearKpiComments = assessment.kpis.map(k => ({ id: k.id, comment: k.midYearManagerComments }));
-    console.log(`[AppraisalReport] Render for ${assessment.id}. Mid-year status: ${assessment.midYearStatus}. Overall status: ${assessment.status}. Comments:`, {
-      kpis: midYearKpiComments,
-      devPlan: assessment.developmentPlan.midYearManagerComments,
-      overall: assessment.overallPerformance.midYearManagerComments
-    });
-  }, [assessment.id, assessment.midYearStatus, assessment.status, assessment.kpis, assessment.developmentPlan, assessment.overallPerformance]);
 
   const renderRatingSelect = (currentRating: Rating | undefined, onChange: (r: Rating) => void) => (
     <select 

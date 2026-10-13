@@ -45,7 +45,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const registryCount = filteredAssessments.length;
 
   const parseCSV = (text: string): string[][] => {
-    if (text.charCodeAt(0) === 0xFEFF) text = text.substr(1);
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentCell = '';
@@ -87,15 +87,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         const dataRows = allRows.slice(1);
         const newEntries: Assessment[] = [];
+        let invalidRows = 0;
         
         dataRows.forEach((row, idx) => {
-          if (row.length < 2 || !row[1].includes('@')) return;
+          if (row.length < 2 || !row[1].includes('@')) { invalidRows++; return; }
           const [name, email, k1, k2, k3, k4, k5, devGoal, mName, mEmail, mPass, ePass] = row;
+          if (!mEmail || !mEmail.includes('@')) { invalidRows++; return; } // manager email is required for portal access
           newEntries.push(createBlankAssessment(
             name || "No Name", 
             email.toLowerCase(), 
             mName || "No Manager", 
-            mEmail?.toLowerCase() || "", 
+            mEmail.toLowerCase(), 
             [k1, k2, k3, k4, k5].filter(Boolean), 
             mPass,
             ePass,
@@ -106,8 +108,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         if (newEntries.length > 0) {
           onBulkUpload(newEntries);
           setActiveTab('submissions');
+          if (invalidRows > 0) alert(`${invalidRows} row(s) were skipped - each needs a valid staff email (column B) and manager email (column J).`);
         } else {
-          alert("No valid entries were found in the CSV.");
+          alert("No valid entries were found in the CSV. Each row needs a staff email (column B) and a manager email (column J).");
         }
       } catch (err: any) { 
         alert(`CSV Upload Error: ${err.message}`); 
@@ -133,7 +136,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (completed.length === 0) { alert("No completed assessments found."); return; }
     
     const headers = [
-      'Staff Name', 'Staff Email', 'Staff Password', 'Position', 'Division', 'Manager',
+      'Staff Name', 'Staff Email', 'Position', 'Division', 'Manager',
       'Review Type',
       'KPI 1 Title', 'KPI 1 Self Rating', 'KPI 1 Self Comments', 'KPI 1 Mgr Rating', 'KPI 1 Mgr Comments',
       'KPI 2 Title', 'KPI 2 Self Rating', 'KPI 2 Self Comments', 'KPI 2 Mgr Rating', 'KPI 2 Mgr Comments',
@@ -155,7 +158,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const rowData: any[] = [
         a.employeeDetails.fullName,
         a.employeeDetails.email,
-        a.employeePassword || 'metabev2025',
         a.employeeDetails.position,
         a.employeeDetails.division,
         a.managerName,
@@ -185,7 +187,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       );
 
       return rowData.map(val => {
-        const str = String(val === undefined || val === null ? '' : val);
+        let str = String(val === undefined || val === null ? '' : val);
+        // Guard against CSV/Excel formula injection (=, +, -, @ prefixes)
+        str = str.replace(/^([=+\-@\t\r])/, "'$1");
         return `"${str.replace(/"/g, '""')}"`;
       }).join(",");
     });
@@ -198,23 +202,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     link.click();
   };
 
-  const handleDownloadPDF = (name: string, type: string) => {
+  const handleDownloadPDF = async (name: string, type: string) => {
     const element = document.getElementById('appraisal-report');
     if (!element) return;
     setIsDownloading(true);
     
-    // @ts-ignore
-    const opt = {
-      margin: 10,
-      filename: `Appraisal_${name.replace(/\s+/g, '_')}_${type}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] }
-    };
+    try {
+      // Loaded on demand so the large PDF library stays out of the main bundle
+      const { default: html2pdf } = await import('html2pdf.js');
+      const opt = {
+        margin: 10,
+        filename: `Appraisal_${name.replace(/\s+/g, '_')}_${type}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      };
 
-    // @ts-ignore
-    html2pdf().set(opt).from(element).save().then(() => setIsDownloading(false));
+      await html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      alert('Sorry, the PDF could not be generated. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (selectedAssessment) {

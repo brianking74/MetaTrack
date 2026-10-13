@@ -36,7 +36,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
   // Initializing state with default values if initialData is not provided.
   // Fixed: Added missing managerName and managerEmail fields and cast empty competencies array to string[].
   const [formData, setFormData] = useState<Assessment>(initialData || {
-    id: Math.random().toString(36).substr(2, 9),
+    id: `mb-${crypto.randomUUID().slice(0, 9)}`,
     employeeId: '',
     employeeDetails: { fullName: '', position: '', division: '', email: '' },
     managerName: '',
@@ -468,7 +468,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ initialData, onSave, on
                 <button 
                   onClick={() => {
                     if (!validateFinal()) return;
-                    onSubmit({ ...latestFormDataRef.current, submittedAt: new Date().toISOString() });
+                    onSubmit({ 
+                      ...latestFormDataRef.current, 
+                      status: 'submitted' as const,
+                      submittedAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString() 
+                    });
                     setIsSubmitted(true);
                   }}
                   className="px-12 py-3 bg-brand-600 text-white hover:bg-brand-700 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg transition-all transform active:scale-95"
