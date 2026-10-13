@@ -35,11 +35,21 @@ as $$
   select public.auth_email() = 'admin@metabev.com';
 $$;
 
--- 2) Remove any previously created versions of the policies
-drop policy if exists "select own or managed or admin" on public.assessments;
-drop policy if exists "insert own or managed or admin" on public.assessments;
-drop policy if exists "update own or managed or admin" on public.assessments;
-drop policy if exists "delete admin only" on public.assessments;
+-- 2) Remove EVERY policy on this table (not just ours). A previous
+--    dashboard experiment left a 5th permissive policy that re-opens
+--    public read access; this loop removes it whatever its name is,
+--    and prints each name in the Messages tab as it goes.
+do $$
+declare r record;
+begin
+  for r in
+    select policyname from pg_policies
+    where schemaname = 'public' and tablename = 'assessments'
+  loop
+    raise notice 'dropping policy: %', r.policyname;
+    execute format('drop policy if exists %I on public.assessments', r.policyname);
+  end loop;
+end $$;
 
 -- 3) Recreate the policies
 -- Staff see their own reviews, managers see reviews they own, admin sees all
@@ -86,7 +96,8 @@ using (public.is_admin());
 -- 4) Switch RLS on (this is the statement that actually closes the hole)
 alter table public.assessments enable row level security;
 
--- 5) Proof for you: the result must show rls_enabled = true
+-- 5) Proof for you:
+--    Query A must show rls_enabled = true and policy_count = 4.
 select
   c.relname as table_name,
   c.relrowsecurity as rls_enabled,
@@ -95,3 +106,13 @@ select
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relname = 'assessments';
+
+--    Query B must list EXACTLY these four policies and nothing else:
+--      delete admin only
+--      insert own or managed or admin
+--      select own or managed or admin
+--      update own or managed or admin
+select policyname, cmd
+from pg_policies
+where schemaname = 'public' and tablename = 'assessments'
+order by policyname;
