@@ -133,7 +133,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleExportExcel = () => {
-    const completed = assessments.filter(a => a.status === 'reviewed');
+    const completed = assessments.filter(a => a.status === 'submitted' || a.status === 'reviewed');
     if (completed.length === 0) { alert("No completed assessments found."); return; }
     
     const headers = [
