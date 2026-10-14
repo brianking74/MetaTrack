@@ -133,26 +133,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleExportExcel = () => {
-    const completed = assessments.filter(a => a.status === 'reviewed');
-    if (completed.length === 0) { alert("No completed assessments found."); return; }
-    
+    // Include everything staff/manager actually filled in: submitted + reviewed.
+    // (Drafts are untouched templates and would only add noise.)
+    const completed = assessments.filter(a => a.status === 'submitted' || a.status === 'reviewed');
+    if (completed.length === 0) { alert("No submitted or reviewed assessments found."); return; }
+
+    // Ratings are stored as long enum strings ("(1) SEE - Substantially
+    // Exceeding Expectations"); export the compact form shown in the UI.
+    const fmtRating = (r?: string) => (r ? String(r).split(' - ')[0] : 'N/A');
+
+    // NOTE: mid-year reviews store their content in *midYear* fields
+    // (midYearSelfComments / midYearManagerComments), NOT the final-year
+    // fields. Both sets are exported so one file covers both review types.
     const headers = [
-      'Staff Name', 'Staff Email', 'Position', 'Division', 'Manager',
-      'Review Type',
-      'KPI 1 Title', 'KPI 1 Self Rating', 'KPI 1 Self Comments', 'KPI 1 Mgr Rating', 'KPI 1 Mgr Comments',
-      'KPI 2 Title', 'KPI 2 Self Rating', 'KPI 2 Self Comments', 'KPI 2 Mgr Rating', 'KPI 2 Mgr Comments',
-      'KPI 3 Title', 'KPI 3 Self Rating', 'KPI 3 Self Comments', 'KPI 3 Mgr Rating', 'KPI 3 Mgr Comments',
-      'KPI 4 Title', 'KPI 4 Self Rating', 'KPI 4 Self Comments', 'KPI 4 Mgr Rating', 'KPI 4 Mgr Comments',
-      'KPI 5 Title', 'KPI 5 Self Rating', 'KPI 5 Self Comments', 'KPI 5 Mgr Rating', 'KPI 5 Mgr Comments',
-      'Work Effectiveness Self', 'Work Effectiveness Mgr', 'Work Effectiveness Comments',
-      'Innovation Self', 'Innovation Mgr', 'Innovation Comments',
-      'Analysing Self', 'Analysing Mgr', 'Analysing Comments',
-      'Customer Focused Self', 'Customer Focused Mgr', 'Customer Focused Comments',
-      'Results Orientation Self', 'Results Orientation Mgr', 'Results Orientation Comments',
-      'Ownership Self', 'Ownership Mgr', 'Ownership Comments',
-      'IDP Staff Goals', 'IDP Assessor Roadmap',
-      'Staff Final Summary', 'Final Official Rating', 'Manager Executive Narrative',
-      'Reviewed At'
+      'Staff Name', 'Staff Email', 'Position', 'Division', 'Manager', 'Manager Email',
+      'Review Type', 'Status', 'Mid-Year Status',
+      'KPI 1 Title', 'KPI 1 Description', 'KPI 1 Self Rating', 'KPI 1 Self Comments', 'KPI 1 Mgr Rating', 'KPI 1 Mgr Comments', 'KPI 1 Mid-Year Self', 'KPI 1 Mid-Year Mgr',
+      'KPI 2 Title', 'KPI 2 Description', 'KPI 2 Self Rating', 'KPI 2 Self Comments', 'KPI 2 Mgr Rating', 'KPI 2 Mgr Comments', 'KPI 2 Mid-Year Self', 'KPI 2 Mid-Year Mgr',
+      'KPI 3 Title', 'KPI 3 Description', 'KPI 3 Self Rating', 'KPI 3 Self Comments', 'KPI 3 Mgr Rating', 'KPI 3 Mgr Comments', 'KPI 3 Mid-Year Self', 'KPI 3 Mid-Year Mgr',
+      'KPI 4 Title', 'KPI 4 Description', 'KPI 4 Self Rating', 'KPI 4 Self Comments', 'KPI 4 Mgr Rating', 'KPI 4 Mgr Comments', 'KPI 4 Mid-Year Self', 'KPI 4 Mid-Year Mgr',
+      'KPI 5 Title', 'KPI 5 Description', 'KPI 5 Self Rating', 'KPI 5 Self Comments', 'KPI 5 Mgr Rating', 'KPI 5 Mgr Comments', 'KPI 5 Mid-Year Self', 'KPI 5 Mid-Year Mgr',
+      'Work Effectiveness Self', 'Work Effectiveness Mgr', 'Work Effectiveness Comments', 'Work Effectiveness Mid-Year Self', 'Work Effectiveness Mid-Year Mgr',
+      'Innovation Self', 'Innovation Mgr', 'Innovation Comments', 'Innovation Mid-Year Self', 'Innovation Mid-Year Mgr',
+      'Analysing Self', 'Analysing Mgr', 'Analysing Comments', 'Analysing Mid-Year Self', 'Analysing Mid-Year Mgr',
+      'Customer Focused Self', 'Customer Focused Mgr', 'Customer Focused Comments', 'Customer Focused Mid-Year Self', 'Customer Focused Mid-Year Mgr',
+      'Results Orientation Self', 'Results Orientation Mgr', 'Results Orientation Comments', 'Results Orientation Mid-Year Self', 'Results Orientation Mid-Year Mgr',
+      'Ownership Self', 'Ownership Mgr', 'Ownership Comments', 'Ownership Mid-Year Self', 'Ownership Mid-Year Mgr',
+      'IDP Development Goal', 'IDP Staff Goals', 'IDP Assessor Roadmap', 'IDP Mid-Year Staff Goals', 'IDP Mid-Year Assessor Roadmap',
+      'Staff Final Summary', 'Final Official Rating', 'Manager Executive Narrative', 'Mid-Year Staff Summary', 'Mid-Year Manager Narrative',
+      'Submitted At', 'Reviewed At'
     ];
 
     const rows = completed.map(a => {
@@ -162,30 +171,59 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         a.employeeDetails.position,
         a.employeeDetails.division,
         a.managerName,
-        a.reviewType === 'mid-year' ? 'Mid-Year Review' : 'Final Year Review'
+        a.managerEmail,
+        a.reviewType === 'mid-year' ? 'Mid-Year Review' : 'Final Year Review',
+        a.status,
+        a.midYearStatus || ''
       ];
 
+      const kpis = a.kpis || [];
       for (let i = 0; i < 5; i++) {
-        const k = a.kpis[i];
+        const k = kpis[i];
         if (k) {
-          rowData.push(k.title, k.selfRating || 'N/A', k.selfComments || '', k.managerRating || 'N/A', k.managerComments || '');
+          rowData.push(
+            k.title, k.description || '',
+            fmtRating(k.selfRating), k.selfComments || '',
+            fmtRating(k.managerRating), k.managerComments || '',
+            k.midYearSelfComments || '', k.midYearManagerComments || ''
+          );
+        } else {
+          rowData.push('', '', '', '', '', '', '', '');
+        }
+      }
+
+      // Competency order mirrors the fixed header list; pad with blanks if
+      // a legacy record has fewer entries.
+      const comps = a.coreCompetencies || [];
+      for (let i = 0; i < 6; i++) {
+        const c = comps[i];
+        if (c) {
+          rowData.push(
+            fmtRating(c.selfRating), fmtRating(c.managerRating), c.managerComments || '',
+            c.midYearSelfComments || '', c.midYearManagerComments || ''
+          );
         } else {
           rowData.push('', '', '', '', '');
         }
       }
 
-      a.coreCompetencies.forEach(c => {
-        rowData.push(c.selfRating || 'N/A', c.managerRating || 'N/A', c.managerComments || '');
-      });
-
-      rowData.push(a.developmentPlan.selfComments || '', a.developmentPlan.managerComments || '');
+      rowData.push(
+        a.developmentPlan?.developmentGoal || '',
+        a.developmentPlan?.selfComments || '',
+        a.developmentPlan?.managerComments || '',
+        a.developmentPlan?.midYearSelfComments || '',
+        a.developmentPlan?.midYearManagerComments || ''
+      );
 
       rowData.push(
-        a.overallPerformance.selfComments || '',
-        a.overallPerformance.managerRating || 'N/A',
-        a.overallPerformance.managerComments || '',
-        a.reviewedAt || 'N/A'
+        a.overallPerformance?.selfComments || '',
+        fmtRating(a.overallPerformance?.managerRating),
+        a.overallPerformance?.managerComments || '',
+        a.overallPerformance?.midYearSelfComments || '',
+        a.overallPerformance?.midYearManagerComments || ''
       );
+
+      rowData.push(a.submittedAt || a.midYearSubmittedAt || 'N/A', a.reviewedAt || 'N/A');
 
       return rowData.map(val => {
         let str = String(val === undefined || val === null ? '' : val);
