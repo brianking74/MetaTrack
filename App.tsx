@@ -4,8 +4,10 @@ import Layout, { Logo } from './components/Layout.tsx';
 import AssessmentForm from './components/AssessmentForm.tsx';
 import AdminDashboard from './components/AdminDashboard.tsx';
 import AppraisalReport from './components/AppraisalReport.tsx';
+import ExpenseClaims from './components/ExpenseClaims.tsx';
 import { Assessment, RoleType } from './types.ts';
 import { supabaseService } from './services/supabase.ts';
+import { EXPENSES_ENABLED } from './constants.ts';
 import confetti from 'canvas-confetti';
 
 // The administrator account. Its password lives ONLY as a salted hash inside
@@ -54,6 +56,7 @@ const App: React.FC = () => {
   const [role, setRole] = useState<RoleType | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [selectedReviewType, setSelectedReviewType] = useState<'mid-year' | 'final' | null>(null);
+  const [staffTab, setStaffTab] = useState<'review' | 'expenses'>('review');
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const syncTimeoutRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -131,6 +134,7 @@ const App: React.FC = () => {
       setRole(null);
       setCurrentUserEmail("");
       setSelectedReviewType(null);
+      setStaffTab('review');
       setAssessments([]);
       localStorage.removeItem(MY_CACHE_KEY);
     });
@@ -179,6 +183,7 @@ const App: React.FC = () => {
       setCurrentUserEmail(email);
       setRole('staff');
       setSelectedReviewType(null);
+      setStaffTab('review');
       setStaffPasswordInput("");
       cacheRelevantReviews(email, data);
     } finally {
@@ -235,6 +240,7 @@ const App: React.FC = () => {
     setRole(null);
     setCurrentUserEmail("");
     setSelectedReviewType(null);
+    setStaffTab('review');
     setAuthError("");
     setAssessments([]);
     // Shared-computer hygiene: drop the cached reviews on sign-out.
@@ -337,6 +343,8 @@ const App: React.FC = () => {
   const currentAssessments = assessments.filter(a => a.employeeDetails.email.toLowerCase() === currentUserEmail.toLowerCase());
   const midYearAssessment = currentAssessments.find(a => a.reviewType === 'mid-year');
   const finalAssessment = currentAssessments.find(a => a.reviewType === 'final');
+  // The staff member's manager (from their registry record) drives expense routing.
+  const myStaffRecord = currentAssessments[0];
 
   const isMidYearCompleted = midYearAssessment?.status === 'reviewed';
   const isMidYearSubmitted = midYearAssessment?.status === 'submitted';
@@ -381,7 +389,7 @@ const App: React.FC = () => {
           </div>
           <div className="md:w-7/12 p-16 flex flex-col justify-center bg-white">
             <div className="max-w-md mx-auto w-full">
-              <h2 className="text-2xl sm:text-[1.75rem] md:text-3xl font-black text-slate-900 mb-12 tracking-tight">Performance Review Portal</h2>
+              <h2 className="text-2xl sm:text-[1.75rem] md:text-3xl font-black text-slate-900 mb-12 tracking-tight">Employee Portal</h2>
               <div className="space-y-12">
                 <form onSubmit={handleStaffLogin} className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -408,7 +416,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="flex flex-col gap-3">
                     <button type="submit" disabled={isSigningIn} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-black transition-all transform active:scale-[0.98] disabled:opacity-60">
-                      {isSigningIn ? 'Signing in...' : 'Start Assessment'}
+                      {isSigningIn ? 'Signing in...' : 'Staff Login'}
                     </button>
                   </div>
                 </form>
@@ -440,8 +448,36 @@ const App: React.FC = () => {
   const currentAssessment = selectedReviewType === 'mid-year' ? midYearAssessment : finalAssessment;
 
   return (
-    <Layout title={role === 'staff' ? 'Performance Review' : 'Manager Hub'} role={role === 'staff' ? 'employee' : 'admin'} onRoleSwitch={handleLogout} isSyncing={isSyncing}>
+    <Layout title={role === 'staff' ? (staffTab === 'expenses' && EXPENSES_ENABLED ? 'Expense Claims' : 'Performance Review') : 'Manager Hub'} role={role === 'staff' ? 'employee' : 'admin'} onRoleSwitch={handleLogout} isSyncing={isSyncing}>
       {role === 'staff' ? (
+        <>
+          {/* Portal tabs - Performance Review | Expense Claims */}
+          <div className="max-w-4xl mx-auto flex gap-6 border-b border-slate-200 mb-2 no-print">
+            <button onClick={() => setStaffTab('review')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${staffTab === 'review' ? 'text-brand-600' : 'text-slate-400'}`}>
+              Performance Review
+              {staffTab === 'review' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
+            </button>
+            {EXPENSES_ENABLED ? (
+              <button onClick={() => setStaffTab('expenses')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${staffTab === 'expenses' ? 'text-brand-600' : 'text-slate-400'}`}>
+                Expense Claims
+                {staffTab === 'expenses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
+              </button>
+            ) : (
+              <button disabled title="Expense Claims - coming soon" className="pb-4 px-2 text-sm font-bold text-slate-300 cursor-not-allowed flex items-center gap-2">
+                Expense Claims
+                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-slate-100 text-slate-400 border border-slate-200">Soon</span>
+              </button>
+            )}
+          </div>
+
+          {staffTab === 'expenses' && EXPENSES_ENABLED ? (
+            <ExpenseClaims
+              staffName={myStaffRecord?.employeeDetails.fullName || currentUserEmail}
+              staffEmail={currentUserEmail}
+              managerEmail={myStaffRecord?.managerEmail || ''}
+              managerName={myStaffRecord?.managerName}
+            />
+          ) : (
         !selectedReviewType ? (
           <div className="max-w-4xl mx-auto py-12 px-6">
             <div className="text-center mb-12">
@@ -561,6 +597,8 @@ const App: React.FC = () => {
             </div>
           )
         )
+          )}
+        </>
       ) : (
         <AdminDashboard 
           assessments={assessments} 

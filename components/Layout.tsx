@@ -48,7 +48,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title, role, onRoleSwitch, is
             )}
             <nav className="hidden md:flex gap-4">
               <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                {role === 'employee' ? 'STAFF PORTAL' : 'ASSESSOR HUB'}
+                {role === 'employee' ? 'EMPLOYEE PORTAL' : 'MANAGER HUB'}
               </span>
             </nav>
             <button 
@@ -73,7 +73,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title, role, onRoleSwitch, is
       <footer className="bg-white border-t border-slate-200 py-10">
         <div className="max-w-7xl mx-auto px-4 flex justify-center">
           <div className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">
-            METABEV Staff Performance Review
+            METABEV Employee Portal
           </div>
         </div>
       </footer>

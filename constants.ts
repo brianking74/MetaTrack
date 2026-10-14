@@ -1,6 +1,43 @@
 
 import { Rating, Competency, KPI, Assessment } from './types.ts';
 
+// ============================================================
+// EXPENSE CLAIMS MODULE
+// ============================================================
+// Flip to true (or leave true) once BOTH are done:
+//   1. supabase/setup_expenses.sql has been run in the Supabase SQL Editor
+//   2. Netlify env vars are in place if you want email notifications
+//      (RESEND_API_KEY + FINANCE_EMAIL - see supabase/EXPENSES_RUNBOOK.md)
+// While false, the Expense Claims tab is visible but greyed out and
+// unselectable for every role ("Coming Soon").
+export const EXPENSES_ENABLED = false;
+
+// Starter claim types (requirement: Entertainment, Travel & A&P).
+// When the full official list of types + codes arrives, add entries here -
+// the dropdown, filters and analytics all read from this single list.
+export const EXPENSE_TYPES: { code: string; label: string }[] = [
+  { code: 'ENT', label: 'Entertainment' },
+  { code: 'TRV', label: 'Travel' },
+  { code: 'AP',  label: 'A&P (Advertising & Promotion)' },
+];
+
+export const expenseTypeLabel = (code: string): string =>
+  EXPENSE_TYPES.find(t => t.code === code)?.label || code;
+
+export const EXPENSE_CURRENCY = 'HKD';
+export const RECEIPT_MAX_MB = 5;
+export const RECEIPT_ACCEPTED_TYPES = [
+  'image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'
+];
+
+export const formatMoney = (amount: number, currency: string = EXPENSE_CURRENCY): string => {
+  try {
+    return new Intl.NumberFormat('en-HK', { style: 'currency', currency }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+};
+
 export const RATING_DESCRIPTIONS: Record<Rating, string> = {
   [Rating.SEE]: "Individual's results have significantly surpassed agreed goals, performance and contribution expectations.",
   [Rating.EE]: "Individual's results have more than achieved agreed goals, performance and contribution expectations.",

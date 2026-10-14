@@ -11,6 +11,30 @@ export enum Rating {
 export type RoleType = 'staff' | 'manager' | 'admin';
 export type ReviewType = 'mid-year' | 'final';
 
+export type ExpenseClaimStatus = 'submitted' | 'approved' | 'rejected';
+
+export interface ExpenseClaim {
+  id: string;
+  email: string;            // claimant (staff) email, lowercase
+  staffName: string;
+  managerEmail: string;     // approver email, lowercase
+  managerName?: string;
+  expenseType: string;      // code from EXPENSE_TYPES, e.g. 'ENT'
+  expenseDate: string;      // ISO date (yyyy-mm-dd)
+  description: string;
+  amount: number;
+  currency: string;         // 'HKD'
+  receiptPath: string;      // storage path: <email>/<claim id>/<file>
+  receiptName: string;
+  receiptType: string;      // mime type
+  status: ExpenseClaimStatus;
+  reviewComment?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  financeNotifiedAt?: string;
+  createdAt: string;
+}
+
 export interface KPI {
   id: string;
   title: string;

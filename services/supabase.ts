@@ -12,7 +12,9 @@ const isConfigured = () => {
   return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && SUPABASE_URL.includes('supabase.co') && SUPABASE_ANON_KEY.length > 50;
 };
 
-const supabase = isConfigured() ? createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!) : null;
+// Exported for the expense module (storage uploads, claim queries) so the
+// client is created exactly once with the same env-var checks.
+export const supabase = isConfigured() ? createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!) : null;
 
 const NOT_CONFIGURED_ERROR = 'Supabase environment variables are missing (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY). Set them in Netlify -> Site settings -> Environment variables, then redeploy.';
 

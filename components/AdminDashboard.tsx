@@ -1,8 +1,11 @@
 
-import { Assessment, RoleType } from '../types.ts';
-import { createBlankAssessment } from '../constants.ts';
+import { Assessment, RoleType, ExpenseClaim } from '../types.ts';
+import { createBlankAssessment, EXPENSES_ENABLED } from '../constants.ts';
 import AppraisalReport from './AppraisalReport.tsx';
-import React, { useState, useRef } from 'react';
+import ManagerExpenses from './ManagerExpenses.tsx';
+import AdminExpenses from './AdminExpenses.tsx';
+import { expensesService } from '../services/expenses.ts';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 interface AdminDashboardProps {
   assessments: Assessment[];
@@ -30,10 +33,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onForceSync
 }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'management'>(
+  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses'>(
     assessments.length === 0 && role === 'admin' ? 'management' : 'submissions'
   );
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // --- Expense claims state (manager: their team's claims; admin: all claims)
+  const [expenseClaims, setExpenseClaims] = useState<ExpenseClaim[]>([]);
+  const [expenseLoading, setExpenseLoading] = useState(false);
+  const [expenseError, setExpenseError] = useState('');
+
+  const loadExpenseClaims = useCallback(async () => {
+    if (!EXPENSES_ENABLED) return;
+    setExpenseLoading(true);
+    setExpenseError('');
+    const { data, error } = await expensesService.getClaims();
+    if (error) setExpenseError(error);
+    setExpenseClaims(data);
+    setExpenseLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (EXPENSES_ENABLED && (role === 'manager' || role === 'admin')) {
+      loadExpenseClaims();
+    }
+  }, [role, loadExpenseClaims]);
+
+  const pendingExpenseCount = expenseClaims.filter(c => c.status === 'submitted').length;
+  const expenseTabLabel = role === 'manager'
+    ? `Expenses (${pendingExpenseCount})`
+    : `Expenses (${expenseClaims.length})`;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -309,6 +338,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             Staff Registry ({registryCount})
             {activeTab === 'management' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
           </button>
+          {EXPENSES_ENABLED ? (
+            <button onClick={() => setActiveTab('expenses')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'expenses' ? 'text-brand-600' : 'text-slate-400'}`}>
+              {expenseTabLabel}
+              {activeTab === 'expenses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
+            </button>
+          ) : (
+            <button disabled title="Expense Claims - coming soon" className="pb-4 px-2 text-sm font-bold text-slate-300 cursor-not-allowed flex items-center gap-2">
+              Expenses
+              <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-slate-100 text-slate-400 border border-slate-200">Soon</span>
+            </button>
+          )}
         </div>
         
         {role === 'admin' && (
@@ -331,6 +371,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         )}
       </div>
 
+      {activeTab === 'expenses' ? (
+        EXPENSES_ENABLED ? (
+          role === 'manager' ? (
+            <ManagerExpenses
+              claims={expenseClaims}
+              isLoading={expenseLoading}
+              error={expenseError}
+              currentUserEmail={currentUserEmail}
+              onRefresh={loadExpenseClaims}
+            />
+          ) : (
+            <AdminExpenses
+              claims={expenseClaims}
+              isLoading={expenseLoading}
+              error={expenseError}
+              currentUserEmail={currentUserEmail}
+              onRefresh={loadExpenseClaims}
+            />
+          )
+        ) : (
+          <div className="bg-white rounded-3xl border p-12 text-center">
+            <p className="text-sm font-bold text-slate-400">Expense Claims are coming soon.</p>
+            <p className="text-xs text-slate-300 mt-1">This module is being finalised and will open to staff shortly.</p>
+          </div>
+        )
+      ) : (
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden no-print">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b">
@@ -407,6 +473,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 };
