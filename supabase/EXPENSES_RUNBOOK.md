@@ -1,44 +1,44 @@
 # Expense Claims Module - Go-Live Runbook
 
-The module is **fully built and code-verified** but ships **disabled** (`EXPENSES_ENABLED = false`)
-so staff only see a greyed-out "Expenses - Soon" tab. Follow these steps in order to open it up.
+The module is **live** (`EXPENSES_ENABLED = true`, SQL setup done, merged to `main`).
+While it is being tested it is in **PILOT MODE**: only staff accounts listed in
+`EXPENSES_PILOT_EMAILS` (constants.ts) see the staff "Expense Claims" tab -
+it is completely hidden from everyone else. Managers and admins keep their
+approval queues and their own "My Expenses" submission tab.
 
 ## What was built
 
 | Area | Behaviour |
 |---|---|
-| Staff portal | New tabs: **Performance Review** (unchanged) + **Expense Claims** (form: type, date, description, amount, one receipt image/PDF; plus "My Claims" list with live status) |
-| Manager Hub | Third tab **Expenses**: pending queue with receipt viewer, optional comment, Reject / **Approve & Notify**; review history below |
+| Staff portal | Tabs: **Performance Review** (unchanged) + **Expense Claims**: multi-claim form ("Add More" for each extra claim; type, date, description, amount, one receipt image/PDF per claim; running total; "Submit N Claims"), plus "My Claims" list with live status |
+| Manager Hub | **Expenses**: pending queue with receipt viewer, optional comment, Reject / **Approve & Notify**; **My Expenses**: managers submit their own claims (routed to their manager on file, or the admin) |
 | Admin dashboard | **Expenses** tab: totals, claims by type, claims by staff member, 12-month trend, full claims table (admin can also approve/reject) |
 | Database | `public.expense_claims` table + private `expense-receipts` storage bucket, RLS mirroring the assessments lockdown (staff: own rows only, manager: their team, admin: all, anonymous: nothing) |
 | Emails | Netlify Function `expense-notify`: manager notified on submit; staff + finance notified on approve; staff notified on reject |
 
-## Step 1 - Run the database setup (Supabase SQL Editor)
+## Pilot mode - test account setup
 
-Paste **`supabase/setup_expenses.sql`** into Dashboard -> SQL Editor -> Run.
+1. **Create the Auth user** (works even after open signups are disabled):
+   Supabase Dashboard -> Authentication -> Users -> **Add user -> Create new user**:
+   email `test.staff@metabev.com`, a password you remember, tick **Auto Confirm User**.
+2. **Add the person to the staff registry** (staff cannot log in without a record,
+   and claims need a manager on file): Admin Hub -> **Upload Registry** ->
+   `supabase/test-staff-registry.csv` - but first open it and replace
+   `Change Me` / `change.me@metabev.com` in the last two columns with the
+   manager account that should approve the test claims (claims for an
+   unreplaced placeholder can still be approved by the admin in the admin
+   Expenses tab, which sees everything).
+3. The test email is already in `EXPENSES_PILOT_EMAILS` in `constants.ts`.
+   Add any other pilot testers the same way (lowercase, comma-separated).
+4. Test flow: log in as the test staff account -> submit one or more claims
+   (each with a receipt) -> log in as the approving manager -> approve in the
+   Expenses queue -> log back in as the test staff account -> the approval
+   banner appears at the top of the Expense Claims tab.
+5. **Go-live**: set `EXPENSES_PILOT_EMAILS` to an empty list -
+   `export const EXPENSES_PILOT_EMAILS: string[] = [];` - and every staff
+   member gets the tab automatically. No other change needed.
 
-Verification (paste results back if anything looks off):
-- Query A: `rls_enabled = true`, `policy_count = 4`
-- Query B: exactly 4 expense policies
-- Query C: one bucket, `public = f`, 5 MB limit
-- Query D: 3 `receipts %` storage policies
-
-## Step 2 - Deploy the code
-
-Merge the `expense-claims` branch into `main` (Netlify rebuilds automatically).
-This merge also ships the full CSV export fix that was pending.
-
-## Step 3 - Flip the flag on
-
-In `constants.ts`, change once, via GitHub web editor:
-
-```
-export const EXPENSES_ENABLED = true;
-```
-
-(edit -> commit to main -> Netlify rebuilds -> staff tabs become clickable)
-
-## Step 4 - Enable emails (optional but recommended)
+## Emails (optional but recommended)
 
 1. Create a free account at **resend.com** and generate an API key.
 2. Verify your sending domain (e.g. `meta-bev.com`) in Resend -> Domains (adds DNS records);

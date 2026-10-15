@@ -12,6 +12,20 @@ import { Rating, Competency, KPI, Assessment } from './types.ts';
 // unselectable for every role ("Coming Soon").
 export const EXPENSES_ENABLED = true;
 
+// PILOT MODE - while the module is still being tested, ONLY the staff
+// accounts listed here see the "Expense Claims" tab in the employee portal;
+// it stays completely hidden from every other staff member. Managers and
+// admins are not affected by this list (they need their approval queues).
+//
+// To open the module to everyone later: set this list to empty  ->  []
+// and every staff member will get the tab automatically.
+export const EXPENSES_PILOT_EMAILS: string[] = [
+  'test.staff@metabev.com',   // <- dedicated test account (see EXPENSES_RUNBOOK.md)
+];
+
+export const isExpensePilotUser = (email?: string | null): boolean =>
+  !!email && EXPENSES_PILOT_EMAILS.some(e => e.toLowerCase().trim() === email.toLowerCase().trim());
+
 // Starter claim types (requirement: Entertainment, Travel & A&P).
 // When the full official list of types + codes arrives, add entries here -
 // the dropdown, filters and analytics all read from this single list.

@@ -7,7 +7,7 @@ import AppraisalReport from './components/AppraisalReport.tsx';
 import ExpenseClaims from './components/ExpenseClaims.tsx';
 import { Assessment, RoleType } from './types.ts';
 import { supabaseService } from './services/supabase.ts';
-import { EXPENSES_ENABLED } from './constants.ts';
+import { EXPENSES_ENABLED, isExpensePilotUser } from './constants.ts';
 import confetti from 'canvas-confetti';
 
 // The administrator account. Its password lives ONLY as a salted hash inside
@@ -356,6 +356,11 @@ const App: React.FC = () => {
   const expenseApproverEmail = ownManagerIsSet ? ownManagerEmail : SUPER_ADMIN_EMAIL;
   const expenseApproverName = ownManagerIsSet ? myStaffRecord?.managerName : undefined;
 
+  // PILOT MODE: while the expense module is being tested, only staff accounts
+  // on the EXPENSES_PILOT_EMAILS list (constants.ts) get the Expenses tab -
+  // it is hidden completely from everyone else. Managers/admins are unaffected.
+  const staffExpensesLive = EXPENSES_ENABLED && isExpensePilotUser(currentUserEmail);
+
   const isMidYearCompleted = midYearAssessment?.status === 'reviewed';
   const isMidYearSubmitted = midYearAssessment?.status === 'submitted';
 
@@ -458,7 +463,7 @@ const App: React.FC = () => {
   const currentAssessment = selectedReviewType === 'mid-year' ? midYearAssessment : finalAssessment;
 
   return (
-    <Layout title={role === 'staff' ? (staffTab === 'expenses' && EXPENSES_ENABLED ? 'Expense Claims' : 'Performance Review') : 'Manager Hub'} role={role === 'staff' ? 'employee' : 'admin'} onRoleSwitch={handleLogout} isSyncing={isSyncing}>
+    <Layout title={role === 'staff' ? (staffTab === 'expenses' && staffExpensesLive ? 'Expense Claims' : 'Performance Review') : 'Manager Hub'} role={role === 'staff' ? 'employee' : 'admin'} onRoleSwitch={handleLogout} isSyncing={isSyncing}>
       {role === 'staff' ? (
         <>
           {/* Portal tabs - Performance Review | Expense Claims */}
@@ -467,20 +472,20 @@ const App: React.FC = () => {
               Performance Review
               {staffTab === 'review' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
             </button>
-            {EXPENSES_ENABLED ? (
+            {staffExpensesLive ? (
               <button onClick={() => setStaffTab('expenses')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${staffTab === 'expenses' ? 'text-brand-600' : 'text-slate-400'}`}>
                 Expense Claims
                 {staffTab === 'expenses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
               </button>
-            ) : (
+            ) : !EXPENSES_ENABLED ? (
               <button disabled title="Expense Claims - coming soon" className="pb-4 px-2 text-sm font-bold text-slate-300 cursor-not-allowed flex items-center gap-2">
                 Expense Claims
                 <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-slate-100 text-slate-400 border border-slate-200">Soon</span>
               </button>
-            )}
+            ) : null}
           </div>
 
-          {staffTab === 'expenses' && EXPENSES_ENABLED ? (
+          {staffTab === 'expenses' && staffExpensesLive ? (
             <ExpenseClaims
               staffName={myStaffRecord?.employeeDetails.fullName || currentUserEmail}
               staffEmail={currentUserEmail}
