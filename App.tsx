@@ -346,6 +346,16 @@ const App: React.FC = () => {
   // The staff member's manager (from their registry record) drives expense routing.
   const myStaffRecord = currentAssessments[0];
 
+  // Routing for the signed-in person's OWN expense claims: their line manager
+  // on file; managers without one (top-level) route to the administrator,
+  // who approves them in the admin Expenses dashboard. Self-approval is
+  // impossible because the approver can never be the claimant here.
+  const myEmailLower = currentUserEmail.toLowerCase().trim();
+  const ownManagerEmail = (myStaffRecord?.managerEmail || '').toLowerCase().trim();
+  const ownManagerIsSet = !!ownManagerEmail && ownManagerEmail.includes('@') && ownManagerEmail !== myEmailLower;
+  const expenseApproverEmail = ownManagerIsSet ? ownManagerEmail : SUPER_ADMIN_EMAIL;
+  const expenseApproverName = ownManagerIsSet ? myStaffRecord?.managerName : undefined;
+
   const isMidYearCompleted = midYearAssessment?.status === 'reviewed';
   const isMidYearSubmitted = midYearAssessment?.status === 'submitted';
 
@@ -653,6 +663,11 @@ const App: React.FC = () => {
           }} 
           isSyncing={isSyncing} 
           onForceSync={() => syncToCloud(assessments).then(s => s && alert("Sync successful."))} 
+          expenseProfile={{
+            staffName: myStaffRecord?.employeeDetails.fullName || currentUserEmail,
+            managerEmail: expenseApproverEmail,
+            managerName: expenseApproverName
+          }}
         />
       )}
     </Layout>

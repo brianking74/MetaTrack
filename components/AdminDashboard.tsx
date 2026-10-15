@@ -4,6 +4,7 @@ import { createBlankAssessment, EXPENSES_ENABLED } from '../constants.ts';
 import AppraisalReport from './AppraisalReport.tsx';
 import ManagerExpenses from './ManagerExpenses.tsx';
 import AdminExpenses from './AdminExpenses.tsx';
+import ExpenseClaims from './ExpenseClaims.tsx';
 import { expensesService } from '../services/expenses.ts';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
@@ -18,6 +19,9 @@ interface AdminDashboardProps {
   onRestoreBackup?: (assessments: Assessment[]) => void;
   isSyncing?: boolean;
   onForceSync?: () => void;
+  // Routing for the signed-in manager's OWN expense claims (My Expenses tab):
+  // their line manager on file, or the administrator when none is set.
+  expenseProfile?: { staffName: string; managerEmail: string; managerName?: string };
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -30,10 +34,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteAssessment,
   onRestoreBackup,
   isSyncing,
-  onForceSync
+  onForceSync,
+  expenseProfile
 }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses'>(
+  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses' | 'my-expenses'>(
     assessments.length === 0 && role === 'admin' ? 'management' : 'submissions'
   );
   const [isDownloading, setIsDownloading] = useState(false);
@@ -349,6 +354,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-slate-100 text-slate-400 border border-slate-200">Soon</span>
             </button>
           )}
+          {role === 'manager' && EXPENSES_ENABLED && (
+            <button onClick={() => setActiveTab('my-expenses')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'my-expenses' ? 'text-brand-600' : 'text-slate-400'}`}>
+              My Expenses
+              {activeTab === 'my-expenses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
+            </button>
+          )}
         </div>
         
         {role === 'admin' && (
@@ -396,6 +407,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <p className="text-xs text-slate-300 mt-1">This module is being finalised and will open to staff shortly.</p>
           </div>
         )
+      ) : activeTab === 'my-expenses' ? (
+        <ExpenseClaims
+          staffName={expenseProfile?.staffName || currentUserEmail}
+          staffEmail={currentUserEmail}
+          managerEmail={expenseProfile?.managerEmail || ''}
+          managerName={expenseProfile?.managerName}
+        />
       ) : (
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden no-print">
         <table className="w-full text-left">

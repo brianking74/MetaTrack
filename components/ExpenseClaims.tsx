@@ -53,12 +53,16 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
       const { data, error } = await expensesService.getClaims();
       if (cancelled) return;
       if (error) setLoadError(error);
-      setClaims(data);
+      // Managers reuse this component for their OWN claims (My Expenses tab):
+      // RLS also returns the team claims they approve, so scope strictly to
+      // the signed-in email. For staff, RLS already returns only their own.
+      const own = data.filter(c => (c.email || '').toLowerCase() === staffEmail.toLowerCase());
+      setClaims(own);
       setIsLoading(false);
 
       // Approval/rejection notice: surface the most recent outcome the staff
       // member has not seen yet (acknowledged in THIS browser via localStorage).
-      const reviewed = data.filter(c => c.reviewedAt).sort((a, b) => (a.reviewedAt! < b.reviewedAt! ? 1 : -1));
+      const reviewed = own.filter(c => c.reviewedAt).sort((a, b) => (a.reviewedAt! < b.reviewedAt! ? 1 : -1));
       if (reviewed.length > 0) {
         let lastSeen = '';
         try { lastSeen = localStorage.getItem(SEEN_KEY) || ''; } catch { /* ignore */ }
