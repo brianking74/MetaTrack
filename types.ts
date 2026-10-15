@@ -28,6 +28,12 @@ export interface ExpenseClaim {
   receiptName: string;
   receiptType: string;      // mime type
   status: ExpenseClaimStatus;
+  // Groups the lines of one submission into a single claim: every row
+  // submitted in the same "Add More" batch shares one claim_group_id, so
+  // the manager approves/rejects the whole claim and finance gets ONE
+  // itemised email. Null for rows submitted before claim groups existed
+  // (those stand alone as their own claim).
+  claimGroupId?: string | null;
   reviewComment?: string;
   reviewedBy?: string;
   reviewedAt?: string;

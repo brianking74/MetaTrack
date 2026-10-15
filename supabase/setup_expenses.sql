@@ -38,6 +38,7 @@ create table if not exists public.expense_claims (
   receipt_type text not null,               -- mime type
   status text not null default 'submitted'
     check (status in ('submitted','approved','rejected')),
+  claim_group_id uuid,                      -- links all items of one submission
   review_comment text,
   reviewed_by text,
   reviewed_at timestamptz,
@@ -51,6 +52,8 @@ create index if not exists expense_claims_manager_idx
   on public.expense_claims (lower(manager_email), status);
 create index if not exists expense_claims_status_idx
   on public.expense_claims (status, created_at desc);
+create index if not exists expense_claims_group_idx
+  on public.expense_claims (claim_group_id);
 
 -- ------------------------------------------------------------
 -- 2) Row Level Security: ON

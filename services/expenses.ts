@@ -30,6 +30,7 @@ const mapClaim = (row: any): ExpenseClaim => ({
   receiptName: row.receipt_name,
   receiptType: row.receipt_type,
   status: row.status as ExpenseClaimStatus,
+  claimGroupId: row.claim_group_id || null,
   reviewComment: row.review_comment || '',
   reviewedBy: row.reviewed_by || '',
   reviewedAt: row.reviewed_at || undefined,
@@ -52,6 +53,7 @@ const mapClaimToRow = (c: ExpenseClaim) => ({
   receipt_name: c.receiptName,
   receipt_type: c.receiptType,
   status: c.status,
+  claim_group_id: c.claimGroupId || null,
   review_comment: c.reviewComment || null,
   reviewed_by: c.reviewedBy || null,
   reviewed_at: c.reviewedAt || null,
@@ -64,15 +66,85 @@ const networkError = (err: any) =>
     : (err?.message || 'Unexpected error');
 
 /** Best-effort email dispatch - never blocks or fails the UI action. */
-const notifyByEmail = (event: 'submitted' | 'approved' | 'rejected', claim: ExpenseClaim): void => {
+const notifyByEmail = (
+  event: 'submitted' | 'approved' | 'rejected',
+  claim: ExpenseClaim,
+  items?: Pick<ExpenseClaim, 'expenseType' | 'expenseDate' | 'description' | 'amount'>[],
+  total?: number
+): void => {
   try {
     fetch('/.netlify/functions/expense-notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event, claim })
+      body: JSON.stringify({
+        event,
+        claim,
+        ...(items && items.length ? { items, total } : {})
+      })
     }).catch(() => { /* email is optional; in-app status always works */ });
   } catch { /* ignore */ }
 };
+
+/**
+ * ONE email for a WHOLE claim (a submission group), not one per item.
+ * The first claim carries the staff/manager identity; all lines are
+ * attached as an itemised list with the claim total.
+ */
+export const notifyClaimEvent = (
+  event: 'submitted' | 'approved' | 'rejected',
+  claims: ExpenseClaim[]
+): void => {
+  if (!claims.length) return;
+  const items = claims.map(c => ({
+    expenseType: c.expenseType,
+    expenseDate: c.expenseDate,
+    description: c.description,
+    amount: c.amount
+  }));
+  notifyByEmail(event, claims[0], items, claims.reduce((t, c) => t + c.amount, 0));
+};
+
+// ============================================================
+// Claim groups: one submission = one claim with N items
+// ============================================================
+// All rows submitted in the same batch share a claim_group_id. Legacy rows
+// (pre-group) have null and stand alone - their key is unique per row.
+
+export const claimGroupKey = (c: ExpenseClaim): string => c.claimGroupId || `row-${c.id}`;
+
+export interface ClaimGroup {
+  key: string;
+  claims: ExpenseClaim[];   // oldest first within the claim
+  total: number;
+  submittedAt: string;      // newest createdAt in the claim
+}
+
+/** Groups claims into whole claims (submissions), newest claim first. */
+export const groupClaims = (claims: ExpenseClaim[]): ClaimGroup[] => {
+  const map = new Map<string, ExpenseClaim[]>();
+  for (const c of claims) {
+    const k = claimGroupKey(c);
+    const list = map.get(k);
+    if (list) list.push(c); else map.set(k, [c]);
+  }
+  const groups: ClaimGroup[] = [];
+  map.forEach(list => {
+    const sorted = [...list].sort((a, b) => ((a.createdAt || '') < (b.createdAt || '') ? -1 : 1));
+    groups.push({
+      key: claimGroupKey(sorted[0]),
+      claims: sorted,
+      total: sorted.reduce((t, c) => t + c.amount, 0),
+      submittedAt: sorted.reduce((m, c) => ((c.createdAt || '') > m ? (c.createdAt || '') : m), sorted[0].createdAt || '')
+    });
+  });
+  return groups.sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1));
+};
+
+/** One group id shared by every line of a batch submission. */
+export const newClaimGroupId = (): string =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 /** Validates a receipt file before any upload is attempted. */
 export const validateReceiptFile = (file: File): string | null => {
@@ -103,7 +175,10 @@ export const expensesService = {
     expenseDate: string;
     description: string;
     amount: number;
-  }, file: File): Promise<{ success: boolean; error?: string; claim?: ExpenseClaim }> {
+  }, file: File, opts?: {
+    claimGroupId?: string;  // shared id linking all lines of one submission
+    notify?: boolean;       // default true; batch submissions notify once at the end
+  }): Promise<{ success: boolean; error?: string; claim?: ExpenseClaim }> {
     if (!supabase) return { success: false, error: 'Supabase is not configured.' };
 
     const email = input.email.toLowerCase().trim();
@@ -149,6 +224,7 @@ export const expensesService = {
       receiptName: file.name,
       receiptType: file.type || 'application/octet-stream',
       status: 'submitted',
+      claimGroupId: opts?.claimGroupId || null,
       createdAt: new Date().toISOString()
     };
 
@@ -161,7 +237,7 @@ export const expensesService = {
       return { success: false, error: insertError.message };
     }
 
-    notifyByEmail('submitted', claim);
+    if (opts?.notify !== false) notifyByEmail('submitted', claim);
     return { success: true, claim };
   },
 
@@ -181,34 +257,35 @@ export const expensesService = {
   },
 
   /**
-   * Manager (or admin) approves/rejects a claim. Sets reviewer + timestamp,
-   * and marks the finance notice as dispatched on approval.
+   * Manager (or admin) approves/rejects a WHOLE claim (all items of one
+   * submission) in a single update + a single notification email.
+   * A single-claim review is just a group of one.
    */
-  async reviewClaim(claim: ExpenseClaim, decision: 'approved' | 'rejected',
-                    comment: string, reviewerEmail: string): Promise<{ success: boolean; error?: string }> {
+  async reviewClaims(group: ExpenseClaim[], decision: 'approved' | 'rejected',
+                     comment: string, reviewerEmail: string): Promise<{ success: boolean; error?: string }> {
     if (!supabase) return { success: false, error: 'Supabase is not configured.' };
+    if (!group.length) return { success: false, error: 'No claims to review.' };
     const now = new Date().toISOString();
-    const updated: ExpenseClaim = {
-      ...claim,
-      status: decision,
-      reviewComment: comment.trim(),
-      reviewedBy: reviewerEmail,
-      reviewedAt: now,
-      financeNotifiedAt: decision === 'approved' ? now : claim.financeNotifiedAt
-    };
     try {
       const { error } = await supabase
         .from(EXPENSES_TABLE)
         .update({
-          status: updated.status,
-          review_comment: updated.reviewComment || null,
-          reviewed_by: updated.reviewedBy,
-          reviewed_at: updated.reviewedAt,
-          finance_notified_at: updated.financeNotifiedAt || null
+          status: decision,
+          review_comment: comment.trim() || null,
+          reviewed_by: reviewerEmail,
+          reviewed_at: now,
+          finance_notified_at: decision === 'approved' ? now : null
         })
-        .eq('id', claim.id);
+        .in('id', group.map(c => c.id));
       if (error) throw error;
-      notifyByEmail(decision, updated);
+      notifyClaimEvent(decision, group.map(c => ({
+        ...c,
+        status: decision,
+        reviewComment: comment.trim(),
+        reviewedBy: reviewerEmail,
+        reviewedAt: now,
+        financeNotifiedAt: decision === 'approved' ? now : undefined
+      })));
       return { success: true };
     } catch (err: any) {
       return { success: false, error: networkError(err) };

@@ -18,33 +18,93 @@
 //
 // Called by the portal as:
 //   POST /.netlify/functions/expense-notify
-//   { "event": "submitted" | "approved" | "rejected", "claim": {...} }
+//   {
+//     "event": "submitted" | "approved" | "rejected",
+//     "claim": { ...identity/amount fields of the claim... },
+//     "items": [ { "expenseType","expenseDate","description","amount" }, ... ],
+//     "total": 208.50
+//   }
+//
+// `items` is OPTIONAL and carries the lines of a multi-item claim (one
+// "Add More" submission). When present, emails show ONE itemised table
+// with a TOTAL row - i.e. ONE email per claim, never one email per item.
+// Without `items` the legacy single-claim table is rendered.
 
 const PORTAL_URL = 'https://performance-review.netlify.app';
 
-const money = (c) =>
-  new Intl.NumberFormat('en-HK', { style: 'currency', currency: c.currency || 'HKD' }).format(c.amount);
+const TYPE_LABELS = {
+  ENT: 'Entertainment',
+  TRV: 'Travel',
+  'AP': 'A&P (Advertising & Promotion)'
+};
+
+const escapeHtml = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+
+const money = (c, amount) =>
+  new Intl.NumberFormat('en-HK', { style: 'currency', currency: c.currency || 'HKD' })
+    .format(amount ?? c.amount);
+
+const itemsLabel = (claim, items, total) =>
+  items && items.length
+    ? `${items.length} item${items.length === 1 ? '' : 's'}, ${money(claim, total)}`
+    : money(claim);
 
 const row = (label, value) =>
   `<tr><td style="padding:6px 14px 6px 0;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700">${label}</td><td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600">${value}</td></tr>`;
 
 const claimTable = (claim) =>
-  `<table style="border-collapse:collapse;margin:18px 0">${row('Staff', claim.staffName)}
-  ${row('Type', (claim.expenseType || ''))}
-  ${row('Expense date', claim.expenseDate)}
-  ${row('Description', claim.description)}
+  `<table style="border-collapse:collapse;margin:18px 0">${row('Staff', escapeHtml(claim.staffName))}
+  ${row('Type', escapeHtml(TYPE_LABELS[claim.expenseType] || claim.expenseType || ''))}
+  ${row('Expense date', escapeHtml(claim.expenseDate))}
+  ${row('Description', escapeHtml(claim.description))}
   ${row('Amount', money(claim))}</table>`;
 
-function buildEmail(event, claim, financeEmail) {
+const itemsTable = (claim, items, total) => {
+  const body = items.map(it => `
+    <tr>
+      <td style="padding:8px 12px 8px 0;border-top:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:700;white-space:nowrap">${escapeHtml(TYPE_LABELS[it.expenseType] || it.expenseType || '')}</td>
+      <td style="padding:8px 12px;border-top:1px solid #e2e8f0;color:#334155;font-size:13px;white-space:nowrap">${escapeHtml(it.expenseDate)}</td>
+      <td style="padding:8px 12px;border-top:1px solid #e2e8f0;color:#334155;font-size:13px">${escapeHtml(it.description)}</td>
+      <td style="padding:8px 0 8px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:600;text-align:right;white-space:nowrap">${money(claim, it.amount)}</td>
+    </tr>`).join('');
+  const grand = total ?? items.reduce((t, it) => t + Number(it.amount || 0), 0);
+  const totalRow = `
+    <tr>
+      <td colspan="3" style="padding:10px 12px 2px 0;text-align:right;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Total &middot; ${items.length} item${items.length === 1 ? '' : 's'}</td>
+      <td style="padding:10px 0 2px 12px;text-align:right;color:#0f172a;font-size:15px;font-weight:800;white-space:nowrap">${money(claim, grand)}</td>
+    </tr>`;
+  return `<table style="border-collapse:collapse;margin:18px 0;width:100%">
+    <thead><tr>
+      <th align="left" style="padding:0 12px 6px 0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.05em">Type</th>
+      <th align="left" style="padding:0 12px 6px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.05em">Date</th>
+      <th align="left" style="padding:0 12px 6px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.05em">Description</th>
+      <th align="right" style="padding:0 0 6px 12px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.05em">Amount</th>
+    </tr></thead>
+    <tbody>${body}${totalRow}</tbody>
+  </table>`;
+};
+
+// Renders the itemised table when `items` is present (multi-item claim),
+// otherwise the legacy single-claim table.
+const claimBody = (claim, items, total) =>
+  items && items.length ? itemsTable(claim, items, total) : claimTable(claim);
+
+function buildEmail(event, claim, financeEmail, items, total) {
+  const table = claimBody(claim, items, total);
+  const label = itemsLabel(claim, items, total);
+
   if (event === 'submitted') {
     return {
       to: [claim.managerEmail],
-      subject: `Expense claim awaiting your approval - ${claim.staffName} (${money(claim)})`,
-      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px">
-        <p style="color:#0f172a;font-size:15px">Hello${claim.managerName ? ' ' + claim.managerName : ''},</p>
-        <p style="color:#334155;font-size:14px;line-height:1.6"><strong>${claim.staffName}</strong> has submitted an expense claim and is waiting for your approval.</p>
-        ${claimTable(claim)}
-        <p style="color:#334155;font-size:14px">Please sign in to the portal to review the claim and its receipt:</p>
+      subject: `Expense claim awaiting your approval - ${claim.staffName} (${label})`,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
+        <p style="color:#0f172a;font-size:15px">Hello${claim.managerName ? ' ' + escapeHtml(claim.managerName) : ''},</p>
+        <p style="color:#334155;font-size:14px;line-height:1.6"><strong>${escapeHtml(claim.staffName)}</strong> has submitted ${items && items.length > 1 ? `an expense claim with <strong>${items.length} items</strong>` : 'an expense claim'} and is waiting for your approval.</p>
+        ${table}
+        <p style="color:#334155;font-size:14px">Please sign in to the portal to review the claim and its receipts:</p>
         <p><a href="${PORTAL_URL}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 26px;border-radius:12px;font-size:12px;font-weight:bold;letter-spacing:.15em;text-transform:uppercase;text-decoration:none">Open Employee Portal</a></p>
         <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
       </div>`
@@ -54,25 +114,25 @@ function buildEmail(event, claim, financeEmail) {
   if (event === 'approved') {
     const staffMail = {
       to: [claim.email],
-      subject: `Your expense claim has been approved (${money(claim)})`,
-      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px">
-        <p style="color:#0f172a;font-size:15px">Hello ${claim.staffName},</p>
-        <p style="color:#334155;font-size:14px;line-height:1.6">Good news - your expense claim has been <strong style="color:#059669">approved</strong>${claim.reviewedBy ? ` by ${claim.reviewedBy}` : ''}.</p>
-        ${claimTable(claim)}
-        ${claim.reviewComment ? `<p style="color:#334155;font-size:14px">Manager comment: "<em>${claim.reviewComment}</em>"</p>` : ''}
+      subject: `Your expense claim has been approved (${label})`,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
+        <p style="color:#0f172a;font-size:15px">Hello ${escapeHtml(claim.staffName)},</p>
+        <p style="color:#334155;font-size:14px;line-height:1.6">Good news - your expense claim has been <strong style="color:#059669">approved</strong>${claim.reviewedBy ? ` by ${escapeHtml(claim.reviewedBy)}` : ''}.</p>
+        ${table}
+        ${claim.reviewComment ? `<p style="color:#334155;font-size:14px">Manager comment: "<em>${escapeHtml(claim.reviewComment)}</em>"</p>` : ''}
         <p style="color:#334155;font-size:14px">Finance has been notified to process the payment.</p>
         <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
       </div>`
     };
     const financeMail = financeEmail ? {
       to: [financeEmail],
-      subject: `Expense claim approved - payment due to ${claim.staffName} (${money(claim)})`,
-      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px">
+      subject: `Expense claim approved - payment due to ${claim.staffName} (${label})`,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
         <p style="color:#0f172a;font-size:15px">Hello Finance,</p>
         <p style="color:#334155;font-size:14px;line-height:1.6">The following expense claim has been approved and is ready for payment.</p>
-        ${claimTable(claim)}
-        ${row('Claimant email', claim.email)}
-        ${row('Approved by', claim.reviewedBy || '')}
+        ${table}
+        ${row('Claimant', `${escapeHtml(claim.staffName)} (${escapeHtml(claim.email)})`)}
+        ${row('Approved by', escapeHtml(claim.reviewedBy || ''))}
         <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
       </div>`
     } : null;
@@ -82,12 +142,12 @@ function buildEmail(event, claim, financeEmail) {
   // rejected
   return {
     to: [claim.email],
-    subject: `Your expense claim was not approved (${money(claim)})`,
-    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px">
-      <p style="color:#0f172a;font-size:15px">Hello ${claim.staffName},</p>
+    subject: `Your expense claim was not approved (${label})`,
+    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
+      <p style="color:#0f172a;font-size:15px">Hello ${escapeHtml(claim.staffName)},</p>
       <p style="color:#334155;font-size:14px;line-height:1.6">Unfortunately your expense claim was <strong style="color:#dc2626">not approved</strong>.</p>
-      ${claimTable(claim)}
-      ${claim.reviewComment ? `<p style="color:#334155;font-size:14px">Manager comment: "<em>${claim.reviewComment}</em>"</p>` : ''}
+      ${table}
+      ${claim.reviewComment ? `<p style="color:#334155;font-size:14px">Manager comment: "<em>${escapeHtml(claim.reviewComment)}</em>"</p>` : ''}
       <p style="color:#334155;font-size:14px">If you have questions, please speak with your manager. You may resubmit a corrected claim if appropriate.</p>
       <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
     </div>`
@@ -112,9 +172,9 @@ export default async (req) => {
     return new Response(JSON.stringify({ error: 'POST only' }), { status: 405 });
   }
 
-  let event, claim;
+  let event, claim, items, total;
   try {
-    ({ event, claim } = await req.json());
+    ({ event, claim, items, total } = await req.json());
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
   }
@@ -133,7 +193,7 @@ export default async (req) => {
   const results = [];
 
   try {
-    const email = buildEmail(event, claim, financeEmail);
+    const email = buildEmail(event, claim, financeEmail, items, total);
     if (event === 'approved') {
       results.push(await sendViaResend(apiKey, email.staffMail, from));
       if (email.financeMail) results.push(await sendViaResend(apiKey, email.financeMail, from));

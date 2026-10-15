@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ExpenseClaim } from '../types.ts';
-import { expensesService, validateReceiptFile } from '../services/expenses.ts';
+import { expensesService, validateReceiptFile, newClaimGroupId, notifyClaimEvent, claimGroupKey } from '../services/expenses.ts';
 import { EXPENSE_TYPES, expenseTypeLabel, formatMoney } from '../constants.ts';
 
 interface ExpenseClaimsProps {
@@ -67,7 +67,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const [reviewNotice, setReviewNotice] = useState<{ claim: ExpenseClaim } | null>(null);
+  const [reviewNotice, setReviewNotice] = useState<{ claims: ExpenseClaim[] } | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const hasManager = !!managerEmail && managerEmail.includes('@');
@@ -86,14 +86,18 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
       setClaims(own);
       setIsLoading(false);
 
-      // Approval/rejection notice: surface the most recent outcome the staff
-      // member has not seen yet (acknowledged in THIS browser via localStorage).
-      const reviewed = own.filter(c => c.reviewedAt).sort((a, b) => (a.reviewedAt! < b.reviewedAt! ? 1 : -1));
+      // Approval/rejection notice: surface the most recent review outcome the
+      // staff member has not seen yet (acknowledged in THIS browser via
+      // localStorage). A claim group is reviewed in one action, so all its
+      // items share the exact same reviewed_at - we show the whole claim.
+      const reviewed = own.filter(c => c.reviewedAt);
       if (reviewed.length > 0) {
         let lastSeen = '';
         try { lastSeen = localStorage.getItem(SEEN_KEY) || ''; } catch { /* ignore */ }
-        if (!lastSeen || reviewed[0].reviewedAt! > lastSeen) {
-          setReviewNotice({ claim: reviewed[0] });
+        const newest = reviewed.map(c => c.reviewedAt!).sort().reverse()[0];
+        if (!lastSeen || newest > lastSeen) {
+          const batch = reviewed.filter(c => c.reviewedAt === newest);
+          setReviewNotice({ claims: batch });
         }
       }
     };
@@ -102,7 +106,9 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
   }, []);
 
   const dismissNotice = () => {
-    try { localStorage.setItem(SEEN_KEY, reviewNotice!.claim.reviewedAt!); } catch { /* ignore */ }
+    if (!reviewNotice) return;
+    const newest = reviewNotice.claims.map(c => c.reviewedAt || '').sort().reverse()[0];
+    try { localStorage.setItem(SEEN_KEY, newest); } catch { /* ignore */ }
     setReviewNotice(null);
   };
 
@@ -170,7 +176,11 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
     const batch = lines;
     setIsSubmitting(true);
 
-    let submitted = 0;
+    // One claim group id shared by every line of THIS submission - the
+    // manager approves the whole claim and finance gets one itemised email.
+    const groupId = newClaimGroupId();
+
+    const submittedClaims: ExpenseClaim[] = [];
     let failError = '';
     try {
       for (let i = 0; i < batch.length; i++) {
@@ -185,14 +195,16 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
           expenseDate: line.expenseDate,
           description: line.description,
           amount: parseFloat(line.amount)
-        }, line.file!);
+        }, line.file!, { claimGroupId: groupId, notify: false });
 
         if (!result.success) {
           failError = result.error || 'Could not submit the claim. Please try again.';
           break;
         }
-        submitted++;
-        if (result.claim) setClaims(prev => [result.claim!, ...prev]);
+        if (result.claim) {
+          submittedClaims.push(result.claim);
+          setClaims(prev => [result.claim!, ...prev]);
+        }
       }
     } catch (err: any) {
       failError = err?.message || 'Unexpected error while submitting.';
@@ -201,9 +213,15 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
       setSubmitProgress(null);
     }
 
+    // Whatever landed in the database is a complete (partial) claim - notify
+    // the manager about exactly those items, once. A retry of the remaining
+    // lines becomes its own claim with its own notification.
+    if (submittedClaims.length > 0) notifyClaimEvent('submitted', submittedClaims);
+
     if (failError) {
       // Keep whatever was NOT submitted (the failed line and everything after
       // it) in the form so nothing has to be retyped - just press Submit again.
+      const submitted = submittedClaims.length;
       setLines(batch.slice(submitted));
       setFormError(
         submitted > 0
@@ -232,22 +250,31 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
   const totalAmount = lines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
   const today = new Date().toISOString().split('T')[0];
 
+  // How many items belong to the same claim (submission) as this row.
+  const groupSizeOf = (c: ExpenseClaim): number =>
+    claims.filter(o => claimGroupKey(o) === claimGroupKey(c)).length;
+
+  const noticeClaims = reviewNotice?.claims || [];
+  const noticeFirst = noticeClaims[0];
+  const noticeTotal = noticeClaims.reduce((t, c) => t + c.amount, 0);
+
   const inputClass = "w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-slate-900 outline-none transition-all placeholder:text-slate-300";
   const labelClass = "text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2";
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      {reviewNotice && (
-        <div className={`p-5 rounded-2xl border-l-4 shadow-sm ${reviewNotice.claim.status === 'approved' ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'}`}>
+      {reviewNotice && noticeFirst && (
+        <div className={`p-5 rounded-2xl border-l-4 shadow-sm ${noticeFirst.status === 'approved' ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'}`}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className={`text-sm font-black ${reviewNotice.claim.status === 'approved' ? 'text-green-700' : 'text-red-700'}`}>
-                {reviewNotice.claim.status === 'approved' ? 'Expense Claim Approved' : 'Expense Claim Not Approved'}
+              <p className={`text-sm font-black ${noticeFirst.status === 'approved' ? 'text-green-700' : 'text-red-700'}`}>
+                {noticeFirst.status === 'approved' ? 'Expense Claim Approved' : 'Expense Claim Not Approved'}
               </p>
               <p className="text-xs text-slate-600 mt-1">
-                Your claim of <strong>{formatMoney(reviewNotice.claim.amount)}</strong> ({expenseTypeLabel(reviewNotice.claim.expenseType)}, {reviewNotice.claim.expenseDate})
-                {reviewNotice.claim.status === 'approved' ? ' has been approved. Finance has been asked to process the payment.' : ' was not approved by your manager.'}
-                {reviewNotice.claim.reviewComment ? ` Comment: "${reviewNotice.claim.reviewComment}"` : ''}
+                Your claim{noticeClaims.length > 1 ? ` (${noticeClaims.length} items)` : ''} of <strong>{formatMoney(noticeTotal)}</strong>
+                {noticeClaims.length === 1 && <> ({expenseTypeLabel(noticeFirst.expenseType)}, {noticeFirst.expenseDate})</>}
+                {noticeFirst.status === 'approved' ? ' has been approved. Finance has been asked to process the payment.' : ' was not approved by your manager.'}
+                {noticeFirst.reviewComment ? ` Comment: "${noticeFirst.reviewComment}"` : ''}
               </p>
             </div>
             <button onClick={dismissNotice} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 whitespace-nowrap">Got it</button>
@@ -381,7 +408,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
               {lines.length > 1 ? (
                 <>{lines.length} claims ready &middot; Total <span className="text-slate-900 font-black">{formatMoney(totalAmount)}</span></>
               ) : (
-                'Each claim is reviewed separately by your manager.'
+                'Items submitted together are reviewed as one claim.'
               )}
             </p>
             <button
@@ -427,7 +454,12 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
               <tbody className="divide-y">
                 {claims.map(c => (
                   <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-8 py-5 text-xs font-bold text-slate-500 whitespace-nowrap">{(c.createdAt || '').split('T')[0]}</td>
+                    <td className="px-8 py-5 text-xs font-bold text-slate-500 whitespace-nowrap">
+                      {(c.createdAt || '').split('T')[0]}
+                      {groupSizeOf(c) > 1 && (
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">part of {groupSizeOf(c)}-item claim</p>
+                      )}
+                    </td>
                     <td className="px-8 py-5">
                       <p className="text-sm font-bold text-slate-800 whitespace-nowrap">{expenseTypeLabel(c.expenseType)}</p>
                       <p className="text-[11px] text-slate-400">{c.expenseDate}</p>

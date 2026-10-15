@@ -5,7 +5,7 @@ import AppraisalReport from './AppraisalReport.tsx';
 import ManagerExpenses from './ManagerExpenses.tsx';
 import AdminExpenses from './AdminExpenses.tsx';
 import ExpenseClaims from './ExpenseClaims.tsx';
-import { expensesService } from '../services/expenses.ts';
+import { expensesService, claimGroupKey } from '../services/expenses.ts';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 interface AdminDashboardProps {
@@ -64,7 +64,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [role, loadExpenseClaims]);
 
-  const pendingExpenseCount = expenseClaims.filter(c => c.status === 'submitted').length;
+  // Badge counts CLAIMS (submissions), not line items - a 5-item claim is one claim to review.
+  const pendingExpenseCount = new Set(
+    expenseClaims.filter(c => c.status === 'submitted').map(claimGroupKey)
+  ).size;
   const expenseTabLabel = role === 'manager'
     ? `Expenses (${pendingExpenseCount})`
     : `Expenses (${expenseClaims.length})`;

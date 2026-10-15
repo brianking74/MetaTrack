@@ -11,10 +11,24 @@ approval queues and their own "My Expenses" submission tab.
 | Area | Behaviour |
 |---|---|
 | Staff portal | Tabs: **Performance Review** (unchanged) + **Expense Claims**: multi-claim form ("Add More" for each extra claim; type, date, description, amount, one receipt image/PDF per claim; running total; "Submit N Claims"), plus "My Claims" list with live status |
-| Manager Hub | **Expenses**: pending queue with receipt viewer, optional comment, Reject / **Approve & Notify**; **My Expenses**: managers submit their own claims (routed to their manager on file, or the admin) |
-| Admin dashboard | **Expenses** tab: totals, claims by type, claims by staff member, 12-month trend, full claims table (admin can also approve/reject) |
-| Database | `public.expense_claims` table + private `expense-receipts` storage bucket, RLS mirroring the assessments lockdown (staff: own rows only, manager: their team, admin: all, anonymous: nothing) |
-| Emails | Netlify Function `expense-notify`: manager notified on submit; staff + finance notified on approve; staff notified on reject |
+| Manager Hub | **Expenses**: pending queue showing ONE review card per claim (a 5-item submission is one card with all items + claim total), receipt viewer, optional comment, Reject / **Approve & Notify** - one click decides the WHOLE claim; **My Expenses**: managers submit their own claims (routed to their manager on file, or the admin) |
+| Admin dashboard | **Expenses** tab: totals, claims by type, claims by staff member, 12-month trend, full claims table (admin approve/reject also acts on the whole claim; multi-item rows carry an "N items" chip) |
+| Database | `public.expense_claims` table + `claim_group_id` column (all items of one submission share it; run `add_claim_groups.sql`) + private `expense-receipts` storage bucket, RLS mirroring the assessments lockdown (staff: own rows only, manager: their team, admin: all, anonymous: nothing) |
+| Emails | Netlify Function `expense-notify`: manager notified ONCE per claim on submit (itemised list + total); staff + finance notified ONCE per claim on approve; staff notified on reject - never one email per line item |
+
+## Claim groups (one submission = one claim)
+
+All lines submitted in one go share a `claim_group_id`, so approving,
+rejecting and email notifications work per CLAIM, not per line item:
+
+- Manager approves/rejects the whole claim in one click (all items flip together).
+- Finance receives a single itemised email with the claim total.
+- The staff approval banner shows the whole claim ("Your claim (3 items) of HK$208.50 ...").
+
+**Deploying this update requires ONE SQL step first** (safe, instant, idempotent -
+the app keeps working before and after): run `supabase/add_claim_groups.sql` in the
+Supabase SQL Editor, then deploy the new code. Rows submitted before this change
+(`claim_group_id` = null) simply behave as their own single-item claim.
 
 ## Pilot mode - test account setup
 

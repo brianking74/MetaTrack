@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ExpenseClaim } from '../types.ts';
-import { expensesService } from '../services/expenses.ts';
+import { expensesService, claimGroupKey } from '../services/expenses.ts';
 import { EXPENSE_TYPES, expenseTypeLabel, formatMoney } from '../constants.ts';
 
 interface AdminExpensesProps {
@@ -70,11 +70,16 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
   const maxMonthTotal = Math.max(...months.map(m => m.total), 1);
 
   const review = async (claim: ExpenseClaim, decision: 'approved' | 'rejected') => {
+    // Admin review acts on the WHOLE claim: every pending item of the same
+    // submission is approved/rejected together with one notification.
+    const group = claims.filter(c => c.status === 'submitted' && claimGroupKey(c) === claimGroupKey(claim));
+    const groupTotal = group.reduce((t, c) => t + c.amount, 0);
+    const scope = group.length > 1 ? ` (${group.length} items, ${formatMoney(groupTotal)})` : '';
     const comment = decision === 'rejected'
-      ? prompt(`Reason for rejecting ${claim.staffName}'s claim of ${formatMoney(claim.amount)}? (sent to the staff member)`) || ''
+      ? prompt(`Reason for rejecting ${claim.staffName}'s claim${scope}? (sent to the staff member)`) || ''
       : '';
-    setBusyId(claim.id);
-    const result = await expensesService.reviewClaim(claim, decision, comment, currentUserEmail);
+    setBusyId(claimGroupKey(claim));
+    const result = await expensesService.reviewClaims(group, decision, comment, currentUserEmail);
     setBusyId(null);
     if (!result.success) { alert(`Review failed: ${result.error}`); return; }
     onRefresh();
@@ -189,10 +194,18 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {claims.map(c => (
+                {claims.map(c => {
+                  const isPending = c.status === 'submitted';
+                  const groupSize = claims.filter(o => claimGroupKey(o) === claimGroupKey(c)).length;
+                  return (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <td className="px-8 py-5">
-                      <p className="text-sm font-bold text-slate-800 whitespace-nowrap">{c.staffName}</p>
+                      <p className="text-sm font-bold text-slate-800 whitespace-nowrap">
+                        {c.staffName}
+                        {isPending && groupSize > 1 && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-700 border border-blue-200 align-middle">{groupSize} items</span>
+                        )}
+                      </p>
                       <p className="text-[11px] text-slate-400">{c.email}</p>
                     </td>
                     <td className="px-8 py-5">
@@ -219,10 +232,10 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                     <td className="px-8 py-5 text-right">
                       <div className="flex justify-end gap-3 items-center whitespace-nowrap">
                         <button onClick={() => openReceipt(c)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">Receipt</button>
-                        {c.status === 'submitted' ? (
+                        {isPending ? (
                           <>
-                            <button onClick={() => review(c, 'approved')} disabled={busyId === c.id} className="text-xs font-black text-green-600 uppercase tracking-widest hover:underline disabled:opacity-50">Approve</button>
-                            <button onClick={() => review(c, 'rejected')} disabled={busyId === c.id} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 disabled:opacity-50">Reject</button>
+                            <button onClick={() => review(c, 'approved')} disabled={busyId === claimGroupKey(c)} className="text-xs font-black text-green-600 uppercase tracking-widest hover:underline disabled:opacity-50">Approve</button>
+                            <button onClick={() => review(c, 'rejected')} disabled={busyId === claimGroupKey(c)} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 disabled:opacity-50">Reject</button>
                           </>
                         ) : (
                           <span className="text-[10px] font-bold text-slate-300 italic">Reviewed</span>
@@ -230,7 +243,8 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

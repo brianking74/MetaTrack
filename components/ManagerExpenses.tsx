@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ExpenseClaim } from '../types.ts';
-import { expensesService } from '../services/expenses.ts';
+import { expensesService, groupClaims, ClaimGroup } from '../services/expenses.ts';
 import { expenseTypeLabel, formatMoney } from '../constants.ts';
 
 interface ManagerExpensesProps {
@@ -12,27 +12,35 @@ interface ManagerExpensesProps {
   onRefresh: () => void;
 }
 
-const pending = (claims: ExpenseClaim[]) => claims.filter(c => c.status === 'submitted');
 const reviewed = (claims: ExpenseClaim[]) =>
   claims.filter(c => c.status !== 'submitted')
         .sort((a, b) => ((a.reviewedAt || '') < (b.reviewedAt || '') ? 1 : -1));
 
-const ReviewCard: React.FC<{
-  claim: ExpenseClaim;
+/**
+ * ONE card per CLAIM (a whole submission, which may hold several items).
+ * Approve/Reject acts on every item of the claim at once and sends a
+ * single notification - staff never get one email per line item.
+ */
+const ClaimReviewCard: React.FC<{
+  group: ClaimGroup;
   currentUserEmail: string;
   onRefresh: () => void;
-}> = ({ claim, currentUserEmail, onRefresh }) => {
+}> = ({ group, currentUserEmail, onRefresh }) => {
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState<'approved' | 'rejected' | null>(null);
   const [error, setError] = useState('');
 
+  const first = group.claims[0];
+  const multi = group.claims.length > 1;
+
   const decide = async (decision: 'approved' | 'rejected') => {
     if (decision === 'rejected' && !comment.trim()) {
-      if (!confirm('Reject without a comment? The staff member will not know why.')) return;
+      const what = multi ? `all ${group.claims.length} items of this claim` : 'this claim';
+      if (!confirm(`Reject ${what} without a comment? The staff member will not know why.`)) return;
     }
     setBusy(decision);
     setError('');
-    const result = await expensesService.reviewClaim(claim, decision, comment, currentUserEmail);
+    const result = await expensesService.reviewClaims(group.claims, decision, comment, currentUserEmail);
     setBusy(null);
     if (!result.success) {
       setError(result.error || 'Review failed. Please try again.');
@@ -41,7 +49,7 @@ const ReviewCard: React.FC<{
     onRefresh();
   };
 
-  const openReceipt = async () => {
+  const openReceipt = async (claim: ExpenseClaim) => {
     const { url, error } = await expensesService.getReceiptUrl(claim);
     if (url) window.open(url, '_blank', 'noopener');
     else setError(error || 'Could not open the receipt.');
@@ -49,28 +57,47 @@ const ReviewCard: React.FC<{
 
   return (
     <div className="border border-slate-200 rounded-3xl p-6 md:p-8 hover:shadow-lg transition-all bg-white">
+      {/* Card header: who + when + claim total */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h4 className="text-lg font-black text-slate-900">{claim.staffName}</h4>
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-blue-50 text-blue-700 border-blue-200">
-              {expenseTypeLabel(claim.expenseType)}
-            </span>
+            <h4 className="text-lg font-black text-slate-900">{first.staffName}</h4>
+            {multi && (
+              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-slate-900 text-white border-slate-900">
+                {group.claims.length} items
+              </span>
+            )}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">{claim.email} · Expense date {claim.expenseDate} · Submitted {(claim.createdAt || '').split('T')[0]}</p>
+          <p className="text-[11px] text-slate-400 mt-1">{first.email} · Submitted {(first.createdAt || '').split('T')[0]}</p>
         </div>
         <div className="text-left md:text-right">
-          <p className="text-2xl font-black text-slate-900 whitespace-nowrap">{formatMoney(claim.amount, claim.currency)}</p>
+          <p className="text-2xl font-black text-slate-900 whitespace-nowrap">{formatMoney(group.total, first.currency)}</p>
+          {multi && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Claim total</p>}
         </div>
       </div>
 
-      <p className="text-sm text-slate-600 mt-4 bg-slate-50 rounded-2xl p-4">{claim.description}</p>
+      {/* Itemised lines of this claim */}
+      <div className={`mt-4 bg-slate-50 rounded-2xl divide-y divide-slate-100 ${multi ? '' : 'p-4'}`}>
+        {group.claims.map(c => (
+          <div key={c.id} className={`flex flex-col md:flex-row md:items-center gap-3 ${multi ? 'p-4' : ''}`}>
+            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-white border-slate-200 text-slate-500 whitespace-nowrap self-start">
+              {expenseTypeLabel(c.expenseType)}
+            </span>
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap md:w-24">{c.expenseDate}</span>
+            <p className="text-sm text-slate-600 flex-1 min-w-0">{c.description}</p>
+            <span className="text-sm font-black text-slate-900 whitespace-nowrap md:text-right">{formatMoney(c.amount, c.currency)}</span>
+            <button
+              onClick={() => openReceipt(c)}
+              className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline whitespace-nowrap self-start md:self-auto"
+            >
+              Receipt
+            </button>
+          </div>
+        ))}
+      </div>
 
+      {/* One decision for the whole claim */}
       <div className="mt-5 flex flex-col md:flex-row md:items-center gap-4">
-        <button onClick={openReceipt} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-          View Receipt
-        </button>
         <input
           value={comment}
           onChange={(e) => setComment(e.target.value)}
@@ -83,7 +110,7 @@ const ReviewCard: React.FC<{
             disabled={!!busy}
             className="px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50 whitespace-nowrap"
           >
-            {busy === 'rejected' ? 'Rejecting...' : 'Reject'}
+            {busy === 'rejected' ? 'Rejecting...' : 'Reject Claim'}
           </button>
           <button
             onClick={() => decide('approved')}
@@ -101,7 +128,9 @@ const ReviewCard: React.FC<{
 };
 
 const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, error, currentUserEmail, onRefresh }) => {
-  const pendingClaims = pending(claims);
+  // One review card per submission (claim), newest first.
+  const pendingGroups = groupClaims(claims.filter(c => c.status === 'submitted'));
+  const pendingItemCount = claims.filter(c => c.status === 'submitted').length;
   const reviewedClaims = reviewed(claims);
 
   const openReceipt = async (claim: ExpenseClaim) => {
@@ -116,8 +145,8 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
       <div>
         <div className="flex items-center gap-3 mb-5">
           <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Awaiting My Review</h3>
-          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${pendingClaims.length > 0 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
-            {pendingClaims.length} pending
+          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${pendingGroups.length > 0 ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+            {pendingGroups.length} claim{pendingGroups.length === 1 ? '' : 's'} · {pendingItemCount} item{pendingItemCount === 1 ? '' : 's'}
           </span>
         </div>
 
@@ -125,15 +154,15 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
           <div className="bg-white rounded-3xl border p-12 text-center text-xs font-black uppercase tracking-widest text-slate-300">Loading expense claims...</div>
         ) : error ? (
           <div className="bg-white rounded-3xl border p-8 text-center text-xs font-bold text-red-500">{error}</div>
-        ) : pendingClaims.length === 0 ? (
+        ) : pendingGroups.length === 0 ? (
           <div className="bg-white rounded-3xl border p-12 text-center">
             <p className="text-sm font-bold text-slate-400">Nothing waiting for your approval.</p>
             <p className="text-xs text-slate-300 mt-1">New claims from your team will appear here with their receipts.</p>
           </div>
         ) : (
           <div className="space-y-5">
-            {pendingClaims.map(c => (
-              <ReviewCard key={c.id} claim={c} currentUserEmail={currentUserEmail} onRefresh={onRefresh} />
+            {pendingGroups.map(g => (
+              <ClaimReviewCard key={g.key} group={g} currentUserEmail={currentUserEmail} onRefresh={onRefresh} />
             ))}
           </div>
         )}
