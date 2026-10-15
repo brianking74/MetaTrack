@@ -9,8 +9,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 const isConfigured = () => {
-  return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && SUPABASE_URL.includes('supabase.co') && SUPABASE_ANON_KEY.length > 50;
-};
+return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && SUPABASE_URL.includes('supabase.co') && SUPABASE_ANON_KEY.length > 20;};
 
 // Exported for the expense module (storage uploads, claim queries) so the
 // client is created exactly once with the same env-var checks.
