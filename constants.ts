@@ -10,7 +10,7 @@ import { Rating, Competency, KPI, Assessment } from './types.ts';
 //      (RESEND_API_KEY + FINANCE_EMAIL - see supabase/EXPENSES_RUNBOOK.md)
 // While false, the Expense Claims tab is visible but greyed out and
 // unselectable for every role ("Coming Soon").
-export const EXPENSES_ENABLED = false;
+export const EXPENSES_ENABLED = true;
 
 // Starter claim types (requirement: Entertainment, Travel & A&P).
 // When the full official list of types + codes arrives, add entries here -
