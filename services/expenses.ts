@@ -309,5 +309,22 @@ export const expensesService = {
     if (error) return { success: false, error: error.message };
     supabase.storage.from(RECEIPT_BUCKET).remove([claim.receiptPath]).catch?.(() => {});
     return { success: true };
+  },
+
+  /**
+   * True when the signed-in user is on the expense-dashboard allowlist
+   * (expense_dashboard_viewers, checked by an RPC so the list itself
+   * never leaves the database). configured=false means the SQL setup
+   * script (supabase/add_dashboard.sql) has not been run yet.
+   */
+  async isDashboardViewer(): Promise<{ viewer: boolean; configured: boolean }> {
+    if (!supabase) return { viewer: false, configured: false };
+    try {
+      const { data, error } = await supabase.rpc('is_expense_dashboard_viewer');
+      if (error) return { viewer: false, configured: false };
+      return { viewer: data === true, configured: true };
+    } catch {
+      return { viewer: false, configured: false };
+    }
   }
 };

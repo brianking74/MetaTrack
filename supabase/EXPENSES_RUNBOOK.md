@@ -76,3 +76,24 @@ Without these variables everything still works; email delivery is simply skipped
 - The claim form fields were designed without the referenced Excel sheet (it never
   arrived). Send it over and the form can be aligned to match it exactly.
 - Amounts are recorded in HKD.
+
+## Expense Dashboard (manager hub)
+
+A "Dashboard" tab in the Manager Hub shows selected managers the running
+totals of ALL expense claims, with filters for staff, expense type and
+status, plus breakdowns by type, by staff and a 6-month trend.
+
+Access is allowlist-based, stored IN THE DATABASE (not in app code):
+
+1. Run `add_dashboard.sql` in the Supabase SQL Editor (idempotent).
+   - Creates `expense_dashboard_viewers` (email allowlist)
+   - Creates `is_expense_dashboard_viewer()` (security definer check)
+   - Adds a permissive SELECT policy so viewers + admins read all claims
+   - Seeds one example viewer - EDIT the seed list before running
+2. Manage viewers any time:
+   - Add:    `insert into expense_dashboard_viewers (email) values ('manager@metabev.com') on conflict do nothing;`
+   - Remove: `delete from expense_dashboard_viewers where email = '...';`
+3. Managers NOT on the list see a polite "no access" card; the allowlist
+   itself never leaves the database (checked via an RPC, RLS-enforced).
+
+Admins always see all claims (existing admin Expenses tab + analytics).

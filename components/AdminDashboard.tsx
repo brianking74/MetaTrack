@@ -5,6 +5,7 @@ import AppraisalReport from './AppraisalReport.tsx';
 import ManagerExpenses from './ManagerExpenses.tsx';
 import AdminExpenses from './AdminExpenses.tsx';
 import ExpenseClaims from './ExpenseClaims.tsx';
+import ExpenseDashboard from './ExpenseDashboard.tsx';
 import { expensesService, claimGroupKey } from '../services/expenses.ts';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
@@ -38,7 +39,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   expenseProfile
 }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses' | 'my-expenses'>(
+  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses' | 'my-expenses' | 'dashboard'>(
     assessments.length === 0 && role === 'admin' ? 'management' : 'submissions'
   );
   const [isDownloading, setIsDownloading] = useState(false);
@@ -363,6 +364,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'my-expenses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
             </button>
           )}
+          {role === 'manager' && EXPENSES_ENABLED && (
+            <button onClick={() => setActiveTab('dashboard')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'dashboard' ? 'text-brand-600' : 'text-slate-400'}`}>
+              Dashboard
+              {activeTab === 'dashboard' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
+            </button>
+          )}
         </div>
         
         {role === 'admin' && (
@@ -417,6 +424,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           managerEmail={expenseProfile?.managerEmail || ''}
           managerName={expenseProfile?.managerName}
         />
+      ) : activeTab === 'dashboard' ? (
+        <ExpenseDashboard currentUserEmail={currentUserEmail} />
       ) : (
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden no-print">
         <table className="w-full text-left">
