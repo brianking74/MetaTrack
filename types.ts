@@ -23,7 +23,11 @@ export interface ExpenseClaim {
   expenseDate: string;      // ISO date (yyyy-mm-dd)
   description: string;
   amount: number;
-  currency: string;         // 'HKD'
+  currency: string;         // 'HKD' or any EXPENSE_CURRENCIES code
+  fxRate?: number;          // HKD per 1 unit of currency (1 for HKD)
+  amountHkd?: number;       // HKD reporting value = amount * fxRate
+  customerName?: string;    // optional customer/client the expense was for
+  budgetCode?: string;      // optional brand budget code, e.g. 'EST008'
   receiptPath: string;      // storage path: <email>/<claim id>/<file>
   receiptName: string;
   receiptType: string;      // mime type

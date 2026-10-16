@@ -33,9 +33,13 @@
 const PORTAL_URL = 'https://performance-review.netlify.app';
 
 const TYPE_LABELS = {
-  ENT: 'Entertainment',
-  TRV: 'Travel',
-  'AP': 'A&P (Advertising & Promotion)'
+  ENT: 'Entertainment & Business Meals',
+  TRV: 'Travel & Transport',
+  HTL: 'Hotel / Accommodation',
+  MEL: 'Meals (Personal / Staff)',
+  TEL: 'Telephone & Communication',
+  'AP': 'A&P (Advertising & Promotion)',
+  MIS: 'Misc / Other'
 };
 
 const escapeHtml = (s) =>
@@ -47,34 +51,79 @@ const money = (c, amount) =>
   new Intl.NumberFormat('en-HK', { style: 'currency', currency: c.currency || 'HKD' })
     .format(amount ?? c.amount);
 
-const itemsLabel = (claim, items, total) =>
-  items && items.length
-    ? `${items.length} item${items.length === 1 ? '' : 's'}, ${money(claim, total)}`
-    : money(claim);
+const moneyOf = (currency, amount) => {
+  try {
+    return new Intl.NumberFormat('en-HK', { style: 'currency', currency: currency || 'HKD' }).format(amount);
+  } catch {
+    return `${currency || 'HKD'} ${Number(amount || 0).toFixed(2)}`;
+  }
+};
+
+const fxText = (rate) => String(parseFloat(Number(rate ?? 1).toFixed(6)));
+
+/** HKD reporting value of an item (amount x fxRate, rounded like the app). */
+const hkdOf = (it) => {
+  const amt = Number(it.amount || 0);
+  const cur = it.currency || 'HKD';
+  if (cur === 'HKD') return amt;
+  return Math.round(amt * Number(it.fxRate ?? 1) * 100) / 100;
+};
+
+/** Amount cell for an item: HKD always, with "original × rate" under foreign lines. */
+const amountCell = (it) => {
+  const cur = it.currency || 'HKD';
+  if (cur === 'HKD') return moneyOf(cur, it.amount);
+  return `${moneyOf(cur, it.amount)} &times; ${fxText(it.fxRate)}<br>` +
+    `<span style="color:#64748b;font-size:11px;font-weight:600">= ${moneyOf('HKD', hkdOf(it))} HKD</span>`;
+};
+
+/** Muted sub-line for customer / budget code, shown under the description. */
+const metaLine = (it) => {
+  const customer = (it.customerName || '').trim();
+  const budget = (it.budgetCode || '').trim();
+  if (!customer && !budget) return '';
+  const parts = [customer, budget ? `Budget: ${budget}` : ''].filter(Boolean).join(' \u00b7 ');
+  return `<div style="color:#94a3b8;font-size:11px;margin-top:2px">${escapeHtml(parts)}</div>`;
+};
+
+const itemsLabel = (claim, items, total) => {
+  if (items && items.length) {
+    const hkd = total ?? items.reduce((t, it) => t + hkdOf(it), 0);
+    return `${items.length} item${items.length === 1 ? '' : 's'}, ${moneyOf('HKD', hkd)}`;
+  }
+  const cur = claim.currency || 'HKD';
+  return cur === 'HKD' ? money(claim) : `${money(claim)} (=${moneyOf('HKD', hkdOf(claim))})`;
+};
 
 const row = (label, value) =>
   `<tr><td style="padding:6px 14px 6px 0;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700">${label}</td><td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600">${value}</td></tr>`;
 
-const claimTable = (claim) =>
-  `<table style="border-collapse:collapse;margin:18px 0">${row('Staff', escapeHtml(claim.staffName))}
+const claimTable = (claim) => {
+  const cur = claim.currency || 'HKD';
+  const customer = (claim.customerName || '').trim();
+  const budget = (claim.budgetCode || '').trim();
+  return `<table style="border-collapse:collapse;margin:18px 0">${row('Staff', escapeHtml(claim.staffName))}
   ${row('Type', escapeHtml(TYPE_LABELS[claim.expenseType] || claim.expenseType || ''))}
   ${row('Expense date', escapeHtml(claim.expenseDate))}
   ${row('Description', escapeHtml(claim.description))}
-  ${row('Amount', money(claim))}</table>`;
+  ${customer ? row('Customer', escapeHtml(customer)) : ''}
+  ${budget ? row('Budget code', escapeHtml(budget)) : ''}
+  ${row('Amount', cur === 'HKD' ? money(claim) : `${money(claim)} &times; ${fxText(claim.fxRate)} = ${moneyOf('HKD', hkdOf(claim))}`)}</table>`;
+};
 
 const itemsTable = (claim, items, total) => {
   const body = items.map(it => `
     <tr>
       <td style="padding:8px 12px 8px 0;border-top:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:700;white-space:nowrap">${escapeHtml(TYPE_LABELS[it.expenseType] || it.expenseType || '')}</td>
       <td style="padding:8px 12px;border-top:1px solid #e2e8f0;color:#334155;font-size:13px;white-space:nowrap">${escapeHtml(it.expenseDate)}</td>
-      <td style="padding:8px 12px;border-top:1px solid #e2e8f0;color:#334155;font-size:13px">${escapeHtml(it.description)}</td>
-      <td style="padding:8px 0 8px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:600;text-align:right;white-space:nowrap">${money(claim, it.amount)}</td>
+      <td style="padding:8px 12px;border-top:1px solid #e2e8f0;color:#334155;font-size:13px">${escapeHtml(it.description)}${metaLine(it)}</td>
+      <td style="padding:8px 0 8px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:13px;font-weight:600;text-align:right;white-space:nowrap">${amountCell(it)}</td>
     </tr>`).join('');
-  const grand = total ?? items.reduce((t, it) => t + Number(it.amount || 0), 0);
+  const grand = total ?? items.reduce((t, it) => t + hkdOf(it), 0);
   const totalRow = `
     <tr>
-      <td colspan="3" style="padding:10px 12px 2px 0;text-align:right;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Total &middot; ${items.length} item${items.length === 1 ? '' : 's'}</td>
-      <td style="padding:10px 0 2px 12px;text-align:right;color:#0f172a;font-size:15px;font-weight:800;white-space:nowrap">${money(claim, grand)}</td>
+      <td colspan="3" style="padding:10px 12px 2px 0;text-align:right;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700">Total in HKD &middot; ${items.length} item${items.length === 1 ? '' : 's'}</td>
+      <td style="padding:10px 0 2px 12px;text-align:right;color:#0f172a;font-size:15px;font-weight:800;white-space:nowrap">${moneyOf('HKD', grand)}</td>
     </tr>`;
   return `<table style="border-collapse:collapse;margin:18px 0;width:100%">
     <thead><tr>

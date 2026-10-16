@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ExpenseClaim } from '../types.ts';
 import { expensesService, validateReceiptFile, newClaimGroupId, notifyClaimEvent, claimGroupKey } from '../services/expenses.ts';
-import { EXPENSE_TYPES, expenseTypeLabel, formatMoney } from '../constants.ts';
+import { EXPENSE_TYPES, EXPENSE_CURRENCIES, expenseTypeLabel, formatMoney, claimHkd, isForeignCurrency } from '../constants.ts';
+import ClaimAmount from './ClaimAmount.tsx';
 
 interface ExpenseClaimsProps {
   staffName: string;
@@ -21,6 +22,10 @@ interface ClaimLine {
   expenseDate: string;
   description: string;
   amount: string;
+  currency: string;      // EXPENSE_CURRENCIES code, default HKD
+  fxRate: string;        // HKD per 1 unit of currency (only used when != HKD)
+  customerName: string;  // optional customer / client
+  budgetCode: string;    // optional brand budget code, e.g. EST008
   file: File | null;
 }
 
@@ -30,14 +35,19 @@ const MAX_CLAIM_LINES = 10;
 const makeLineKey = (): string =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-// A new blank line. When "Add More" is pressed we copy the type and date from
-// the last line - most multi-claim batches happen on the same day / same type.
+// A new blank line. When "Add More" is pressed we copy the type, date,
+// currency and customer/budget details from the last line - most multi-claim
+// batches happen on the same day, same trip, same customer.
 const makeLine = (copyFrom?: ClaimLine): ClaimLine => ({
   key: makeLineKey(),
   expenseType: copyFrom?.expenseType || EXPENSE_TYPES[0]?.code || '',
   expenseDate: copyFrom?.expenseDate || new Date().toISOString().split('T')[0],
   description: '',
   amount: '',
+  currency: copyFrom?.currency || 'HKD',
+  fxRate: copyFrom?.fxRate || '1',
+  customerName: copyFrom?.customerName || '',
+  budgetCode: copyFrom?.budgetCode || '',
   file: null,
 });
 
@@ -143,6 +153,14 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
     updateLine(key, { file: f });
   };
 
+  /** HKD value of a form line (amount x fx rate for foreign currency). */
+  const lineHkd = (l: ClaimLine): number => {
+    const amt = parseFloat(l.amount) || 0;
+    if (!isForeignCurrency(l.currency)) return amt;
+    const rate = parseFloat(l.fxRate) || 0;
+    return Math.round(amt * rate * 100) / 100;
+  };
+
   /** Returns the first problem found across all lines, with its line number. */
   const validateLines = (): string | null => {
     for (let i = 0; i < lines.length; i++) {
@@ -153,6 +171,10 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
       if (!l.description.trim()) return `${label}please describe the expense (what it was for).`;
       const amt = parseFloat(l.amount);
       if (!amt || amt <= 0) return `${label}please enter a valid claim amount.`;
+      if (isForeignCurrency(l.currency)) {
+        const rate = parseFloat(l.fxRate);
+        if (!rate || rate <= 0) return `${label}please enter the exchange rate (HKD per 1 ${l.currency}).`;
+      }
       if (!l.file) return `${label}please attach one receipt image or PDF.`;
     }
     return null;
@@ -194,7 +216,11 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
           expenseType: line.expenseType,
           expenseDate: line.expenseDate,
           description: line.description,
-          amount: parseFloat(line.amount)
+          amount: parseFloat(line.amount),
+          currency: line.currency,
+          fxRate: isForeignCurrency(line.currency) ? parseFloat(line.fxRate) : 1,
+          customerName: line.customerName,
+          budgetCode: line.budgetCode
         }, line.file!, { claimGroupId: groupId, notify: false });
 
         if (!result.success) {
@@ -231,7 +257,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
       return;
     }
 
-    const total = batch.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+    const total = batch.reduce((sum, l) => sum + lineHkd(l), 0);
     setSuccessMsg(
       batch.length > 1
         ? `${batch.length} claims submitted for a total of ${formatMoney(total)}. ${managerName || 'Your manager'} has been notified to review them.`
@@ -247,7 +273,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
     else alert(`Could not open receipt: ${error}`);
   };
 
-  const totalAmount = lines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+  const totalAmount = lines.reduce((sum, l) => sum + lineHkd(l), 0);
   const today = new Date().toISOString().split('T')[0];
 
   // How many items belong to the same claim (submission) as this row.
@@ -256,7 +282,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
 
   const noticeClaims = reviewNotice?.claims || [];
   const noticeFirst = noticeClaims[0];
-  const noticeTotal = noticeClaims.reduce((t, c) => t + c.amount, 0);
+  const noticeTotal = noticeClaims.reduce((t, c) => t + claimHkd(c), 0);
 
   const inputClass = "w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-slate-900 outline-none transition-all placeholder:text-slate-300";
   const labelClass = "text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2";
@@ -319,7 +345,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                 <div>
                   <label className={labelClass}>Expense Type</label>
                   <select
@@ -343,7 +369,17 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Amount (HKD)</label>
+                  <label className={labelClass}>Currency</label>
+                  <select
+                    value={line.currency}
+                    onChange={(e) => updateLine(line.key, { currency: e.target.value, fxRate: e.target.value === 'HKD' ? '1' : line.fxRate })}
+                    className={inputClass}
+                  >
+                    {EXPENSE_CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Amount ({line.currency})</label>
                   <input
                     type="number"
                     min="0.01"
@@ -353,6 +389,49 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                     onChange={(e) => updateLine(line.key, { amount: e.target.value })}
                     className={inputClass}
                     required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {isForeignCurrency(line.currency) && (
+                  <div>
+                    <label className={labelClass}>Exchange Rate (HKD per 1 {line.currency})</label>
+                    <input
+                      type="number"
+                      min="0.0001"
+                      step="0.0001"
+                      placeholder="e.g. 7.8000"
+                      value={line.fxRate}
+                      onChange={(e) => updateLine(line.key, { fxRate: e.target.value })}
+                      className={inputClass}
+                      required
+                    />
+                    {(parseFloat(line.amount) || 0) > 0 && (parseFloat(line.fxRate) || 0) > 0 && (
+                      <p className="text-[11px] font-black text-brand-600 mt-1.5 uppercase tracking-widest">
+                        = {formatMoney(lineHkd(line))} HKD
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className={isForeignCurrency(line.currency) ? '' : 'md:col-span-2'}>
+                  <label className={labelClass}>Customer / Client (optional)</label>
+                  <input
+                    type="text"
+                    value={line.customerName}
+                    onChange={(e) => updateLine(line.key, { customerName: e.target.value })}
+                    placeholder="e.g. ABC Corp"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Brand Budget Code (optional)</label>
+                  <input
+                    type="text"
+                    value={line.budgetCode}
+                    onChange={(e) => updateLine(line.key, { budgetCode: e.target.value })}
+                    placeholder="e.g. EST008"
+                    className={inputClass}
                   />
                 </div>
               </div>
@@ -406,7 +485,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-2">
             <p className="text-xs font-bold text-slate-400">
               {lines.length > 1 ? (
-                <>{lines.length} claims ready &middot; Total <span className="text-slate-900 font-black">{formatMoney(totalAmount)}</span></>
+                <>{lines.length} claims ready &middot; Total <span className="text-slate-900 font-black">{formatMoney(totalAmount)}</span>{lines.some(l => isForeignCurrency(l.currency)) && <span className="text-slate-400"> (HKD)</span>}</>
               ) : (
                 'Items submitted together are reviewed as one claim.'
               )}
@@ -466,9 +545,14 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                     </td>
                     <td className="px-8 py-5 max-w-[280px]">
                       <p className="text-xs text-slate-600 truncate" title={c.description}>{c.description}</p>
+                      {(c.customerName || c.budgetCode) && (
+                        <p className="text-[11px] text-slate-400 mt-1 truncate">
+                          {c.customerName}{c.customerName && c.budgetCode ? ' \u00b7 ' : ''}{c.budgetCode ? `Budget: ${c.budgetCode}` : ''}
+                        </p>
+                      )}
                       {c.reviewComment && <p className="text-[11px] text-slate-400 italic mt-1 truncate" title={c.reviewComment}>Mgr: "{c.reviewComment}"</p>}
                     </td>
-                    <td className="px-8 py-5 text-right text-sm font-black text-slate-800 whitespace-nowrap">{formatMoney(c.amount, c.currency)}</td>
+                    <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
                     <td className="px-8 py-5"><StatusChip claim={c} /></td>
                     <td className="px-8 py-5 text-right">
                       <button onClick={() => openReceipt(c)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline whitespace-nowrap">View</button>

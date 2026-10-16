@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { ExpenseClaim } from '../types.ts';
 import { expensesService, groupClaims, ClaimGroup } from '../services/expenses.ts';
 import { expenseTypeLabel, formatMoney } from '../constants.ts';
+import ClaimAmount from './ClaimAmount.tsx';
 
 interface ManagerExpensesProps {
   claims: ExpenseClaim[];
@@ -71,8 +72,8 @@ const ClaimReviewCard: React.FC<{
           <p className="text-[11px] text-slate-400 mt-1">{first.email} · Submitted {(first.createdAt || '').split('T')[0]}</p>
         </div>
         <div className="text-left md:text-right">
-          <p className="text-2xl font-black text-slate-900 whitespace-nowrap">{formatMoney(group.total, first.currency)}</p>
-          {multi && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Claim total</p>}
+          <p className="text-2xl font-black text-slate-900 whitespace-nowrap">{formatMoney(group.total)}</p>
+          {multi && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Claim total (HKD)</p>}
         </div>
       </div>
 
@@ -84,8 +85,15 @@ const ClaimReviewCard: React.FC<{
               {expenseTypeLabel(c.expenseType)}
             </span>
             <span className="text-xs font-bold text-slate-500 whitespace-nowrap md:w-24">{c.expenseDate}</span>
-            <p className="text-sm text-slate-600 flex-1 min-w-0">{c.description}</p>
-            <span className="text-sm font-black text-slate-900 whitespace-nowrap md:text-right">{formatMoney(c.amount, c.currency)}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-600">{c.description}</p>
+              {(c.customerName || c.budgetCode) && (
+                <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                  {c.customerName}{c.customerName && c.budgetCode ? ' \u00b7 ' : ''}{c.budgetCode ? `Budget: ${c.budgetCode}` : ''}
+                </p>
+              )}
+            </div>
+            <div className="whitespace-nowrap md:text-right self-start md:self-auto"><ClaimAmount claim={c} /></div>
             <button
               onClick={() => openReceipt(c)}
               className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline whitespace-nowrap self-start md:self-auto"
@@ -201,9 +209,14 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
                     </td>
                     <td className="px-8 py-5 max-w-[240px]">
                       <p className="text-xs text-slate-600 truncate" title={c.description}>{c.description}</p>
+                      {(c.customerName || c.budgetCode) && (
+                        <p className="text-[11px] text-slate-400 mt-1 truncate">
+                          {c.customerName}{c.customerName && c.budgetCode ? ' \u00b7 ' : ''}{c.budgetCode ? `Budget: ${c.budgetCode}` : ''}
+                        </p>
+                      )}
                       {c.reviewComment && <p className="text-[11px] text-slate-400 italic mt-1 truncate" title={c.reviewComment}>"{c.reviewComment}"</p>}
                     </td>
-                    <td className="px-8 py-5 text-right text-sm font-black text-slate-800 whitespace-nowrap">{formatMoney(c.amount, c.currency)}</td>
+                    <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
                     <td className="px-8 py-5">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${c.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                         {c.status === 'approved' ? 'Approved' : 'Rejected'}

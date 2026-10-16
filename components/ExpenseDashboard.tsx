@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ExpenseClaim } from '../types.ts';
 import { expensesService, claimGroupKey } from '../services/expenses.ts';
-import { EXPENSE_TYPES, expenseTypeLabel, formatMoney } from '../constants.ts';
+import { EXPENSE_TYPES, expenseTypeLabel, formatMoney, claimHkd } from '../constants.ts';
 
 interface ExpenseDashboardProps {
   currentUserEmail: string;
@@ -87,16 +87,16 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail })
     [typeMatched]
   );
 
-  const total = filtered.reduce((t, c) => t + c.amount, 0);
+  const total = filtered.reduce((t, c) => t + claimHkd(c), 0);
   const claimCount = new Set(filtered.map(claimGroupKey)).size;
   const itemCount = filtered.length;
-  const pendingTotal = pendingWithinScope.reduce((t, c) => t + c.amount, 0);
+  const pendingTotal = pendingWithinScope.reduce((t, c) => t + claimHkd(c), 0);
 
   // --- by expense type (respects staff + status filters) ---------------
   const byType = EXPENSE_TYPES
     .map(t => {
       const list = staffMatched.filter(c => c.expenseType === t.code && (statusFilter === 'all' || c.status === statusFilter));
-      return { code: t.code, label: t.label, count: list.length, total: list.reduce((s, c) => s + c.amount, 0) };
+      return { code: t.code, label: t.label, count: list.length, total: list.reduce((s, c) => s + claimHkd(c), 0) };
     })
     .filter(t => t.count > 0);
   const maxTypeTotal = Math.max(...byType.map(t => t.total), 1);
@@ -110,7 +110,7 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail })
         const cur = map.get(c.email) || { name: c.staffName || c.email, email: c.email, items: 0, claims: new Set<string>(), total: 0 };
         cur.items += 1;
         cur.claims.add(claimGroupKey(c));
-        cur.total += c.amount;
+        cur.total += claimHkd(c);
         map.set(c.email, cur);
       });
     return [...map.values()]
@@ -131,7 +131,7 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail })
     filtered.forEach(c => {
       const k = (c.createdAt || '').slice(0, 7);
       const i = idx.get(k);
-      if (i !== undefined) out[i].total += c.amount;
+      if (i !== undefined) out[i].total += claimHkd(c);
     });
     return out;
   }, [filtered]);

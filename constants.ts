@@ -26,19 +26,60 @@ export const EXPENSES_PILOT_EMAILS: string[] = [
 export const isExpensePilotUser = (email?: string | null): boolean =>
   !!email && EXPENSES_PILOT_EMAILS.some(e => e.toLowerCase().trim() === email.toLowerCase().trim());
 
-// Starter claim types (requirement: Entertainment, Travel & A&P).
-// When the full official list of types + codes arrives, add entries here -
-// the dropdown, filters and analytics all read from this single list.
+// Expense types. Codes are stored on every claim row - ONLY ADD new
+// entries, never rename or reuse a code (old claims keep their code and
+// would otherwise display the wrong label). List mirrors the company's
+// paper Travel/Expense Report categories (guideline 2):
+// Transport, Hotel Room, Personal Meals, Business Meals & Entertainment,
+// Telephone, Misc - plus MetaBev's A&P.
 export const EXPENSE_TYPES: { code: string; label: string }[] = [
-  { code: 'ENT', label: 'Entertainment' },
-  { code: 'TRV', label: 'Travel' },
+  { code: 'ENT', label: 'Entertainment & Business Meals' },
+  { code: 'TRV', label: 'Travel & Transport' },
+  { code: 'HTL', label: 'Hotel / Accommodation' },
+  { code: 'MEL', label: 'Meals (Personal / Staff)' },
+  { code: 'TEL', label: 'Telephone & Communication' },
   { code: 'AP',  label: 'A&P (Advertising & Promotion)' },
+  { code: 'MIS', label: 'Misc / Other' },
 ];
 
 export const expenseTypeLabel = (code: string): string =>
   EXPENSE_TYPES.find(t => t.code === code)?.label || code;
 
+// Reporting currency - totals in the dashboard, analytics and emails are
+// always expressed in HKD. A claim can be made in any currency below;
+// the staff member enters the exchange rate and the portal stores both
+// the original amount and the HKD equivalent (amount_hkd).
 export const EXPENSE_CURRENCY = 'HKD';
+
+export const EXPENSE_CURRENCIES: { code: string; label: string }[] = [
+  { code: 'HKD', label: 'HKD - Hong Kong Dollar' },
+  { code: 'CNY', label: 'CNY - Chinese Yuan (RMB)' },
+  { code: 'MOP', label: 'MOP - Macau Pataca' },
+  { code: 'TWD', label: 'TWD - Taiwan Dollar' },
+  { code: 'JPY', label: 'JPY - Japanese Yen' },
+  { code: 'KRW', label: 'KRW - Korean Won' },
+  { code: 'SGD', label: 'SGD - Singapore Dollar' },
+  { code: 'THB', label: 'THB - Thai Baht' },
+  { code: 'AUD', label: 'AUD - Australian Dollar' },
+  { code: 'USD', label: 'USD - US Dollar' },
+  { code: 'EUR', label: 'EUR - Euro' },
+  { code: 'GBP', label: 'GBP - British Pound' },
+];
+
+/** HKD reporting value of a claim/line (falls back to amount for legacy rows). */
+export const claimHkd = (c: { amount: number; amountHkd?: number | null }): number =>
+  c.amountHkd != null && Number.isFinite(c.amountHkd) ? (c.amountHkd as number) : c.amount;
+
+/** True when the claim was made in a currency other than HKD. */
+export const isForeignCurrency = (currency?: string | null): boolean =>
+  !!currency && currency !== 'HKD';
+
+/** FX rate as a compact display string: 7.8312 -> "7.8312", 7.8 -> "7.8". */
+export const fxRateText = (rate?: number | null): string => {
+  const r = Number(rate ?? 1);
+  return Number.isFinite(r) ? String(parseFloat(r.toFixed(6))) : '1';
+};
+
 export const RECEIPT_MAX_MB = 5;
 export const RECEIPT_ACCEPTED_TYPES = [
   'image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'

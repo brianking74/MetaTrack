@@ -1,7 +1,7 @@
 
 import { supabase } from './supabase.ts';
 import { ExpenseClaim, ExpenseClaimStatus } from '../types.ts';
-import { RECEIPT_ACCEPTED_TYPES, RECEIPT_MAX_MB } from '../constants.ts';
+import { RECEIPT_ACCEPTED_TYPES, RECEIPT_MAX_MB, EXPENSE_CURRENCY, claimHkd } from '../constants.ts';
 
 // ============================================================
 // Expense Claims service
@@ -26,6 +26,10 @@ const mapClaim = (row: any): ExpenseClaim => ({
   description: row.description,
   amount: Number(row.amount),
   currency: row.currency || 'HKD',
+  fxRate: row.fx_rate != null ? Number(row.fx_rate) : 1,
+  amountHkd: row.amount_hkd != null ? Number(row.amount_hkd) : undefined,
+  customerName: row.customer_name || '',
+  budgetCode: row.budget_code || '',
   receiptPath: row.receipt_path,
   receiptName: row.receipt_name,
   receiptType: row.receipt_type,
@@ -49,6 +53,10 @@ const mapClaimToRow = (c: ExpenseClaim) => ({
   description: c.description,
   amount: c.amount,
   currency: c.currency,
+  fx_rate: c.fxRate ?? 1,
+  amount_hkd: c.amountHkd ?? c.amount,
+  customer_name: c.customerName?.trim() || null,
+  budget_code: c.budgetCode?.trim() || null,
   receipt_path: c.receiptPath,
   receipt_name: c.receiptName,
   receipt_type: c.receiptType,
@@ -99,9 +107,14 @@ export const notifyClaimEvent = (
     expenseType: c.expenseType,
     expenseDate: c.expenseDate,
     description: c.description,
-    amount: c.amount
+    amount: c.amount,
+    currency: c.currency,
+    fxRate: c.fxRate,
+    amountHkd: c.amountHkd,
+    customerName: c.customerName,
+    budgetCode: c.budgetCode
   }));
-  notifyByEmail(event, claims[0], items, claims.reduce((t, c) => t + c.amount, 0));
+  notifyByEmail(event, claims[0], items, claims.reduce((t, c) => t + claimHkd(c), 0));
 };
 
 // ============================================================
@@ -133,7 +146,7 @@ export const groupClaims = (claims: ExpenseClaim[]): ClaimGroup[] => {
     groups.push({
       key: claimGroupKey(sorted[0]),
       claims: sorted,
-      total: sorted.reduce((t, c) => t + c.amount, 0),
+      total: sorted.reduce((t, c) => t + claimHkd(c), 0),
       submittedAt: sorted.reduce((m, c) => ((c.createdAt || '') > m ? (c.createdAt || '') : m), sorted[0].createdAt || '')
     });
   });
@@ -175,6 +188,10 @@ export const expensesService = {
     expenseDate: string;
     description: string;
     amount: number;
+    currency?: string;      // default HKD
+    fxRate?: number;        // HKD per 1 unit of currency; forced to 1 for HKD
+    customerName?: string;
+    budgetCode?: string;
   }, file: File, opts?: {
     claimGroupId?: string;  // shared id linking all lines of one submission
     notify?: boolean;       // default true; batch submissions notify once at the end
@@ -209,6 +226,16 @@ export const expensesService = {
     }
 
     // 2) Insert the claim row (RLS requires email = own, status = 'submitted')
+    // Currency + FX: HKD claims are always rate 1. Foreign claims carry
+    // the entered rate; amountHkd (the HKD reporting value every total
+    // sums) is fixed at submission time so later rate changes cannot
+    // rewrite history.
+    const currency = (input.currency || EXPENSE_CURRENCY).toUpperCase();
+    const fxRate = currency === 'HKD'
+      ? 1
+      : (input.fxRate && input.fxRate > 0 ? input.fxRate : 1);
+    const amountHkd = Math.round(input.amount * fxRate * 100) / 100;
+
     const claim: ExpenseClaim = {
       id: claimId,
       email,
@@ -219,7 +246,11 @@ export const expensesService = {
       expenseDate: input.expenseDate,
       description: input.description.trim(),
       amount: input.amount,
-      currency: 'HKD',
+      currency,
+      fxRate,
+      amountHkd,
+      customerName: input.customerName?.trim() || '',
+      budgetCode: input.budgetCode?.trim() || '',
       receiptPath,
       receiptName: file.name,
       receiptType: file.type || 'application/octet-stream',

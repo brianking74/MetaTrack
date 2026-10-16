@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { ExpenseClaim } from '../types.ts';
 import { expensesService, claimGroupKey } from '../services/expenses.ts';
-import { EXPENSE_TYPES, expenseTypeLabel, formatMoney } from '../constants.ts';
+import { EXPENSE_TYPES, expenseTypeLabel, formatMoney, claimHkd } from '../constants.ts';
+import ClaimAmount from './ClaimAmount.tsx';
 
 interface AdminExpensesProps {
   claims: ExpenseClaim[];
@@ -29,7 +30,7 @@ const Bar: React.FC<{ pct: number; color: string }> = ({ pct, color }) => (
 const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error, currentUserEmail, onRefresh }) => {
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const sum = (list: ExpenseClaim[]) => list.reduce((t, c) => t + c.amount, 0);
+  const sum = (list: ExpenseClaim[]) => list.reduce((t, c) => t + claimHkd(c), 0);
   const pendingClaims = claims.filter(c => c.status === 'submitted');
   const approvedClaims = claims.filter(c => c.status === 'approved');
   const rejectedClaims = claims.filter(c => c.status === 'rejected');
@@ -49,7 +50,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
     const key = c.email;
     const cur = staffMap.get(key) || { name: c.staffName, email: c.email, count: 0, total: 0 };
     cur.count += 1;
-    cur.total += c.amount;
+    cur.total += claimHkd(c);
     staffMap.set(key, cur);
   });
   const byStaff = [...staffMap.values()].sort((a, b) => b.total - a.total);
@@ -65,7 +66,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
   claims.forEach(c => {
     const key = (c.createdAt || '').slice(0, 7);
     const m = months.find(x => x.key === key);
-    if (m) { m.count += 1; m.total += c.amount; }
+    if (m) { m.count += 1; m.total += claimHkd(c); }
   });
   const maxMonthTotal = Math.max(...months.map(m => m.total), 1);
 
@@ -73,7 +74,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
     // Admin review acts on the WHOLE claim: every pending item of the same
     // submission is approved/rejected together with one notification.
     const group = claims.filter(c => c.status === 'submitted' && claimGroupKey(c) === claimGroupKey(claim));
-    const groupTotal = group.reduce((t, c) => t + c.amount, 0);
+    const groupTotal = group.reduce((t, c) => t + claimHkd(c), 0);
     const scope = group.length > 1 ? ` (${group.length} items, ${formatMoney(groupTotal)})` : '';
     const comment = decision === 'rejected'
       ? prompt(`Reason for rejecting ${claim.staffName}'s claim${scope}? (sent to the staff member)`) || ''
@@ -218,8 +219,13 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                     </td>
                     <td className="px-8 py-5 max-w-[220px]">
                       <p className="text-xs text-slate-600 truncate" title={c.description}>{c.description}</p>
+                      {(c.customerName || c.budgetCode) && (
+                        <p className="text-[11px] text-slate-400 mt-1 truncate">
+                          {c.customerName}{c.customerName && c.budgetCode ? ' \u00b7 ' : ''}{c.budgetCode ? `Budget: ${c.budgetCode}` : ''}
+                        </p>
+                      )}
                     </td>
-                    <td className="px-8 py-5 text-right text-sm font-black text-slate-800 whitespace-nowrap">{formatMoney(c.amount, c.currency)}</td>
+                    <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
                     <td className="px-8 py-5">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${
                         c.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
