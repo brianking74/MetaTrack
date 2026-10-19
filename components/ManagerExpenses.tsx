@@ -125,7 +125,7 @@ const ClaimReviewCard: React.FC<{
             disabled={!!busy}
             className="px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 shadow-sm whitespace-nowrap"
           >
-            {busy === 'approved' ? 'Approving...' : 'Approve & Notify'}
+            {busy === 'approved' ? 'Approving...' : 'Approve & Send to GM'}
           </button>
         </div>
       </div>
@@ -180,6 +180,7 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden">
         <div className="px-8 py-5 border-b bg-slate-50">
           <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Review History ({reviewedClaims.length})</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">Claims you approved move to the General Manager for the final decision.</p>
         </div>
         {reviewedClaims.length === 0 ? (
           <div className="p-10 text-center text-xs font-bold text-slate-300">No reviewed claims yet.</div>
@@ -201,7 +202,9 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
                   <tr key={c.id} className="hover:bg-slate-50">
                     <td className="px-8 py-5">
                       <p className="text-sm font-bold text-slate-800">{c.staffName}</p>
-                      <p className="text-[11px] text-slate-400">by {c.reviewedBy || '—'} on {(c.reviewedAt || '').split('T')[0]}</p>
+                      <p className="text-[11px] text-slate-400">
+                        by {c.reviewedBy || c.managerReviewedBy || '—'} on {((c.reviewedAt || c.managerReviewedAt) || '').split('T')[0]}
+                      </p>
                     </td>
                     <td className="px-8 py-5">
                       <p className="text-xs font-bold text-slate-600 whitespace-nowrap">{expenseTypeLabel(c.expenseType)}</p>
@@ -218,8 +221,11 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
                     </td>
                     <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${c.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                        {c.status === 'approved' ? 'Approved' : 'Rejected'}
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${
+                        c.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                        c.status === 'pending_gm' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        'bg-red-50 text-red-700 border-red-200'}`}>
+                        {c.status === 'approved' ? 'Approved' : c.status === 'pending_gm' ? 'Awaiting GM' : 'Rejected'}
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right">

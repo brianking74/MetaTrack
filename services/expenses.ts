@@ -1,7 +1,7 @@
 
 import { supabase } from './supabase.ts';
 import { ExpenseClaim, ExpenseClaimStatus } from '../types.ts';
-import { RECEIPT_ACCEPTED_TYPES, RECEIPT_MAX_MB, EXPENSE_CURRENCY, claimHkd } from '../constants.ts';
+import { RECEIPT_ACCEPTED_TYPES, RECEIPT_MAX_MB, EXPENSE_CURRENCY, EXPENSE_GM_EMAIL, claimHkd } from '../constants.ts';
 
 // ============================================================
 // Expense Claims service
@@ -35,9 +35,13 @@ const mapClaim = (row: any): ExpenseClaim => ({
   receiptType: row.receipt_type,
   status: row.status as ExpenseClaimStatus,
   claimGroupId: row.claim_group_id || null,
+  gmEmail: row.gm_email || '',
   reviewComment: row.review_comment || '',
+  gmComment: row.gm_comment || '',
   reviewedBy: row.reviewed_by || '',
   reviewedAt: row.reviewed_at || undefined,
+  managerReviewedBy: row.manager_reviewed_by || '',
+  managerReviewedAt: row.manager_reviewed_at || undefined,
   financeNotifiedAt: row.finance_notified_at || undefined,
   createdAt: row.created_at,
 });
@@ -62,9 +66,13 @@ const mapClaimToRow = (c: ExpenseClaim) => ({
   receipt_type: c.receiptType,
   status: c.status,
   claim_group_id: c.claimGroupId || null,
+  gm_email: (c.gmEmail || EXPENSE_GM_EMAIL).toLowerCase().trim(),
   review_comment: c.reviewComment || null,
+  gm_comment: c.gmComment || null,
   reviewed_by: c.reviewedBy || null,
   reviewed_at: c.reviewedAt || null,
+  manager_reviewed_by: c.managerReviewedBy || null,
+  manager_reviewed_at: c.managerReviewedAt || null,
   finance_notified_at: c.financeNotifiedAt || null
 });
 
@@ -75,7 +83,7 @@ const networkError = (err: any) =>
 
 /** Best-effort email dispatch - never blocks or fails the UI action. */
 const notifyByEmail = (
-  event: 'submitted' | 'approved' | 'rejected',
+  event: 'submitted' | 'gm_approval' | 'approved' | 'rejected',
   claim: ExpenseClaim,
   items?: Pick<ExpenseClaim, 'expenseType' | 'expenseDate' | 'description' | 'amount'>[],
   total?: number
@@ -99,7 +107,7 @@ const notifyByEmail = (
  * attached as an itemised list with the claim total.
  */
 export const notifyClaimEvent = (
-  event: 'submitted' | 'approved' | 'rejected',
+  event: 'submitted' | 'gm_approval' | 'approved' | 'rejected',
   claims: ExpenseClaim[]
 ): void => {
   if (!claims.length) return;
@@ -256,6 +264,7 @@ export const expensesService = {
       receiptType: file.type || 'application/octet-stream',
       status: 'submitted',
       claimGroupId: opts?.claimGroupId || null,
+      gmEmail: EXPENSE_GM_EMAIL,
       createdAt: new Date().toISOString()
     };
 
@@ -288,35 +297,93 @@ export const expensesService = {
   },
 
   /**
-   * Manager (or admin) approves/rejects a WHOLE claim (all items of one
-   * submission) in a single update + a single notification email.
+   * TWO-STAGE review of a WHOLE claim (all items of one submission) in a
+   * single update + a single notification email.
+   *
+   * stage 'manager' (line manager, claim status = 'submitted'):
+   *   - approved  -> status 'pending_gm': the claim moves to the General
+   *                  Manager's queue and the GM is notified by email.
+   *   - rejected  -> status 'rejected': staff are asked to resubmit an
+   *                  amended claim.
+   *
+   * stage 'gm' (General Manager, claim status = 'pending_gm'):
+   *   - approved  -> status 'approved': FINAL approval. Staff are told the
+   *                  claim will be paid within 30 days and finance is
+   *                  notified to pay it.
+   *   - rejected  -> status 'rejected': staff resubmit an amended claim.
+   *
    * A single-claim review is just a group of one.
    */
   async reviewClaims(group: ExpenseClaim[], decision: 'approved' | 'rejected',
-                     comment: string, reviewerEmail: string): Promise<{ success: boolean; error?: string }> {
+                     comment: string, reviewerEmail: string,
+                     stage: 'manager' | 'gm' = 'manager'): Promise<{ success: boolean; error?: string }> {
     if (!supabase) return { success: false, error: 'Supabase is not configured.' };
     if (!group.length) return { success: false, error: 'No claims to review.' };
+
+    // Stage guard: every row must still be sitting at the expected stage so
+    // a stale browser cannot double-review a claim that already moved on.
+    const expected = stage === 'manager' ? 'submitted' : 'pending_gm';
+    if (group.some(c => c.status !== expected)) {
+      return {
+        success: false,
+        error: stage === 'manager'
+          ? 'This claim has already been reviewed. Please refresh the page.'
+          : 'This claim is no longer awaiting GM approval. Please refresh the page.'
+      };
+    }
+
     const now = new Date().toISOString();
+    const trimmed = comment.trim();
+
+    // Stage 1 (line manager) approval keeps the claim moving: the manager's
+    // comment goes into review_comment (stage-1 comment) and the audit
+    // fields record WHO approved. reviewed_by/at stay untouched until the
+    // FINAL decision so the history always shows the last decision maker.
+    const isStage1Approval = stage === 'manager' && decision === 'approved';
+    const updates = isStage1Approval
+      ? {
+          status: 'pending_gm' as ExpenseClaimStatus,
+          review_comment: trimmed || null,
+          gm_comment: null,
+          manager_reviewed_by: reviewerEmail,
+          manager_reviewed_at: now,
+          finance_notified_at: null
+        }
+      : {
+          status: decision as ExpenseClaimStatus,
+          review_comment: stage === 'gm' ? group[0].reviewComment || null : (trimmed || null),
+          gm_comment: stage === 'gm' ? (trimmed || null) : null,
+          reviewed_by: reviewerEmail,
+          reviewed_at: now,
+          manager_reviewed_by: stage === 'manager' ? reviewerEmail : group[0].managerReviewedBy || null,
+          manager_reviewed_at: stage === 'manager' ? now : group[0].managerReviewedAt || null,
+          finance_notified_at: decision === 'approved' ? now : null
+        };
+
     try {
       const { error } = await supabase
         .from(EXPENSES_TABLE)
-        .update({
-          status: decision,
-          review_comment: comment.trim() || null,
-          reviewed_by: reviewerEmail,
-          reviewed_at: now,
-          finance_notified_at: decision === 'approved' ? now : null
-        })
+        .update(updates)
         .in('id', group.map(c => c.id));
       if (error) throw error;
-      notifyClaimEvent(decision, group.map(c => ({
+
+      const updated = group.map(c => ({
         ...c,
-        status: decision,
-        reviewComment: comment.trim(),
-        reviewedBy: reviewerEmail,
-        reviewedAt: now,
-        financeNotifiedAt: decision === 'approved' ? now : undefined
-      })));
+        status: updates.status,
+        reviewComment: updates.review_comment || '',
+        gmComment: updates.gm_comment || '',
+        reviewedBy: updates.reviewed_by || '',
+        reviewedAt: updates.reviewed_at || undefined,
+        managerReviewedBy: updates.manager_reviewed_by || '',
+        managerReviewedAt: updates.manager_reviewed_at || undefined,
+        financeNotifiedAt: updates.finance_notified_at || undefined
+      }));
+
+      // ONE notification per claim, matched to where the claim now sits.
+      notifyClaimEvent(
+        isStage1Approval ? 'gm_approval' : decision,
+        updated
+      );
       return { success: true };
     } catch (err: any) {
       return { success: false, error: networkError(err) };

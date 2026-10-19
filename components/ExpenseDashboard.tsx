@@ -9,7 +9,7 @@ interface ExpenseDashboardProps {
 }
 
 type Access = 'checking' | 'granted' | 'locked' | 'unconfigured';
-type StatusFilter = 'all' | 'approved' | 'submitted';
+type StatusFilter = 'all' | 'approved' | 'submitted' | 'pending_gm';
 
 const KpiCard: React.FC<{ label: string; value: string; sub?: string; accent?: string }> = ({ label, value, sub, accent = 'text-slate-900' }) => (
   <div className="bg-white rounded-3xl border p-6 shadow-sm">
@@ -83,7 +83,9 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail })
     [typeMatched, statusFilter]
   );
   const pendingWithinScope = useMemo(
-    () => typeMatched.filter(c => c.status === 'submitted'),
+    // 'Pending' = anywhere in the approval pipeline: with the line manager
+    // or with the General Manager. Only fully approved claims leave it.
+    () => typeMatched.filter(c => c.status === 'submitted' || c.status === 'pending_gm'),
     [typeMatched]
   );
 
@@ -204,7 +206,7 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail })
             {EXPENSE_TYPES.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
           </select>
           <div className="flex bg-slate-100 rounded-lg p-1 gap-1 self-start">
-            {([['all', 'All'], ['approved', 'Approved'], ['submitted', 'Pending']] as [StatusFilter, string][]).map(([value, label]) => (
+            {([['all', 'All'], ['approved', 'Approved'], ['submitted', 'Pending'], ['pending_gm', 'Awaiting GM']] as [StatusFilter, string][]).map(([value, label]) => (
               <button
                 key={value}
                 onClick={() => setStatusFilter(value)}

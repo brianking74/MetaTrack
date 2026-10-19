@@ -12,6 +12,23 @@ import { Rating, Competency, KPI, Assessment } from './types.ts';
 // unselectable for every role ("Coming Soon").
 export const EXPENSES_ENABLED = true;
 
+// ---------------------------------------------------------------
+// GENERAL MANAGER (second) APPROVAL STAGE
+// ---------------------------------------------------------------
+// Every approved claim must ALSO be approved by the General Manager
+// before finance pays it. The GM reviews claims in the "GM Approvals"
+// tab of the Manager Hub and is notified by email whenever a line
+// manager approves a claim.
+// Change the address here if the GM role moves to someone else - no
+// other code change is needed (the address is stamped onto each claim
+// at submission time and checked by the database RLS policies).
+export const EXPENSE_GM_EMAIL = 'sophian@meta-bev.com';
+export const EXPENSE_GM_TITLE = 'General Manager';
+
+// The line shown to staff whenever a claim is finally approved - in the
+// in-app banner and in the approval email (single source of truth).
+export const PAYMENT_TERMS_TEXT = 'Expense claims will be paid within 30 days.';
+
 // PILOT MODE - while the module is still being tested, ONLY the staff
 // accounts listed here see the "Expense Claims" tab in the employee portal;
 // it stays completely hidden from every other staff member. Managers and

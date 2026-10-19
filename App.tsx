@@ -8,7 +8,7 @@ import AppraisalReport from './components/AppraisalReport.tsx';
 import ExpenseClaims from './components/ExpenseClaims.tsx';
 import { Assessment, RoleType } from './types.ts';
 import { supabaseService } from './services/supabase.ts';
-import { EXPENSES_ENABLED, isExpensePilotUser } from './constants.ts';
+import { EXPENSES_ENABLED, isExpensePilotUser, EXPENSE_GM_EMAIL } from './constants.ts';
 import confetti from 'canvas-confetti';
 
 // The administrator account. Its password lives ONLY as a salted hash inside
@@ -222,7 +222,11 @@ const App: React.FC = () => {
       }
 
       const managedRows = data.filter(a => a.managerEmail.toLowerCase() === email);
-      if (managedRows.length === 0) {
+      // The General Manager signs in here too - she may not have direct
+      // reports in the registry, but she owns the FINAL approval stage for
+      // every expense claim in the company (GM Approvals tab).
+      const isGmLogin = email === EXPENSE_GM_EMAIL.toLowerCase();
+      if (managedRows.length === 0 && !isGmLogin) {
         await supabaseService.signOut();
         setAuthError(`"${email}" has no team reports. If you are a team member, please use the Team Member Portal above.`);
         return;

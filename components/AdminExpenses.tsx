@@ -32,6 +32,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
 
   const sum = (list: ExpenseClaim[]) => list.reduce((t, c) => t + claimHkd(c), 0);
   const pendingClaims = claims.filter(c => c.status === 'submitted');
+  const pendingGmClaims = claims.filter(c => c.status === 'pending_gm');
   const approvedClaims = claims.filter(c => c.status === 'approved');
   const rejectedClaims = claims.filter(c => c.status === 'rejected');
 
@@ -112,7 +113,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
         <>
           {/* KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            <KpiCard label="Total Claims" value={String(claims.length)} sub={`${pendingClaims.length} awaiting review`} />
+            <KpiCard label="Total Claims" value={String(claims.length)} sub={`${pendingClaims.length} with manager · ${pendingGmClaims.length} with GM`} />
             <KpiCard label="Total Claimed" value={formatMoney(sum(claims))} sub={`${claims.length} claims`} />
             <KpiCard label="Approved" value={formatMoney(sum(approvedClaims))} sub={`${approvedClaims.length} claims`} accent="text-green-600" />
             <KpiCard label="Rejected" value={formatMoney(sum(rejectedClaims))} sub={`${rejectedClaims.length} claims`} accent="text-red-500" />
@@ -230,8 +231,9 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${
                         c.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
                         c.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                        c.status === 'pending_gm' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                        {c.status === 'submitted' ? 'Pending' : c.status === 'approved' ? 'Approved' : 'Rejected'}
+                        {c.status === 'submitted' ? 'Pending' : c.status === 'pending_gm' ? 'Awaiting GM' : c.status === 'approved' ? 'Approved' : 'Rejected'}
                       </span>
                       {c.reviewedBy && <p className="text-[10px] text-slate-400 mt-1">{c.reviewedBy}</p>}
                     </td>
@@ -243,6 +245,8 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                             <button onClick={() => review(c, 'approved')} disabled={busyId === claimGroupKey(c)} className="text-xs font-black text-green-600 uppercase tracking-widest hover:underline disabled:opacity-50">Approve</button>
                             <button onClick={() => review(c, 'rejected')} disabled={busyId === claimGroupKey(c)} className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600 disabled:opacity-50">Reject</button>
                           </>
+                        ) : c.status === 'pending_gm' ? (
+                          <span className="text-[10px] font-bold text-amber-500 italic">Awaiting GM</span>
                         ) : (
                           <span className="text-[10px] font-bold text-slate-300 italic">Reviewed</span>
                         )}

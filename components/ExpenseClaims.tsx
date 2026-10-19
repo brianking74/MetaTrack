@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ExpenseClaim } from '../types.ts';
 import { expensesService, validateReceiptFile, newClaimGroupId, notifyClaimEvent, claimGroupKey } from '../services/expenses.ts';
-import { EXPENSE_TYPES, EXPENSE_CURRENCIES, expenseTypeLabel, formatMoney, claimHkd, isForeignCurrency } from '../constants.ts';
+import { EXPENSE_TYPES, EXPENSE_CURRENCIES, expenseTypeLabel, formatMoney, claimHkd, isForeignCurrency, PAYMENT_TERMS_TEXT } from '../constants.ts';
 import ClaimAmount from './ClaimAmount.tsx';
 
 interface ExpenseClaimsProps {
@@ -52,12 +52,13 @@ const makeLine = (copyFrom?: ClaimLine): ClaimLine => ({
 });
 
 const StatusChip: React.FC<{ claim: ExpenseClaim }> = ({ claim }) => {
-  const map = {
-    submitted: { text: 'Pending Approval', classes: 'bg-blue-50 text-blue-700 border-blue-200' },
-    approved:  { text: 'Approved',         classes: 'bg-green-50 text-green-700 border-green-200' },
-    rejected:  { text: 'Not Approved',     classes: 'bg-red-50 text-red-700 border-red-200' }
+  const map: Record<string, { text: string; classes: string }> = {
+    submitted:  { text: 'Pending Approval',       classes: 'bg-blue-50 text-blue-700 border-blue-200' },
+    pending_gm: { text: 'Approved · Awaiting GM', classes: 'bg-amber-50 text-amber-700 border-amber-200' },
+    approved:   { text: 'Approved',               classes: 'bg-green-50 text-green-700 border-green-200' },
+    rejected:   { text: 'Not Approved',           classes: 'bg-red-50 text-red-700 border-red-200' }
   };
-  const s = map[claim.status];
+  const s = map[claim.status] || map.submitted;
   return (
     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${s.classes}`}>
       {s.text}
@@ -290,17 +291,26 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {reviewNotice && noticeFirst && (
-        <div className={`p-5 rounded-2xl border-l-4 shadow-sm ${noticeFirst.status === 'approved' ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'}`}>
+        <div className={`p-5 rounded-2xl border-l-4 shadow-sm ${noticeFirst.status === 'approved' ? 'bg-green-50 border-green-400' : noticeFirst.status === 'pending_gm' ? 'bg-amber-50 border-amber-400' : 'bg-red-50 border-red-400'}`}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className={`text-sm font-black ${noticeFirst.status === 'approved' ? 'text-green-700' : 'text-red-700'}`}>
-                {noticeFirst.status === 'approved' ? 'Expense Claim Approved' : 'Expense Claim Not Approved'}
+              <p className={`text-sm font-black ${noticeFirst.status === 'approved' ? 'text-green-700' : noticeFirst.status === 'pending_gm' ? 'text-amber-700' : 'text-red-700'}`}>
+                {noticeFirst.status === 'approved' ? 'Expense Claim Approved' : noticeFirst.status === 'pending_gm' ? 'Expense Claim Approved by Your Manager' : 'Expense Claim Not Approved'}
               </p>
               <p className="text-xs text-slate-600 mt-1">
                 Your claim{noticeClaims.length > 1 ? ` (${noticeClaims.length} items)` : ''} of <strong>{formatMoney(noticeTotal)}</strong>
                 {noticeClaims.length === 1 && <> ({expenseTypeLabel(noticeFirst.expenseType)}, {noticeFirst.expenseDate})</>}
-                {noticeFirst.status === 'approved' ? ' has been approved. Finance has been asked to process the payment.' : ' was not approved by your manager.'}
-                {noticeFirst.reviewComment ? ` Comment: "${noticeFirst.reviewComment}"` : ''}
+                {noticeFirst.status === 'approved' && (
+                  <> has received final approval from the General Manager. <strong>{PAYMENT_TERMS_TEXT}</strong> Finance has been notified to process the payment.</>
+                )}
+                {noticeFirst.status === 'pending_gm' && (
+                  <> has been approved by your manager and is now with the General Manager for the final approval. No action is needed from you right now.</>
+                )}
+                {noticeFirst.status === 'rejected' && (
+                  <> was not approved at the {noticeFirst.gmComment ? 'General Manager' : 'line manager'} review stage. Please resubmit an amended claim with the necessary corrections.</>
+                )}
+                {noticeFirst.reviewComment ? ` Manager comment: "${noticeFirst.reviewComment}"` : ''}
+                {noticeFirst.gmComment ? ` General Manager comment: "${noticeFirst.gmComment}"` : ''}
               </p>
             </div>
             <button onClick={dismissNotice} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 whitespace-nowrap">Got it</button>
@@ -314,7 +324,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
           <h3 className="text-xl font-black text-slate-900">Submit Expense Claims</h3>
           <p className="text-sm text-slate-500 mt-1">
             Log one or several claims in a single submission - press <strong>Add More</strong> for each additional claim.
-            Every claim needs its own receipt. Once submitted, {managerName || 'your manager'} receives a notification to review and approve them.
+            Every claim needs its own receipt. Once submitted, {managerName || 'your manager'} reviews it first and the General Manager gives the final approval. Approved claims are paid within 30 days.
           </p>
           {!hasManager && (
             <p className="text-xs font-bold text-red-500 bg-red-50 border border-red-100 rounded-2xl p-4 mt-4">
@@ -551,6 +561,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                         </p>
                       )}
                       {c.reviewComment && <p className="text-[11px] text-slate-400 italic mt-1 truncate" title={c.reviewComment}>Mgr: "{c.reviewComment}"</p>}
+                      {c.gmComment && <p className="text-[11px] text-slate-400 italic mt-1 truncate" title={c.gmComment}>GM: "{c.gmComment}"</p>}
                     </td>
                     <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
                     <td className="px-8 py-5"><StatusChip claim={c} /></td>

@@ -19,11 +19,17 @@
 // Called by the portal as:
 //   POST /.netlify/functions/expense-notify
 //   {
-//     "event": "submitted" | "approved" | "rejected",
+//     "event": "submitted" | "gm_approval" | "approved" | "rejected",
 //     "claim": { ...identity/amount fields of the claim... },
 //     "items": [ { "expenseType","expenseDate","description","amount" }, ... ],
 //     "total": 208.50
 //   }
+//
+// Events and who gets mail:
+//   submitted   -> line manager   (new claim awaiting their approval)
+//   gm_approval -> General Manager (line manager approved; final review)
+//   approved    -> staff ("paid within 30 days") + finance (pay the claim)
+//   rejected    -> staff (resubmit an amended claim)
 //
 // `items` is OPTIONAL and carries the lines of a multi-item claim (one
 // "Add More" submission). When present, emails show ONE itemised table
@@ -31,6 +37,7 @@
 // Without `items` the legacy single-claim table is rendered.
 
 const PORTAL_URL = 'https://performance-review.netlify.app';
+const DEFAULT_GM_EMAIL = 'sophian@meta-bev.com';
 
 const TYPE_LABELS = {
   ENT: 'Entertainment & Business Meals',
@@ -141,6 +148,9 @@ const itemsTable = (claim, items, total) => {
 const claimBody = (claim, items, total) =>
   items && items.length ? itemsTable(claim, items, total) : claimTable(claim);
 
+const gmEmailOf = (claim) =>
+  String(claim.gm_email || claim.gmEmail || process.env.GM_EMAIL || DEFAULT_GM_EMAIL).toLowerCase();
+
 function buildEmail(event, claim, financeEmail, items, total) {
   const table = claimBody(claim, items, total);
   const label = itemsLabel(claim, items, total);
@@ -160,16 +170,36 @@ function buildEmail(event, claim, financeEmail, items, total) {
     };
   }
 
+  if (event === 'gm_approval') {
+    const approvedLine = claim.managerReviewedBy
+      ? `It was approved by <strong>${escapeHtml(claim.managerReviewedBy)}</strong>${claim.managerReviewedAt ? ` on ${escapeHtml(String(claim.managerReviewedAt).split('T')[0])}` : ''}.`
+      : 'It has been approved by the claimant\'s line manager.';
+    return {
+      to: [gmEmailOf(claim)],
+      subject: `Expense claim awaiting your final approval - ${claim.staffName} (${label})`,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
+        <p style="color:#0f172a;font-size:15px">Hello,</p>
+        <p style="color:#334155;font-size:14px;line-height:1.6">An expense claim from <strong>${escapeHtml(claim.staffName)}</strong> is awaiting your approval as General Manager. ${approvedLine}</p>
+        ${table}
+        ${claim.reviewComment ? `<p style="color:#334155;font-size:14px">Line manager comment: "<em>${escapeHtml(claim.reviewComment)}</em>"</p>` : ''}
+        <p style="color:#334155;font-size:14px">Please sign in to the portal to give the final approval or reject the claim. Rejecting returns it to <strong>${escapeHtml(claim.staffName)}</strong> to resubmit an amended claim:</p>
+        <p><a href="${PORTAL_URL}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 26px;border-radius:12px;font-size:12px;font-weight:bold;letter-spacing:.15em;text-transform:uppercase;text-decoration:none">Open Employee Portal</a></p>
+        <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
+      </div>`
+    };
+  }
+
   if (event === 'approved') {
     const staffMail = {
       to: [claim.email],
-      subject: `Your expense claim has been approved (${label})`,
+      subject: `Your expense claim has been approved and will be paid (${label})`,
       html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
         <p style="color:#0f172a;font-size:15px">Hello ${escapeHtml(claim.staffName)},</p>
-        <p style="color:#334155;font-size:14px;line-height:1.6">Good news - your expense claim has been <strong style="color:#059669">approved</strong>${claim.reviewedBy ? ` by ${escapeHtml(claim.reviewedBy)}` : ''}.</p>
+        <p style="color:#334155;font-size:14px;line-height:1.6">Good news - your expense claim has received <strong style="color:#059669">final approval</strong>${claim.reviewedBy ? ` from ${escapeHtml(claim.reviewedBy)} (General Manager)` : ''}.</p>
         ${table}
         ${claim.reviewComment ? `<p style="color:#334155;font-size:14px">Manager comment: "<em>${escapeHtml(claim.reviewComment)}</em>"</p>` : ''}
-        <p style="color:#334155;font-size:14px">Finance has been notified to process the payment.</p>
+        ${claim.gmComment ? `<p style="color:#334155;font-size:14px">General Manager comment: "<em>${escapeHtml(claim.gmComment)}</em>"</p>` : ''}
+        <p style="color:#334155;font-size:14px"><strong>Expense claims will be paid within 30 days.</strong> Finance has been notified to process the payment.</p>
         <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
       </div>`
     };
@@ -178,26 +208,31 @@ function buildEmail(event, claim, financeEmail, items, total) {
       subject: `Expense claim approved - payment due to ${claim.staffName} (${label})`,
       html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
         <p style="color:#0f172a;font-size:15px">Hello Finance,</p>
-        <p style="color:#334155;font-size:14px;line-height:1.6">The following expense claim has been approved and is ready for payment.</p>
+        <p style="color:#334155;font-size:14px;line-height:1.6">The following expense claim has received final approval from the General Manager and is ready for payment (within 30 days).</p>
         ${table}
         ${row('Claimant', `${escapeHtml(claim.staffName)} (${escapeHtml(claim.email)})`)}
-        ${row('Approved by', escapeHtml(claim.reviewedBy || ''))}
+        ${claim.managerReviewedBy ? row('Approved by (line manager)', escapeHtml(claim.managerReviewedBy)) : ''}
+        ${row('Approved by (General Manager)', escapeHtml(claim.reviewedBy || ''))}
         <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
       </div>`
     } : null;
     return { staffMail, financeMail };
   }
 
-  // rejected
+  // rejected - by the line manager or by the General Manager
+  const byGm = !!(claim.gmComment || (claim.reviewedBy && claim.gmEmail &&
+    String(claim.reviewedBy).toLowerCase() === gmEmailOf(claim)));
+  const stageText = byGm ? 'General Manager' : 'line manager';
+  const stageComment = byGm ? claim.gmComment : claim.reviewComment;
   return {
     to: [claim.email],
     subject: `Your expense claim was not approved (${label})`,
     html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px">
       <p style="color:#0f172a;font-size:15px">Hello ${escapeHtml(claim.staffName)},</p>
-      <p style="color:#334155;font-size:14px;line-height:1.6">Unfortunately your expense claim was <strong style="color:#dc2626">not approved</strong>.</p>
+      <p style="color:#334155;font-size:14px;line-height:1.6">Unfortunately your expense claim was <strong style="color:#dc2626">not approved</strong> at the ${stageText} review stage.</p>
       ${table}
-      ${claim.reviewComment ? `<p style="color:#334155;font-size:14px">Manager comment: "<em>${escapeHtml(claim.reviewComment)}</em>"</p>` : ''}
-      <p style="color:#334155;font-size:14px">If you have questions, please speak with your manager. You may resubmit a corrected claim if appropriate.</p>
+      ${stageComment ? `<p style="color:#334155;font-size:14px">${stageText === 'General Manager' ? 'General Manager' : 'Manager'} comment: "<em>${escapeHtml(stageComment)}</em>"</p>` : ''}
+      <p style="color:#334155;font-size:14px">Please <strong>resubmit an amended claim</strong> with the necessary corrections in the portal. If you have questions, please speak with your manager.</p>
       <p style="color:#94a3b8;font-size:11px;margin-top:28px">MetaBev Employee Portal - automated notification. Do not reply.</p>
     </div>`
   };
@@ -227,7 +262,7 @@ export default async (req) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
   }
-  if (!claim || !['submitted', 'approved', 'rejected'].includes(event)) {
+  if (!claim || !['submitted', 'gm_approval', 'approved', 'rejected'].includes(event)) {
     return new Response(JSON.stringify({ error: 'Expected event + claim' }), { status: 400 });
   }
 

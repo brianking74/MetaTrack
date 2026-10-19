@@ -97,3 +97,43 @@ Access is allowlist-based, stored IN THE DATABASE (not in app code):
    itself never leaves the database (checked via an RPC, RLS-enforced).
 
 Admins always see all claims (existing admin Expenses tab + analytics).
+
+## Two-Stage Approval: line manager -> General Manager
+
+Every expense claim now needs TWO approvals before it is paid:
+
+1. **Line manager** approves the claim as before.
+2. The claim moves to **pending_gm** and the **General Manager**
+   (currently sophian@meta-bev.com) is emailed to give the FINAL approval.
+   She sees a dedicated "GM Approvals" tab in the Manager Hub.
+3. GM approves  -> staff are told the claim is approved and that
+   "Expense claims will be paid within 30 days." Finance is emailed to pay.
+   GM rejects   -> staff are asked to resubmit an amended claim.
+
+### To switch it on (ORDER MATTERS - database first)
+
+1. Run `add_gm_stage.sql` in the Supabase SQL Editor (idempotent):
+   - adds gm_email / gm_comment / manager_reviewed_by / manager_reviewed_at
+   - backfills gm_email on existing rows
+   - widens the status check to allow 'pending_gm'
+   - rewrites the RLS policies so the GM sees + reviews their queue
+   - lets the GM open claim receipts
+2. Deploy the app update (netlify picks it up from GitHub automatically).
+3. Make sure sophian@meta-bev.com can sign in: the account must exist in
+   Supabase Auth (same as other managers - see import-users.mjs). She logs
+   in through the MANAGER login on the portal; the "GM Approvals" tab
+   appears only for her.
+
+### Changing the GM later
+
+The GM address lives in two places - update both together:
+- app:  `EXPENSE_GM_EMAIL` in constants.ts (stamped onto new claims)
+- db:   the literal in add_gm_stage.sql section 2 (for existing rows),
+  e.g. `update expense_claims set gm_email = 'new@meta-bev.com' where gm_email = 'old@meta-bev.com';`
+
+### Emails
+
+The Netlify function expense-notify sends one email per claim event:
+submitted -> line manager, gm_approval -> GM, approved -> staff + finance,
+rejected -> staff. Still requires RESEND_API_KEY and FINANCE_EMAIL in the
+Netlify environment variables (see top of this runbook).

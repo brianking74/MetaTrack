@@ -1,11 +1,12 @@
 
 import { Assessment, RoleType, ExpenseClaim } from '../types.ts';
-import { createBlankAssessment, EXPENSES_ENABLED } from '../constants.ts';
+import { createBlankAssessment, EXPENSES_ENABLED, EXPENSE_GM_EMAIL } from '../constants.ts';
 import AppraisalReport from './AppraisalReport.tsx';
 import ManagerExpenses from './ManagerExpenses.tsx';
 import AdminExpenses from './AdminExpenses.tsx';
 import ExpenseClaims from './ExpenseClaims.tsx';
 import ExpenseDashboard from './ExpenseDashboard.tsx';
+import GmExpenses from './GmExpenses.tsx';
 import { expensesService, claimGroupKey } from '../services/expenses.ts';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
@@ -39,7 +40,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   expenseProfile
 }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses' | 'my-expenses' | 'dashboard'>(
+  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses' | 'my-expenses' | 'dashboard' | 'gm-approvals'>(
     assessments.length === 0 && role === 'admin' ? 'management' : 'submissions'
   );
   const [isDownloading, setIsDownloading] = useState(false);
@@ -72,6 +73,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const expenseTabLabel = role === 'manager'
     ? `Expenses (${pendingExpenseCount})`
     : `Expenses (${expenseClaims.length})`;
+
+  // The General Manager gets a dedicated FINAL-approval tab: claims her line
+  // managers already approved and are waiting on her. RLS feeds this tab
+  // exactly the rows stamped with her email, so it stays empty for everyone
+  // else and no claim data leaks sideways.
+  const isGm = (currentUserEmail || '').toLowerCase() === EXPENSE_GM_EMAIL.toLowerCase();
+  const gmPendingCount = new Set(
+    expenseClaims.filter(c => c.status === 'pending_gm').map(claimGroupKey)
+  ).size;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -364,6 +374,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'my-expenses' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
             </button>
           )}
+          {role === 'manager' && EXPENSES_ENABLED && isGm && (
+            <button onClick={() => setActiveTab('gm-approvals')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'gm-approvals' ? 'text-brand-600' : gmPendingCount > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+              GM Approvals ({gmPendingCount})
+              {gmPendingCount > 0 && activeTab !== 'gm-approvals' && (
+                <span className="absolute top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              )}
+              {activeTab === 'gm-approvals' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
+            </button>
+          )}
           {role === 'manager' && EXPENSES_ENABLED && (
             <button onClick={() => setActiveTab('dashboard')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'dashboard' ? 'text-brand-600' : 'text-slate-400'}`}>
               Dashboard
@@ -423,6 +442,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           staffEmail={currentUserEmail}
           managerEmail={expenseProfile?.managerEmail || ''}
           managerName={expenseProfile?.managerName}
+        />
+      ) : activeTab === 'gm-approvals' ? (
+        <GmExpenses
+          claims={expenseClaims}
+          isLoading={expenseLoading}
+          error={expenseError}
+          currentUserEmail={currentUserEmail}
+          onRefresh={loadExpenseClaims}
         />
       ) : activeTab === 'dashboard' ? (
         <ExpenseDashboard currentUserEmail={currentUserEmail} />
