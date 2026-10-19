@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Layout, { Logo } from './components/Layout.tsx';
+import loginIllustration from './assets/metabev-login-illustration.jpeg';
 import AssessmentForm from './components/AssessmentForm.tsx';
 import AdminDashboard from './components/AdminDashboard.tsx';
 import AppraisalReport from './components/AppraisalReport.tsx';
@@ -71,6 +72,8 @@ const App: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [showStaffPw, setShowStaffPw] = useState(false);
+  const [showMgrPw, setShowMgrPw] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -373,7 +376,7 @@ const App: React.FC = () => {
 
   if (!role) {
     return (
-      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 sm:p-12">
+      <div className="min-h-screen bg-[#F4F5FA] flex flex-col items-center justify-center p-6 sm:p-12">
         {!dbStatus.connected && (
           <div className="w-full max-w-5xl mb-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-2xl shadow-sm">
             <div className="flex">
@@ -389,73 +392,108 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        <div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] overflow-hidden flex flex-col md:flex-row min-h-[640px]">
-          <div className="bg-[#0f172a] md:w-5/12 p-16 text-white flex flex-col justify-between relative overflow-hidden group">
-            <div className="absolute top-[-20%] left-[-20%] w-[150%] h-[150%] opacity-20 pointer-events-none">
-              <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500 rounded-full blur-[120px] animate-pulse"></div>
-              <div className="absolute bottom-0 right-0 w-80 h-80 bg-cyan-500 rounded-full blur-[100px] animate-pulse delay-1000"></div>
-            </div>
-            <div className="relative z-10 flex flex-col items-start h-full">
-              <div className="mb-12"><Logo light /></div>
-              <div className="mt-auto space-y-6">
-                <h3 className="text-2xl font-light leading-snug">“We can’t become what we <span className="text-blue-400 font-bold italic">need to be</span> by remaining what we are.”</h3>
-              </div>
-            </div>
+        <div className="w-full max-w-4xl bg-white rounded-3xl border border-[#EAEAF0] shadow-[0_20px_60px_-15px_rgba(47,43,61,0.15)] overflow-hidden flex flex-col md:flex-row">
+          {/* Illustration panel - Sneat-style split auth card */}
+          <div className="hidden md:flex md:w-1/2 bg-[#F3F2F9] flex-col items-center justify-center p-10 lg:p-14">
+            <img src={loginIllustration} alt="MetaBev team member managing digital tasks" className="w-full max-w-[420px] mix-blend-multiply select-none pointer-events-none" draggable={false} />
+            <p className="mt-8 max-w-[300px] text-center text-[13px] leading-relaxed text-[#6D6684]">“We can’t become what we <span className="text-[#7367F0] font-semibold">need to be</span> by remaining what we are.”</p>
           </div>
-          <div className="md:w-7/12 p-16 flex flex-col justify-center bg-white">
-            <div className="max-w-md mx-auto w-full">
-              <h2 className="text-2xl sm:text-[1.75rem] md:text-3xl font-black text-slate-900 mb-12 tracking-tight">Employee Portal</h2>
-              <div className="space-y-12">
-                <form onSubmit={handleStaffLogin} className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Team Member Portal</span>
-                  </div>
-                  <div className="relative">
-                    <input 
-                      type="email" 
-                      placeholder="Enter your email" 
-                      className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-slate-900 outline-none transition-all placeholder:text-slate-300" 
-                      value={staffEmailInput} 
-                      onChange={(e) => setStaffEmailInput(e.target.value)} 
-                      required 
-                    />
-                    <input 
-                      type="password" 
-                      placeholder="Enter your password" 
-                      className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-slate-900 outline-none transition-all placeholder:text-slate-300 mt-4" 
-                      value={staffPasswordInput} 
-                      onChange={(e) => setStaffPasswordInput(e.target.value)} 
-                      required 
-                    />
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <button type="submit" disabled={isSigningIn} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-black transition-all transform active:scale-[0.98] disabled:opacity-60">
-                      {isSigningIn ? 'Signing in...' : 'Staff Login'}
-                    </button>
-                  </div>
-                </form>
-                <div className="relative flex items-center">
-                  <div className="flex-grow border-t border-slate-100"></div>
-                  <span className="flex-shrink mx-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Administrative Hub</span>
-                  <div className="flex-grow border-t border-slate-100"></div>
+          {/* Form panel */}
+          <div className="md:w-1/2 p-8 sm:p-12 lg:px-14 lg:py-14 flex flex-col justify-center bg-white">
+            <div className="max-w-[380px] mx-auto w-full">
+              <div className="mb-8"><Logo /></div>
+              <h1 className="text-[1.75rem] font-bold text-[#2F2B3D] tracking-tight mb-8">Employee Portal</h1>
+              <form onSubmit={handleStaffLogin} className="space-y-4">
+                <span className="text-[11px] font-bold text-[#8B8796] uppercase tracking-[0.18em] block mb-1">Team Member Portal</span>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8AAB4] pointer-events-none">
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  </span>
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-[#DBDAE3] rounded-[10px] text-[15px] text-[#2F2B3D] font-medium placeholder:text-[#A8AAB4] outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[#7367F0]/20 transition-all"
+                    value={staffEmailInput}
+                    onChange={(e) => setStaffEmailInput(e.target.value)}
+                    required
+                  />
                 </div>
-                <form onSubmit={handleAssessorLogin} className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <input type="email" placeholder="Manager Email" className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-blue-600 outline-none transition-all placeholder:text-slate-300" value={assessorEmailInput} onChange={(e) => setAssessorEmailInput(e.target.value)} required />
-                    <input type="password" placeholder="Access Password" className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-800 font-medium focus:border-blue-600 outline-none transition-all placeholder:text-slate-300" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} required />
-                  </div>
-                  <button type="submit" disabled={isSigningIn} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all transform active:scale-[0.98] disabled:opacity-60">{isSigningIn ? 'Signing in...' : 'Manager Login'}</button>
-                </form>
-                {authError && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <p className="text-xs font-bold text-red-500 bg-red-50 p-4 rounded-2xl border border-red-100 flex items-center gap-3">{authError}</p>
-                  </div>
-                )}
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8AAB4] pointer-events-none">
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  </span>
+                  <input
+                    type={showStaffPw ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    className="w-full pl-11 pr-11 py-3 bg-white border border-[#DBDAE3] rounded-[10px] text-[15px] text-[#2F2B3D] font-medium placeholder:text-[#A8AAB4] outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[#7367F0]/20 transition-all"
+                    value={staffPasswordInput}
+                    onChange={(e) => setStaffPasswordInput(e.target.value)}
+                    required
+                  />
+                  <button type="button" onClick={() => setShowStaffPw(!showStaffPw)} aria-label={showStaffPw ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8AAB4] hover:text-[#7367F0] transition-colors">
+                    {showStaffPw ? (
+                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29" /></svg>
+                    ) : (
+                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    )}
+                  </button>
+                </div>
+                <button type="submit" disabled={isSigningIn} className="w-full bg-[#7367F0] hover:bg-[#685DD8] text-white py-3 rounded-[10px] font-semibold text-[15px] shadow-[0_8px_16px_-6px_rgba(115,103,240,0.5)] transition-all active:scale-[0.98] disabled:opacity-60">
+                  {isSigningIn ? 'Signing in...' : 'Staff Login'}
+                </button>
+              </form>
+              <div className="relative flex items-center my-7">
+                <div className="flex-grow border-t border-[#EAEAF0]"></div>
+                <span className="flex-shrink mx-4 text-[11px] font-bold text-[#8B8796] uppercase tracking-[0.18em]">Administrative Hub</span>
+                <div className="flex-grow border-t border-[#EAEAF0]"></div>
               </div>
+              <form onSubmit={handleAssessorLogin} className="space-y-4">
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8AAB4] pointer-events-none">
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  </span>
+                  <input
+                    type="email"
+                    placeholder="Manager Email"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-[#DBDAE3] rounded-[10px] text-[15px] text-[#2F2B3D] font-medium placeholder:text-[#A8AAB4] outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[#7367F0]/20 transition-all"
+                    value={assessorEmailInput}
+                    onChange={(e) => setAssessorEmailInput(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8AAB4] pointer-events-none">
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  </span>
+                  <input
+                    type={showMgrPw ? 'text' : 'password'}
+                    placeholder="Access Password"
+                    className="w-full pl-11 pr-11 py-3 bg-white border border-[#DBDAE3] rounded-[10px] text-[15px] text-[#2F2B3D] font-medium placeholder:text-[#A8AAB4] outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[#7367F0]/20 transition-all"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    required
+                  />
+                  <button type="button" onClick={() => setShowMgrPw(!showMgrPw)} aria-label={showMgrPw ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8AAB4] hover:text-[#7367F0] transition-colors">
+                    {showMgrPw ? (
+                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29" /></svg>
+                    ) : (
+                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    )}
+                  </button>
+                </div>
+                <button type="submit" disabled={isSigningIn} className="w-full bg-[#7367F0]/10 hover:bg-[#7367F0]/20 text-[#7367F0] py-3 rounded-[10px] font-semibold text-[15px] transition-all active:scale-[0.98] disabled:opacity-60">
+                  {isSigningIn ? 'Signing in...' : 'Manager Login'}
+                </button>
+              </form>
+              {authError && (
+                <div className="mt-5 p-4 rounded-[10px] bg-[#FE4956]/10 border border-[#FE4956]/25">
+                  <p className="text-[13px] font-semibold text-[#E23A46]">{authError}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
+        <p className="mt-8 text-[11px] font-bold text-[#A8AAB4] uppercase tracking-[0.25em]">METABEV Employee Portal</p>
       </div>
     );
   }
