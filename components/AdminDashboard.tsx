@@ -7,6 +7,7 @@ import AdminExpenses from './AdminExpenses.tsx';
 import ExpenseClaims from './ExpenseClaims.tsx';
 import ExpenseDashboard from './ExpenseDashboard.tsx';
 import GmExpenses from './GmExpenses.tsx';
+import AdminFxRates from './AdminFxRates.tsx';
 import { expensesService, claimGroupKey } from '../services/expenses.ts';
 import { supabaseService } from '../services/supabase.ts';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -41,7 +42,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   expenseProfile
 }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
-  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses' | 'my-expenses' | 'dashboard' | 'gm-approvals'>(
+  const [activeTab, setActiveTab] = useState<'submissions' | 'management' | 'expenses' | 'my-expenses' | 'dashboard' | 'gm-approvals' | 'fx-rates'>(
     assessments.length === 0 && role === 'admin' ? 'management' : 'submissions'
   );
   const [isDownloading, setIsDownloading] = useState(false);
@@ -468,6 +469,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'dashboard' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
             </button>
           )}
+          {role === 'admin' && EXPENSES_ENABLED && (
+            <button onClick={() => setActiveTab('fx-rates')} className={`pb-4 px-2 text-sm font-bold transition-all relative ${activeTab === 'fx-rates' ? 'text-brand-600' : 'text-slate-400'}`}>
+              FX Rates
+              {activeTab === 'fx-rates' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600"></div>}
+            </button>
+          )}
         </div>
         
         {role === 'admin' && (
@@ -533,6 +540,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         />
       ) : activeTab === 'dashboard' ? (
         <ExpenseDashboard currentUserEmail={currentUserEmail} />
+      ) : activeTab === 'fx-rates' ? (
+        <AdminFxRates currentUserEmail={currentUserEmail} />
       ) : (
       <>
       {role === 'admin' && showAddStaff && (

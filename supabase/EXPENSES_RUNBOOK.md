@@ -94,6 +94,30 @@ still added and the existing password is left untouched.
 Then redeploy. Until the key is set, the button returns a clear "not
 configured" message and nothing else in the portal changes.
 
+## Company exchange rates (Admin Hub -> "FX Rates")
+
+Staff no longer set the exchange rate themselves - the rate used to convert a
+foreign-currency claim into HKD is a **company rate** only the administrator
+can change. This removes rate manipulation and keeps every claim consistent.
+
+| Area | Behaviour |
+|---|---|
+| Admin Hub | New **FX Rates** tab (admin only): one editable rate per currency ("HKD per 1 unit", same definition as the paper form), who last set it and when. **Fetch Latest Rates** prefills every field from open.er-api.com (free daily reference rates, no API key - XE.com's API is a paid product); **Save Rates** stores the reviewed figures |
+| Claim form | The exchange-rate field is read-only: "1 USD = 7.848246 HKD - Company rate · set 21 Oct 2026". If a currency has no company rate yet, foreign-currency claims for it are paused with a clear message; HKD claims are unaffected |
+| History | The rate is **frozen into each claim at submission** (`fx_rate` + `amount_hkd`), so changing a rate later never rewrites past claims, totals or emails |
+
+**Deploying this update requires ONE SQL step first** (safe, instant, idempotent -
+the app keeps working before and after): run `supabase/add_fx_rates.sql` in the
+Supabase SQL Editor. It creates `public.expense_fx_rates` (RLS: everyone
+signed-in reads, ONLY `admin@metabev.com` writes) and seeds all 12 claim
+currencies with 21 Oct 2026 reference rates, flagged as "company default -
+review please". Re-running the script never overwrites a rate you have saved.
+
+Suggested routine: press **Fetch Latest Rates**, sanity-check the prefilled
+market rates (they carry no company margin), adjust to finance policy if
+needed, press **Save Rates** - e.g. weekly or whenever a big currency move
+makes totals look off.
+
 ## Notes
 
 - Receipts: PNG / JPG / WEBP / HEIC / PDF, max 5 MB, stored PRIVATELY; opened via

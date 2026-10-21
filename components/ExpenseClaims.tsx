@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ExpenseClaim } from '../types.ts';
 import { expensesService, validateReceiptFile, newClaimGroupId, notifyClaimEvent, claimGroupKey } from '../services/expenses.ts';
-import { EXPENSE_TYPES, EXPENSE_CURRENCIES, expenseTypeLabel, formatMoney, claimHkd, isForeignCurrency, PAYMENT_TERMS_TEXT } from '../constants.ts';
+import { EXPENSE_TYPES, EXPENSE_CURRENCIES, expenseTypeLabel, formatMoney, claimHkd, isForeignCurrency, fxRateText, PAYMENT_TERMS_TEXT } from '../constants.ts';
+import { fxRatesService, CompanyRates } from '../services/fx.ts';
 import ClaimAmount from './ClaimAmount.tsx';
 
 interface ExpenseClaimsProps {
@@ -23,7 +24,7 @@ interface ClaimLine {
   description: string;
   amount: string;
   currency: string;      // EXPENSE_CURRENCIES code, default HKD
-  fxRate: string;        // HKD per 1 unit of currency (only used when != HKD)
+  fxRate: string;        // mirror of the company rate (manual entry only until the rates table exists)
   customerName: string;  // optional customer / client
   budgetCode: string;    // optional brand budget code, e.g. EST008
   file: File | null;
@@ -80,6 +81,36 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
 
   const [reviewNotice, setReviewNotice] = useState<{ claims: ExpenseClaim[] } | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // --- Company FX rates (admin-controlled) ---
+  // Staff can no longer type an exchange rate: every claim uses the
+  // company rate set in the Admin Hub (FX Rates tab). companyRates stays
+  // null until the rates table exists (SQL not run yet) or cannot be
+  // loaded - in those cases the form falls back to the old manual rate
+  // input so nothing breaks during rollout.
+  const [companyRates, setCompanyRates] = useState<CompanyRates | null>(null);
+  const [ratesTableMissing, setRatesTableMissing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fxRatesService.getRates().then(({ rates, tableMissing }) => {
+      if (cancelled) return;
+      if (tableMissing) setRatesTableMissing(true);
+      else setCompanyRates(rates || {});
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Keep every line's displayed rate in step with the company rates once
+  // they load (or when the administrator updates them mid-session).
+  useEffect(() => {
+    if (!companyRates) return;
+    setLines(prev => prev.map(l =>
+      isForeignCurrency(l.currency) && companyRates[l.currency]
+        ? { ...l, fxRate: String(companyRates[l.currency].rate) }
+        : l
+    ));
+  }, [companyRates]);
 
   const hasManager = !!managerEmail && managerEmail.includes('@');
 
@@ -154,11 +185,34 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
     updateLine(key, { file: f });
   };
 
+  /** The exchange rate a line can use: the company rate set in the Admin
+   *  Hub when available, otherwise (rates table missing / unreachable)
+   *  the manually entered one - the pre-rates behaviour. Null = no valid
+   *  rate yet, which blocks submission for foreign-currency lines. */
+  const rateForLine = (l: ClaimLine): number | null => {
+    if (!isForeignCurrency(l.currency)) return 1;
+    if (companyRates) {
+      const info = companyRates[l.currency];
+      return info && info.rate > 0 ? info.rate : null;
+    }
+    const manual = parseFloat(l.fxRate);
+    return manual > 0 ? manual : null;
+  };
+
+  /** Friendly "set <date>" for a company rate, e.g. "21 Oct 2026". */
+  const rateSetDate = (currency: string): string => {
+    const info = companyRates?.[currency];
+    if (!info?.updatedAt) return '';
+    try {
+      return new Date(info.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return ''; }
+  };
+
   /** HKD value of a form line (amount x fx rate for foreign currency). */
   const lineHkd = (l: ClaimLine): number => {
     const amt = parseFloat(l.amount) || 0;
-    if (!isForeignCurrency(l.currency)) return amt;
-    const rate = parseFloat(l.fxRate) || 0;
+    const rate = rateForLine(l);
+    if (rate == null) return 0;
     return Math.round(amt * rate * 100) / 100;
   };
 
@@ -173,8 +227,12 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
       const amt = parseFloat(l.amount);
       if (!amt || amt <= 0) return `${label}please enter a valid claim amount.`;
       if (isForeignCurrency(l.currency)) {
-        const rate = parseFloat(l.fxRate);
-        if (!rate || rate <= 0) return `${label}please enter the exchange rate (HKD per 1 ${l.currency}).`;
+        const rate = rateForLine(l);
+        if (rate == null) {
+          if (ratesTableMissing) return `${label}company exchange rates are not set up yet - the administrator needs to run supabase/add_fx_rates.sql. Please submit in HKD for now.`;
+          if (companyRates) return `${label}no company exchange rate is set for ${l.currency} yet - please ask your administrator to add one in the Admin Hub (FX Rates tab).`;
+          return `${label}please enter the exchange rate (HKD per 1 ${l.currency}).`;
+        }
       }
       if (!l.file) return `${label}please attach one receipt image or PDF.`;
     }
@@ -219,7 +277,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
           description: line.description,
           amount: parseFloat(line.amount),
           currency: line.currency,
-          fxRate: isForeignCurrency(line.currency) ? parseFloat(line.fxRate) : 1,
+          fxRate: rateForLine(line) ?? 0, // validation guarantees a rate exists here
           customerName: line.customerName,
           budgetCode: line.budgetCode
         }, line.file!, { claimGroupId: groupId, notify: false });
@@ -382,7 +440,13 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                   <label className={labelClass}>Currency</label>
                   <select
                     value={line.currency}
-                    onChange={(e) => updateLine(line.key, { currency: e.target.value, fxRate: e.target.value === 'HKD' ? '1' : line.fxRate })}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const r = v === 'HKD'
+                        ? '1'
+                        : (companyRates?.[v] ? String(companyRates[v].rate) : line.fxRate);
+                      updateLine(line.key, { currency: v, fxRate: r });
+                    }}
                     className={inputClass}
                   >
                     {EXPENSE_CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
@@ -407,17 +471,32 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                 {isForeignCurrency(line.currency) && (
                   <div>
                     <label className={labelClass}>Exchange Rate (HKD per 1 {line.currency})</label>
-                    <input
-                      type="number"
-                      min="0.0001"
-                      step="0.0001"
-                      placeholder="e.g. 7.8000"
-                      value={line.fxRate}
-                      onChange={(e) => updateLine(line.key, { fxRate: e.target.value })}
-                      className={inputClass}
-                      required
-                    />
-                    {(parseFloat(line.amount) || 0) > 0 && (parseFloat(line.fxRate) || 0) > 0 && (
+                    {companyRates ? (
+                      rateForLine(line) != null ? (
+                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5">
+                          <p className="text-sm font-black text-slate-800">1 {line.currency} = {fxRateText(rateForLine(line))} HKD</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-relaxed">
+                            Company rate{companyRates[line.currency]?.seeded ? ' (company default)' : ''}{rateSetDate(line.currency) ? ` · set ${rateSetDate(line.currency)}` : ''} - fixed by the administrator
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5">
+                          <p className="text-xs font-black text-amber-700 leading-relaxed">No company rate is set for {line.currency} yet. Please ask your administrator to add one in the Admin Hub (FX Rates tab) - foreign-currency claims are paused until then.</p>
+                        </div>
+                      )
+                    ) : (
+                      <input
+                        type="number"
+                        min="0.0001"
+                        step="0.0001"
+                        placeholder="e.g. 7.8000"
+                        value={line.fxRate}
+                        onChange={(e) => updateLine(line.key, { fxRate: e.target.value })}
+                        className={inputClass}
+                        required
+                      />
+                    )}
+                    {(parseFloat(line.amount) || 0) > 0 && rateForLine(line) != null && (
                       <p className="text-[11px] font-black text-brand-600 mt-1.5 uppercase tracking-widest">
                         = {formatMoney(lineHkd(line))} HKD
                       </p>
