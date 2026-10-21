@@ -65,6 +65,35 @@ Supabase SQL Editor, then deploy the new code. Rows submitted before this change
 
 Without these variables everything still works; email delivery is simply skipped.
 
+## Adding staff manually (Admin Hub -> "+ Add Staff")
+
+For one-off joiners you no longer need a CSV round-trip. In the Admin Hub press
+**"+ Add Staff"** and fill in **Full Name, Email Address, Password and Line
+Manager Name**, then press **Add Staff Member**. In one go this:
+
+1. Creates the person's Supabase Auth login (email + password, confirmed, no
+   verification email) via the `create-staff` Netlify Function - the secret
+   service_role key never touches the browser, and the function checks the
+   caller really is the administrator (`admin@metabev.com`) before it does anything.
+2. Adds them to the Staff Registry under the named line manager (the same
+   mid-year + final records the CSV upload creates), so their manager's hub,
+   expense-claim routing and the registry count all pick them up immediately.
+
+The **Line Manager Name** field auto-completes from people already in the
+registry; the manager must exist first (add them via CSV or add them here
+first). If a login account already exists for the email, the registry entry is
+still added and the existing password is left untouched.
+
+**One-time setup (Netlify env vars):**
+- `SUPABASE_SERVICE_ROLE_KEY` = the service_role secret (Supabase -> Settings
+  -> API). Keep it out of screenshots and never commit it.
+- `SUPABASE_URL` (optional - the existing `VITE_SUPABASE_URL` is picked up
+  automatically).
+- `ADMIN_EMAIL` (optional override, defaults to `admin@metabev.com`).
+
+Then redeploy. Until the key is set, the button returns a clear "not
+configured" message and nothing else in the portal changes.
+
 ## Notes
 
 - Receipts: PNG / JPG / WEBP / HEIC / PDF, max 5 MB, stored PRIVATELY; opened via

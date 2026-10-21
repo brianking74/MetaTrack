@@ -187,5 +187,40 @@ export const supabaseService = {
     const { error } = await supabase.from('assessments').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
     return { success: true };
+  },
+
+  // Creates the Supabase Auth account for a new staff member via the
+  // create-staff Netlify Function (the service_role key stays on the
+  // server). The registry rows themselves are written separately by the
+  // regular bulk-upload path - this call ONLY provisions the login.
+  async createStaffAuth(
+    payload: { fullName: string; email: string; password: string; managerName: string }
+  ): Promise<{ success: boolean; authCreated?: boolean; message?: string; error?: string }> {
+    if (!supabase) return { success: false, error: NOT_CONFIGURED_ERROR };
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        return { success: false, error: 'Your session has expired - please log in again.' };
+      }
+      const res = await fetch('/.netlify/functions/create-staff', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { success: false, error: body.error || `Server error ${res.status}` };
+      }
+      return { success: true, authCreated: body.authCreated, message: body.message };
+    } catch (err: any) {
+      const userError = err?.message === 'Failed to fetch'
+        ? 'Network error: could not reach the create-staff function.'
+        : String(err?.message || err);
+      return { success: false, error: userError };
+    }
   }
 };

@@ -8,6 +8,7 @@ import ExpenseClaims from './ExpenseClaims.tsx';
 import ExpenseDashboard from './ExpenseDashboard.tsx';
 import GmExpenses from './GmExpenses.tsx';
 import { expensesService, claimGroupKey } from '../services/expenses.ts';
+import { supabaseService } from '../services/supabase.ts';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 interface AdminDashboardProps {
@@ -84,6 +85,84 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ).size;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Add Staff (manual registry entry, admin only) ---
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newManager, setNewManager] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [addBusy, setAddBusy] = useState(false);
+  const [addMsg, setAddMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Everyone the admin could name as a line manager: every full name and
+  // every manager name already present in the registry.
+  const managerNameOptions = React.useMemo(() => {
+    const names = new Set<string>();
+    assessments.forEach(a => {
+      const n = (a.employeeDetails?.fullName || '').trim();
+      const m = (a.managerName || '').trim();
+      if (n) names.add(n);
+      if (m) names.add(m);
+    });
+    return Array.from(names).sort((x, y) => x.localeCompare(y));
+  }, [assessments]);
+
+  const handleAddStaff = async () => {
+    setAddMsg(null);
+    const name = newName.trim();
+    const email = newEmail.toLowerCase().trim();
+    const manager = newManager.trim();
+    if (!name || !email || !newPassword || !manager) {
+      setAddMsg({ ok: false, text: 'All four fields are required.' });
+      return;
+    }
+    if (!email.includes('@') || email.includes(' ')) {
+      setAddMsg({ ok: false, text: 'Enter a valid email address.' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setAddMsg({ ok: false, text: 'Password must be at least 6 characters.' });
+      return;
+    }
+    // Resolve the manager NAME to the email on file (case-insensitive).
+    const norm = (s: string) => s.toLowerCase().trim();
+    const match =
+      assessments.find(a => norm(a.employeeDetails?.fullName || '') === norm(manager)) ||
+      assessments.find(a => norm(a.managerName || '') === norm(manager));
+    if (!match) {
+      setAddMsg({ ok: false, text: `No one called "${manager}" is in the registry yet. Add the manager first (CSV Upload Registry, or add them here first), then add their staff member.` });
+      return;
+    }
+    const managerEmail = (match.employeeDetails.email || '').toLowerCase().trim();
+    if (!managerEmail) {
+      setAddMsg({ ok: false, text: `"${match.employeeDetails?.fullName}" has no email on file - fix their registry entry first.` });
+      return;
+    }
+    if (assessments.some(a => (a.employeeDetails.email || '').toLowerCase().trim() === email)) {
+      setAddMsg({ ok: false, text: `${email} is already in the registry.` });
+      return;
+    }
+    setAddBusy(true);
+    const res = await supabaseService.createStaffAuth({ fullName: name, email, password: newPassword, managerName: manager });
+    setAddBusy(false);
+    if (!res.success) {
+      setAddMsg({ ok: false, text: res.error || 'Could not create the account.' });
+      return;
+    }
+    // Registry rows via the same proven path as the CSV upload
+    // (creates the mid-year + final records and syncs them to the cloud).
+    onBulkUpload([createBlankAssessment(name, email, manager, managerEmail, [], `${name} added via Admin Hub on ${new Date().toISOString().split('T')[0]}`)]);
+    const pwNote = res.authCreated === false
+      ? ' NOTE: a login account already existed - its password was left unchanged, so use the password they already have.'
+      : ` Login: ${email} / password as entered - share it with them for their first sign-in.`;
+    setAddMsg({ ok: true, text: `${name} added to the registry under ${manager} (${managerEmail}).${pwNote}` });
+    setNewName('');
+    setNewEmail('');
+    setNewPassword('');
+    setNewManager('');
+  };
 
   const filteredAssessments = role === 'admin' 
     ? assessments 
@@ -405,6 +484,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                </button>
              )}
              <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors">Export Report</button>
+             <button onClick={() => { setShowAddStaff(v => !v); setActiveTab('management'); setAddMsg(null); }} className="bg-brand-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-brand-700 transition-colors">+ Add Staff</button>
              <button onClick={() => fileInputRef.current?.click()} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors">Upload Registry</button>
              <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} className="hidden" />
           </div>
@@ -454,6 +534,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ) : activeTab === 'dashboard' ? (
         <ExpenseDashboard currentUserEmail={currentUserEmail} />
       ) : (
+      <>
+      {role === 'admin' && showAddStaff && (
+        <div className="bg-white rounded-3xl shadow-xl border p-8 mb-6 no-print">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-base font-black text-slate-800">Add a new staff member</h3>
+              <p className="text-xs text-slate-400 mt-1">Creates their login account (Supabase Auth) AND adds them to the Staff Registry under their line manager. The manager must already exist in the registry.</p>
+            </div>
+            <button onClick={() => { setShowAddStaff(false); setAddMsg(null); }} className="text-slate-300 hover:text-slate-500 text-2xl leading-none" title="Close">&times;</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Full Name</label>
+              <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Jenny Wong" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Email Address</label>
+              <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="jenny.wong@meta-bev.com" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Password</label>
+              <div className="relative">
+                <input type={showNewPw ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="At least 6 characters" className="w-full rounded-xl border border-slate-200 px-4 py-3 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500" />
+                <button type="button" onClick={() => setShowNewPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">{showNewPw ? 'Hide' : 'Show'}</button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Line Manager Name</label>
+              <input list="add-staff-manager-names" value={newManager} onChange={e => setNewManager(e.target.value)} placeholder="Start typing to pick from the registry" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500" />
+              <datalist id="add-staff-manager-names">
+                {managerNameOptions.map(n => <option key={n} value={n} />)}
+              </datalist>
+            </div>
+          </div>
+          {addMsg && (
+            <div className={`mt-4 rounded-xl px-4 py-3 text-xs font-bold leading-relaxed ${addMsg.ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+              {addMsg.text}
+            </div>
+          )}
+          <div className="flex items-center gap-3 mt-5">
+            <button onClick={handleAddStaff} disabled={addBusy} className={`px-5 py-2.5 rounded-lg text-xs font-bold text-white transition-colors ${addBusy ? 'bg-slate-300 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700'}`}>
+              {addBusy ? 'Creating...' : 'Add Staff Member'}
+            </button>
+            <span className="text-[11px] text-slate-400">They appear in the registry immediately. Note: the Expense Claims tab is only shown to pilot accounts until go-live.</span>
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden no-print">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b">
@@ -530,6 +657,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </tbody>
         </table>
       </div>
+      </>
       )}
     </div>
   );
