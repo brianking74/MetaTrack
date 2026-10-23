@@ -178,7 +178,7 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
 
       {/* History */}
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden">
-        <div className="px-8 py-5 border-b bg-slate-50">
+        <div className="px-5 py-5 border-b bg-slate-50">
           <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Review History ({reviewedClaims.length})</h3>
           <p className="text-[11px] text-slate-400 mt-0.5">Claims you approved move to the General Manager for the final decision.</p>
         </div>
@@ -189,28 +189,28 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type / Date</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Decision</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Receipt</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type / Date</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Decision</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {reviewedClaims.map(c => (
                   <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-5">
                       <p className="text-sm font-bold text-slate-800">{c.staffName}</p>
                       <p className="text-[11px] text-slate-400">
                         by {c.reviewedBy || c.managerReviewedBy || '—'} on {((c.reviewedAt || c.managerReviewedAt) || '').split('T')[0]}
                       </p>
                     </td>
-                    <td className="px-8 py-5">
-                      <p className="text-xs font-bold text-slate-600 whitespace-nowrap">{expenseTypeLabel(c.expenseType)}</p>
+                    <td className="px-5 py-5">
+                      <p className="text-xs font-bold text-slate-600">{expenseTypeLabel(c.expenseType)}</p>
                       <p className="text-[11px] text-slate-400">{c.expenseDate}</p>
                     </td>
-                    <td className="px-8 py-5 max-w-[240px]">
+                    <td className="px-5 py-5 max-w-[240px]">
                       <p className="text-xs text-slate-600 truncate" title={c.description}>{c.description}</p>
                       {(c.customerName || c.budgetCode) && (
                         <p className="text-[11px] text-slate-400 mt-1 truncate">
@@ -219,8 +219,8 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
                       )}
                       {c.reviewComment && <p className="text-[11px] text-slate-400 italic mt-1 truncate" title={c.reviewComment}>"{c.reviewComment}"</p>}
                     </td>
-                    <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
+                    <td className="px-5 py-5">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${
                         c.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
                         c.status === 'pending_gm' ? 'bg-amber-50 text-amber-700 border-amber-200' :
@@ -228,7 +228,7 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
                         {c.status === 'approved' ? 'Approved' : c.status === 'pending_gm' ? 'Awaiting GM' : 'Rejected'}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-5 py-5 text-right">
                       <button onClick={() => openReceipt(c)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">View</button>
                     </td>
                   </tr>

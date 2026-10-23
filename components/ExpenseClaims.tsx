@@ -61,7 +61,7 @@ const StatusChip: React.FC<{ claim: ExpenseClaim }> = ({ claim }) => {
   };
   const s = map[claim.status] || map.submitted;
   return (
-    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${s.classes}`}>
+    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${s.classes}`}>
       {s.text}
     </span>
   );
@@ -347,7 +347,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
   const labelClass = "text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2";
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8">
       {reviewNotice && noticeFirst && (
         <div className={`p-5 rounded-2xl border-l-4 shadow-sm ${noticeFirst.status === 'approved' ? 'bg-green-50 border-green-400' : noticeFirst.status === 'pending_gm' ? 'bg-amber-50 border-amber-400' : 'bg-red-50 border-red-400'}`}>
           <div className="flex items-start justify-between gap-4">
@@ -594,7 +594,7 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
 
       {/* My claims */}
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden">
-        <div className="px-8 py-5 border-b bg-slate-50">
+        <div className="px-5 py-5 border-b bg-slate-50">
           <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">My Claims ({claims.length})</h3>
         </div>
         {isLoading ? (
@@ -611,28 +611,28 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Submitted</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Receipt</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Submitted</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {claims.map(c => (
                   <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-8 py-5 text-xs font-bold text-slate-500 whitespace-nowrap">
+                    <td className="px-5 py-5 text-xs font-bold text-slate-500 whitespace-nowrap">
                       {(c.createdAt || '').split('T')[0]}
                       {groupSizeOf(c) > 1 && (
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">part of {groupSizeOf(c)}-item claim</p>
                       )}
                     </td>
-                    <td className="px-8 py-5">
-                      <p className="text-sm font-bold text-slate-800 whitespace-nowrap">{expenseTypeLabel(c.expenseType)}</p>
+                    <td className="px-5 py-5">
+                      <p className="text-sm font-bold text-slate-800">{expenseTypeLabel(c.expenseType)}</p>
                       <p className="text-[11px] text-slate-400">{c.expenseDate}</p>
                     </td>
-                    <td className="px-8 py-5 max-w-[280px]">
+                    <td className="px-5 py-5 max-w-[280px]">
                       <p className="text-xs text-slate-600 truncate" title={c.description}>{c.description}</p>
                       {(c.customerName || c.budgetCode) && (
                         <p className="text-[11px] text-slate-400 mt-1 truncate">
@@ -642,9 +642,9 @@ const ExpenseClaims: React.FC<ExpenseClaimsProps> = ({ staffName, staffEmail, ma
                       {c.reviewComment && <p className="text-[11px] text-slate-400 italic mt-1 truncate" title={c.reviewComment}>Mgr: "{c.reviewComment}"</p>}
                       {c.gmComment && <p className="text-[11px] text-slate-400 italic mt-1 truncate" title={c.gmComment}>GM: "{c.gmComment}"</p>}
                     </td>
-                    <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
-                    <td className="px-8 py-5"><StatusChip claim={c} /></td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-5 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
+                    <td className="px-5 py-5"><StatusChip claim={c} /></td>
+                    <td className="px-5 py-5 text-right">
                       <button onClick={() => openReceipt(c)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline whitespace-nowrap">View</button>
                     </td>
                   </tr>

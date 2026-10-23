@@ -173,7 +173,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
 
       {/* All claims */}
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden">
-        <div className="px-8 py-5 border-b bg-slate-50 flex items-center justify-between">
+        <div className="px-5 py-5 border-b bg-slate-50 flex items-center justify-between">
           <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">All Claims ({claims.length})</h3>
           {pendingClaims.length > 0 && (
             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-blue-50 text-blue-700 border-blue-200">
@@ -186,13 +186,13 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Manager</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type / Date</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Manager</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type / Date</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                  <th className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -201,7 +201,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                   const groupSize = claims.filter(o => claimGroupKey(o) === claimGroupKey(c)).length;
                   return (
                   <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-5">
                       <p className="text-sm font-bold text-slate-800 whitespace-nowrap">
                         {c.staffName}
                         {isPending && groupSize > 1 && (
@@ -210,15 +210,15 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                       </p>
                       <p className="text-[11px] text-slate-400">{c.email}</p>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-5">
                       <p className="text-xs font-bold text-slate-600 whitespace-nowrap">{c.managerName || '—'}</p>
                       <p className="text-[11px] text-slate-400">{c.managerEmail}</p>
                     </td>
-                    <td className="px-8 py-5">
-                      <p className="text-xs font-bold text-slate-600 whitespace-nowrap">{expenseTypeLabel(c.expenseType)}</p>
+                    <td className="px-5 py-5">
+                      <p className="text-xs font-bold text-slate-600">{expenseTypeLabel(c.expenseType)}</p>
                       <p className="text-[11px] text-slate-400">{c.expenseDate} · filed {(c.createdAt || '').split('T')[0]}</p>
                     </td>
-                    <td className="px-8 py-5 max-w-[220px]">
+                    <td className="px-5 py-5 max-w-[180px]">
                       <p className="text-xs text-slate-600 truncate" title={c.description}>{c.description}</p>
                       {(c.customerName || c.budgetCode) && (
                         <p className="text-[11px] text-slate-400 mt-1 truncate">
@@ -226,8 +226,8 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                         </p>
                       )}
                     </td>
-                    <td className="px-8 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-5 text-right whitespace-nowrap"><ClaimAmount claim={c} /></td>
+                    <td className="px-5 py-5">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${
                         c.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
                         c.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
@@ -237,7 +237,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
                       </span>
                       {c.reviewedBy && <p className="text-[10px] text-slate-400 mt-1">{c.reviewedBy}</p>}
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-5 py-5 text-right">
                       <div className="flex justify-end gap-3 items-center whitespace-nowrap">
                         <button onClick={() => openReceipt(c)} className="text-xs font-black text-brand-600 uppercase tracking-widest hover:underline">Receipt</button>
                         {isPending ? (
