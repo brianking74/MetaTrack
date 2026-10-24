@@ -106,7 +106,14 @@ const App: React.FC = () => {
       setCurrentUserEmail(email);
       if (email === SUPER_ADMIN_EMAIL) {
         setRole('admin');
-      } else if (!error && data.some(a => a.managerEmail.toLowerCase() === email)) {
+      } else if (
+        !error &&
+        (data.some(a => a.managerEmail.toLowerCase() === email) ||
+         // The GM keeps the Manager Hub on refresh too - she has no direct
+         // reports in the registry but owns the final approval stage
+         // (mirrors the isGmLogin check in handleAssessorLogin).
+         email === EXPENSE_GM_EMAIL.toLowerCase())
+      ) {
         setRole('manager');
       } else {
         setRole('staff');

@@ -151,6 +151,33 @@ Access is allowlist-based, stored IN THE DATABASE (not in app code):
 
 Admins always see all claims (existing admin Expenses tab + analytics).
 
+### Dashboard upgrade: periods, A&P, 12-month chart, budget
+
+The dashboard was upgraded with:
+
+- KPI cards: **Total Submitted**, **A&P Total** (final GM-approved =
+  "Approve & Pay", amount + claim count), **# Staff Submissions**
+  (distinct staff in view), **Awaiting Approval** (in the pipeline).
+- A **period filter** (This week / This month / This year / Last 12
+  months / All time, default This year) that drives every KPI and both
+  breakdowns. The 12-month chart is always the last 12 months.
+- The trend chart now shows TWO bars per month: total submitted (brown)
+  and A&P approved (dark blue), with exact figures in the hover tooltip.
+- Chart sits LEFT, by-expense-type RIGHT.
+- Staff names in "By staff member" are clickable -> jumps to the
+  Expenses tab scoped to that person's claims ("Show all" clears it).
+- A **Budget panel** right of the filters: annual budget vs spend
+  running total (spent = submitted this year excluding rejected). All
+  dashboard viewers see it; ONLY the General Manager can enter/save the
+  figure (database-enforced).
+
+Budget storage setup - run `add_budget.sql` in the Supabase SQL Editor
+(idempotent, safe any time; until then the panel simply stays hidden):
+
+- Creates `expense_budget` (budget_year PK, amount, updated_by/at)
+- RLS: authenticated users read; ONLY sophian@meta-bev.com (the GM,
+  mirrored from EXPENSE_GM_EMAIL in constants.ts) can write
+
 ## Two-Stage Approval: line manager -> General Manager
 
 Every expense claim now needs TWO approvals before it is paid:

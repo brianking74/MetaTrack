@@ -11,6 +11,10 @@ interface ManagerExpensesProps {
   error?: string;
   currentUserEmail: string;
   onRefresh: () => void;
+  /** Set when arriving from a staff name clicked in the Expense Dashboard:
+   *  every list below is scoped to that person's claims. */
+  focusStaffEmail?: string | null;
+  onClearFocusStaff?: () => void;
 }
 
 const reviewed = (claims: ExpenseClaim[]) =>
@@ -135,11 +139,17 @@ const ClaimReviewCard: React.FC<{
   );
 };
 
-const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, error, currentUserEmail, onRefresh }) => {
+const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, error, currentUserEmail, onRefresh, focusStaffEmail, onClearFocusStaff }) => {
+  // Staff-focus mode (from the dashboard): scope EVERYTHING to that person.
+  const focusName = focusStaffEmail
+    ? (claims.find(c => c.email === focusStaffEmail)?.staffName || focusStaffEmail)
+    : '';
+  const scoped = focusStaffEmail ? claims.filter(c => c.email === focusStaffEmail) : claims;
+
   // One review card per submission (claim), newest first.
-  const pendingGroups = groupClaims(claims.filter(c => c.status === 'submitted'));
-  const pendingItemCount = claims.filter(c => c.status === 'submitted').length;
-  const reviewedClaims = reviewed(claims);
+  const pendingGroups = groupClaims(scoped.filter(c => c.status === 'submitted'));
+  const pendingItemCount = scoped.filter(c => c.status === 'submitted').length;
+  const reviewedClaims = reviewed(scoped);
 
   const openReceipt = async (claim: ExpenseClaim) => {
     const { url, err } = { url: undefined as string | undefined, err: undefined as string | undefined, ...(await expensesService.getReceiptUrl(claim)) };
@@ -149,6 +159,21 @@ const ManagerExpenses: React.FC<ManagerExpensesProps> = ({ claims, isLoading, er
 
   return (
     <div className="space-y-8">
+      {/* Staff-focus banner (arrived from the Expense Dashboard) */}
+      {focusStaffEmail && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <p className="text-xs font-bold text-blue-800">
+            Showing all claims for <span className="font-black">{focusName}</span> ({focusStaffEmail})
+          </p>
+          <button
+            onClick={onClearFocusStaff}
+            className="self-start text-[10px] font-black uppercase tracking-widest text-blue-700 hover:underline"
+          >
+            Show all
+          </button>
+        </div>
+      )}
+
       {/* Pending queue */}
       <div>
         <div className="flex items-center gap-3 mb-5">

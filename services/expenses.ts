@@ -140,6 +140,14 @@ export interface ClaimGroup {
   submittedAt: string;      // newest createdAt in the claim
 }
 
+/** One row of public.expense_budget - the GM's annual budget (add_budget.sql). */
+export interface AnnualBudget {
+  year: number;
+  amount: number;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
 /** Groups claims into whole claims (submissions), newest claim first. */
 export const groupClaims = (claims: ExpenseClaim[]): ClaimGroup[] => {
   const map = new Map<string, ExpenseClaim[]>();
@@ -423,6 +431,71 @@ export const expensesService = {
       return { viewer: data === true, configured: true };
     } catch {
       return { viewer: false, configured: false };
+    }
+  },
+
+  /**
+   * The GM-controlled annual budget (public.expense_budget, see
+   * supabase/add_budget.sql). tableMissing=true means that SQL has not
+   * been run yet - the dashboard hides the budget panel in that case, so
+   * the app can ship before the migration (zero-downtime rollout, same
+   * pattern as the FX rates table).
+   */
+  async getAnnualBudget(year: number): Promise<{ data: AnnualBudget | null; tableMissing?: boolean; error?: string }> {
+    if (!supabase) return { data: null, tableMissing: true };
+    try {
+      const { data, error } = await supabase
+        .from('expense_budget')
+        .select('budget_year, amount, updated_by, updated_at')
+        .eq('budget_year', year)
+        .maybeSingle();
+      if (error) {
+        const msg = error.message || '';
+        if ((error as any).code === 'PGRST205' || /schema cache|does not exist/i.test(msg)) {
+          return { data: null, tableMissing: true };
+        }
+        return { data: null, error: networkError(error) };
+      }
+      if (!data) return { data: null };
+      return {
+        data: {
+          year: Number(data.budget_year),
+          amount: Number(data.amount),
+          updatedBy: data.updated_by || '',
+          updatedAt: data.updated_at || undefined
+        }
+      };
+    } catch (err: any) {
+      return { data: null, error: networkError(err) };
+    }
+  },
+
+  /**
+   * Save the annual budget. RLS allows ONLY the General Manager
+   * (sophian@meta-bev.com, mirrored from EXPENSE_GM_EMAIL) to write;
+   * anyone else gets a permission error back from the database.
+   */
+  async saveAnnualBudget(year: number, amount: number, savedBy: string): Promise<{ success: boolean; tableMissing?: boolean; error?: string }> {
+    if (!supabase) return { success: false, error: 'Supabase is not configured.' };
+    try {
+      const { error } = await supabase
+        .from('expense_budget')
+        .upsert({
+          budget_year: year,
+          amount: Math.round(amount * 100) / 100,
+          updated_by: savedBy.toLowerCase().trim(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'budget_year' });
+      if (error) {
+        const msg = error.message || '';
+        if ((error as any).code === 'PGRST205' || /schema cache|does not exist/i.test(msg)) {
+          return { success: false, tableMissing: true, error: 'The budget table is not set up yet. Ask the administrator to run supabase/add_budget.sql.' };
+        }
+        return { success: false, error: networkError(error) };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: networkError(err) };
     }
   }
 };

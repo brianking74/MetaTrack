@@ -84,6 +84,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const gmPendingCount = new Set(
     expenseClaims.filter(c => c.status === 'pending_gm').map(claimGroupKey)
   ).size;
+
+  // Staff name clicked in the Expense Dashboard -> jump to the Expenses tab
+  // scoped to that person's claims (cleared with "Show all").
+  const [expensesStaffFocus, setExpensesStaffFocus] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -507,6 +511,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               error={expenseError}
               currentUserEmail={currentUserEmail}
               onRefresh={loadExpenseClaims}
+              focusStaffEmail={expensesStaffFocus}
+              onClearFocusStaff={() => setExpensesStaffFocus(null)}
             />
           ) : (
             <AdminExpenses
@@ -539,7 +545,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onRefresh={loadExpenseClaims}
         />
       ) : activeTab === 'dashboard' ? (
-        <ExpenseDashboard currentUserEmail={currentUserEmail} />
+        <ExpenseDashboard
+          currentUserEmail={currentUserEmail}
+          isGm={isGm}
+          onOpenStaffClaims={(email) => { setExpensesStaffFocus(email); setActiveTab('expenses'); }}
+        />
       ) : activeTab === 'fx-rates' ? (
         <AdminFxRates currentUserEmail={currentUserEmail} />
       ) : (
