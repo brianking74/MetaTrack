@@ -6,7 +6,10 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # Node 22 is required: @supabase/supabase-js pulls @supabase/realtime-js,
+  # which throws "native WebSocket not found" on Node < 22 the moment a
+  # Supabase client is constructed (killed create-staff with a 502).
+  NODE_VERSION = "22"
 
 # Single-page app: always serve index.html for unknown paths
 [[redirects]]

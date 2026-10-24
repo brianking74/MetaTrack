@@ -66,9 +66,23 @@ export default async (req) => {
     return json(401, { error: 'Missing admin session token. Please log in again.' });
   }
 
-  const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  // Client construction can throw on a misconfigured runtime (e.g. a Node
+  // version without native WebSocket, which newer @supabase/realtime-js
+  // requires). Catch it so the portal gets a readable error instead of a
+  // bare Netlify 502.
+  let adminClient;
+  try {
+    adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  } catch (err) {
+    return json(500, {
+      error:
+        'Could not start the Supabase client inside the function: ' +
+        String(err?.message || err) +
+        ' - check the Netlify function runtime (Node 22+ required).',
+    });
+  }
 
   let callerEmail = '';
   try {
