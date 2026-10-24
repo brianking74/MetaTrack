@@ -38,6 +38,7 @@ export const PAYMENT_TERMS_TEXT = 'Expense claims will be paid within 30 days.';
 // and every staff member will get the tab automatically.
 export const EXPENSES_PILOT_EMAILS: string[] = [
   'test.staff@metabev.com',   // <- dedicated test account (see EXPENSES_RUNBOOK.md)
+  'daniel.wong@meta-bev.com', // <- multi-submission test account (Admin Hub, Oct 2026)
 ];
 
 export const isExpensePilotUser = (email?: string | null): boolean =>
