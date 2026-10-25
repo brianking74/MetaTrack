@@ -155,10 +155,21 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [claims]);
 
+  // DEMO MODE (temporary): while demoing to users, the dashboard treats a
+  // claim line's EXPENSE DATE (the date typed on the line) as its chart
+  // date, so back-dated demo claims spread across the trend chart and the
+  // period filters. The permanent behaviour keys off createdAt (the moment
+  // the line was submitted) - swap chartDate back to createdAt when the
+  // demo period ends.
+  const chartDate = (c: { expenseDate?: string; createdAt?: string }): string =>
+    c.expenseDate || c.createdAt || '';
+
   // --- filtering: period, then staff, then type, then status ------------
   const periodStart = periodStartIso(period);
   const inPeriod = useMemo(
-    () => (periodStart ? claims.filter(c => (c.createdAt || '') >= periodStart) : claims),
+    // chartDate is date-only (YYYY-MM-DD), so compare against the date
+    // part of periodStart - keeps the first day of the period inclusive.
+    () => (periodStart ? claims.filter(c => chartDate(c) >= periodStart.slice(0, 10)) : claims),
     [claims, periodStart]
   );
   const staffMatched = useMemo(
@@ -273,7 +284,7 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
         count = now.getMonth() + 1;
       } else {
         const minKey = claims.reduce<string>((min, c) => {
-          const k = (c.createdAt || '').slice(0, 7);
+          const k = chartDate(c).slice(0, 7);
           return k && (!min || k < min) ? k : min;
         }, '') || `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
         const [y, m] = minKey.split('-').map(Number);
@@ -289,7 +300,7 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
     const daily = period === 'week' || period === 'month';
     const idx = new Map(out.map((b, i) => [b.key, i]));
     filtered.forEach(c => {
-      const i = idx.get((c.createdAt || '').slice(0, daily ? 10 : 7));
+      const i = idx.get(chartDate(c).slice(0, daily ? 10 : 7));
       if (i === undefined) return;
       out[i].total += claimHkd(c);
       if (c.status === 'approved') out[i].ap += claimHkd(c);
@@ -303,8 +314,10 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
   // --- budget vs spend (company-wide, current year, ignores the KPI
   //     filters; rejected claims are not committed spend) ----------------
   const yearSpend = useMemo(
+    // DEMO MODE: uses chartDate (expense date) like the charts - see note
+    // above. Permanent behaviour: (c.createdAt || '').slice(0, 4).
     () => claims
-      .filter(c => c.status !== 'rejected' && (c.createdAt || '').slice(0, 4) === String(budgetYear))
+      .filter(c => c.status !== 'rejected' && chartDate(c).slice(0, 4) === String(budgetYear))
       .reduce((t, c) => t + claimHkd(c), 0),
     [claims, budgetYear]
   );
