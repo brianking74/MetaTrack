@@ -229,6 +229,34 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
     .filter(t => t.count > 0);
   const maxTypeTotal = Math.max(...byType.map(t => t.total), 1);
 
+  // --- A&P per-claim breakdown: when the A&P chip is selected the right
+  //     chart switches from "by expense type" to ONE BAR PER WHOLE CLAIM
+  //     (numbered chronologically, oldest first) so viewers can see the
+  //     individual approved payouts. With a brand budget code selected in
+  //     the second box, that code is appended to every bar label.
+  const byClaim = useMemo(() => {
+    if (statusFilter !== 'approved') return [];
+    const map = new Map<string, { key: string; staff: string; date: string; total: number; items: number }>();
+    filtered.forEach(c => {
+      const k = claimGroupKey(c);
+      const d = (c.expenseDate || '').slice(0, 10);
+      const cur = map.get(k) || { key: k, staff: c.staffName || c.email, date: d || '9999-12-31', total: 0, items: 0 };
+      cur.total += claimHkd(c);
+      cur.items += 1;
+      if (d && d < cur.date) cur.date = d;
+      map.set(k, cur);
+    });
+    return [...map.values()]
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.staff < b.staff ? -1 : 1))
+      .map((g, i) => ({
+        key: g.key,
+        label: `Claim ${i + 1} · ${g.date !== '9999-12-31' ? new Date(`${g.date}T00:00:00`).toLocaleString('en', { day: 'numeric', month: 'short' }) : 'no date'} · ${g.staff}${codeFilter !== 'all' ? ` · ${codeFilter}` : ''}`,
+        total: g.total,
+        items: g.items,
+      }));
+  }, [filtered, statusFilter, codeFilter]);
+  const maxClaimTotal = Math.max(...byClaim.map(g => g.total), 1);
+
   // --- by staff (respects type + status filters) -----------------------
   const byStaff = useMemo(() => {
     const map = new Map<string, { name: string; email: string; items: number; claims: Set<string>; total: number }>();
@@ -543,10 +571,28 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
             </div>
           </div>
 
-          {/* By expense type (right side) */}
+          {/* Right side: by expense type - or, with the A&P chip selected,
+              one bar per approved claim (with the budget code on the label
+              when a specific code is picked) */}
           <div className="bg-white rounded-3xl border p-6 shadow-sm">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">By expense type</p>
-            {byType.length === 0 ? (
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{statusFilter === 'approved' ? 'A&P by claim' : 'By expense type'}</p>
+            {statusFilter === 'approved' ? (
+              byClaim.length === 0 ? (
+                <p className="text-xs text-slate-400 font-bold">Nothing matches the current filters.</p>
+              ) : (
+                <div className="space-y-3">
+                  {byClaim.map(g => (
+                    <div key={g.key}>
+                      <div className="flex justify-between items-baseline mb-1.5">
+                        <span className="text-xs font-bold text-slate-600">{g.label} <span className="text-slate-300">· {g.items} item{g.items === 1 ? '' : 's'}</span></span>
+                        <span className="text-xs font-black text-slate-800">{formatMoney(g.total)}</span>
+                      </div>
+                      <Bar pct={(g.total / maxClaimTotal) * 100} color="bg-blue-800" />
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : byType.length === 0 ? (
               <p className="text-xs text-slate-400 font-bold">Nothing matches the current filters.</p>
             ) : (
               <div className="space-y-3">
