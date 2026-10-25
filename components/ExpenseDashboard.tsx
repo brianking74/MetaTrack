@@ -58,7 +58,7 @@ const compactMoney = (n: number): string => {
 const KpiCard: React.FC<{ label: string; value: string; sub?: string; accent?: string }> = ({ label, value, sub, accent = 'text-slate-900' }) => (
   <div className="bg-white rounded-3xl border p-6 shadow-sm">
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-    <p className={`text-2xl font-black mt-2 ${accent}`}>{value}</p>
+    <p className={`text-2xl font-bold mt-2 ${accent}`}>{value}</p>
     {sub && <p className="text-[11px] font-bold text-slate-400 mt-1">{sub}</p>}
   </div>
 );
@@ -367,20 +367,11 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
       <div className="bg-white rounded-3xl border p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0 space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">Expense Dashboard</h3>
-                <p className="text-xs text-slate-400 font-bold mt-0.5">
-                  Running totals across all expense claims{isLoading ? ' - loading...' : ` - ${claimCount} claims · ${itemCount} items in view`}
-                </p>
-              </div>
-              <button
-                onClick={load}
-                disabled={isLoading}
-                className={`self-start px-4 py-2 rounded-lg text-xs font-bold border transition-colors ${isLoading ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-              >
-                {isLoading ? 'Refreshing...' : 'Refresh'}
-              </button>
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Expense Dashboard</h3>
+              <p className="text-xs text-slate-400 font-bold mt-0.5">
+                Running totals across all expense claims{isLoading ? ' - loading...' : ` - ${claimCount} claims · ${itemCount} items in view`}
+              </p>
             </div>
 
             {/* Row 1: period / staff / expense type */}
@@ -415,6 +406,14 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
                   </button>
                 ))}
               </div>
+              {/* Refresh sits right next to the status chips */}
+              <button
+                onClick={load}
+                disabled={isLoading}
+                className={`self-start px-3 py-1.5 rounded-md text-xs font-bold border transition-colors ${isLoading ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              >
+                {isLoading ? 'Refreshing...' : 'Refresh'}
+              </button>
               {statusFilter === 'approved' && (
                 <select
                   value={codeFilter}
@@ -440,7 +439,7 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
 
           {/* Budget panel - right of the filters; GM gets the edit controls */}
           {!budgetMissing && (
-            <div className="lg:w-[320px] lg:border-l lg:border-slate-100 lg:pl-6">
+            <div className="lg:flex-1 min-w-0 lg:border-l lg:border-slate-100 lg:pl-6">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Budget {budgetYear}</p>
                 {isGm && (
@@ -502,8 +501,8 @@ const ExpenseDashboard: React.FC<ExpenseDashboardProps> = ({ currentUserEmail, i
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Total Submitted" value={formatMoney(total)} sub={hasFilters ? 'with current filters' : 'all claims in view'} accent="text-brand-600" />
         <KpiCard label="A&P Total" value={formatMoney(apTotal)} sub={`${apClaimCount} claim${apClaimCount === 1 ? '' : 's'} approved & payable`} accent="text-emerald-600" />
-        <KpiCard label="# Staff Submissions" value={String(staffCount)} sub="staff with claims in view" />
         <KpiCard label="Awaiting Approval" value={formatMoney(pendingTotal)} sub={`${pendingWithinScope.length} item${pendingWithinScope.length === 1 ? '' : 's'} awaiting review`} accent={pendingTotal > 0 ? 'text-amber-600' : 'text-slate-900'} />
+        <KpiCard label="# Staff Submissions" value={String(staffCount)} sub="staff with claims in view" />
       </div>
 
       {claims.length === 0 && !isLoading ? (
