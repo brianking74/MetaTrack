@@ -1,9 +1,45 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ExpenseClaim } from '../types.ts';
 import { expensesService, claimGroupKey } from '../services/expenses.ts';
 import { EXPENSE_TYPES, expenseTypeLabel, formatMoney, claimHkd } from '../constants.ts';
 import ClaimAmount from './ClaimAmount.tsx';
+
+/** Date period for the analytics cards - mirrors the staff dashboard. */
+type PeriodFilter = 'week' | 'month' | 'year' | '12m' | 'all';
+
+const PERIODS: [PeriodFilter, string][] = [
+  ['week', 'This week'],
+  ['month', 'This month'],
+  ['year', 'This year'],
+  ['12m', 'Last 12 months'],
+  ['all', 'All time'],
+];
+
+/** ISO start instant of the selected period (null = no restriction). */
+const periodStartIso = (p: PeriodFilter): string | null => {
+  const now = new Date();
+  switch (p) {
+    case 'week': {
+      // Monday-based calendar week
+      const start = new Date(now);
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      start.setHours(0, 0, 0, 0);
+      return start.toISOString();
+    }
+    case 'month':
+      return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    case 'year':
+      return new Date(now.getFullYear(), 0, 1).toISOString();
+    case '12m':
+      return new Date(now.getFullYear(), now.getMonth() - 11, 1).toISOString();
+    default:
+      return null;
+  }
+};
+
+const selectCls =
+  'bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40 max-w-[240px]';
 
 interface AdminExpensesProps {
   claims: ExpenseClaim[];
@@ -29,25 +65,46 @@ const Bar: React.FC<{ pct: number; color: string }> = ({ pct, color }) => (
 
 const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error, currentUserEmail, onRefresh }) => {
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Date period for the analytics sections (KPI cards, by type, by staff,
+  // per-month trend). Defaults to the current calendar year. The
+  // "All Claims" review table below stays unfiltered - it is the admin
+  // worklist and must keep showing every pending claim.
+  const [period, setPeriod] = useState<PeriodFilter>('year');
 
   const sum = (list: ExpenseClaim[]) => list.reduce((t, c) => t + claimHkd(c), 0);
-  const pendingClaims = claims.filter(c => c.status === 'submitted');
-  const pendingGmClaims = claims.filter(c => c.status === 'pending_gm');
-  const approvedClaims = claims.filter(c => c.status === 'approved');
-  const rejectedClaims = claims.filter(c => c.status === 'rejected');
 
-  // --- by type ---
+  // Analytics date scope - same semantics as the staff dashboard: each
+  // claim line counts on its EXPENSE date (falling back to the submission
+  // date when the line has none). Keeps both pages telling the same story
+  // while back-dated demo claims are in play.
+  const periodStart = periodStartIso(period);
+  const dateKey = (c: ExpenseClaim): string => c.expenseDate || c.createdAt || '';
+  const inPeriod = useMemo(
+    () => (periodStart
+      ? claims.filter(c => dateKey(c).slice(0, 10) >= periodStart.slice(0, 10))
+      : claims),
+    [claims, periodStart]
+  );
+  // All-time pending count - feeds the "All Claims" table badge only.
+  const pendingAllCount = claims.filter(c => c.status === 'submitted').length;
+
+  const pendingClaims = inPeriod.filter(c => c.status === 'submitted');
+  const pendingGmClaims = inPeriod.filter(c => c.status === 'pending_gm');
+  const approvedClaims = inPeriod.filter(c => c.status === 'approved');
+  const rejectedClaims = inPeriod.filter(c => c.status === 'rejected');
+
+  // --- by type (respects the selected period) ---
   const byType = EXPENSE_TYPES
     .map(t => {
-      const list = claims.filter(c => c.expenseType === t.code);
+      const list = inPeriod.filter(c => c.expenseType === t.code);
       return { code: t.code, label: t.label, count: list.length, total: sum(list) };
     })
     .filter(t => t.count > 0);
   const maxTypeTotal = Math.max(...byType.map(t => t.total), 1);
 
-  // --- by staff ---
+  // --- by staff (respects the selected period) ---
   const staffMap = new Map<string, { name: string; email: string; count: number; total: number }>();
-  claims.forEach(c => {
+  inPeriod.forEach(c => {
     const key = c.email;
     const cur = staffMap.get(key) || { name: c.staffName, email: c.email, count: 0, total: 0 };
     cur.count += 1;
@@ -57,15 +114,16 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
   const byStaff = [...staffMap.values()].sort((a, b) => b.total - a.total);
   const maxStaffTotal = Math.max(...byStaff.map(s => s.total), 1);
 
-  // --- monthly trend (last 12 months by submission date) ---
+  // --- monthly trend (12 monthly buckets fed by the selected period;
+  //     lines bucket on their expense date, like the dashboard) ---
   const months: { key: string; label: string; count: number; total: number }[] = [];
   const now = new Date();
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleString('en', { month: 'short' }), count: 0, total: 0 });
   }
-  claims.forEach(c => {
-    const key = (c.createdAt || '').slice(0, 7);
+  inPeriod.forEach(c => {
+    const key = dateKey(c).slice(0, 7);
     const m = months.find(x => x.key === key);
     if (m) { m.count += 1; m.total += claimHkd(c); }
   });
@@ -111,10 +169,24 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
 
       {claims.length > 0 && (
         <>
+          {/* Period filter - scopes the analytics cards below. Defaults to
+              the current calendar year, like the staff dashboard. */}
+          <div className="flex items-center justify-end gap-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</label>
+            <select
+              value={period}
+              onChange={e => setPeriod(e.target.value as PeriodFilter)}
+              className={selectCls}
+              aria-label="Filter analytics by date period"
+            >
+              {PERIODS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
+
           {/* KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            <KpiCard label="Total Claims" value={String(claims.length)} sub={`${pendingClaims.length} with manager · ${pendingGmClaims.length} with GM`} />
-            <KpiCard label="Total Claimed" value={formatMoney(sum(claims))} sub={`${claims.length} claims`} />
+            <KpiCard label="Total Claims" value={String(inPeriod.length)} sub={`${pendingClaims.length} with manager · ${pendingGmClaims.length} with GM`} />
+            <KpiCard label="Total Claimed" value={formatMoney(sum(inPeriod))} sub={`${inPeriod.length} claims`} />
             <KpiCard label="Approved" value={formatMoney(sum(approvedClaims))} sub={`${approvedClaims.length} claims`} accent="text-green-600" />
             <KpiCard label="Rejected" value={formatMoney(sum(rejectedClaims))} sub={`${rejectedClaims.length} claims`} accent="text-red-500" />
           </div>
@@ -155,7 +227,7 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
 
           {/* Monthly trend */}
           <div className="bg-white rounded-3xl shadow-xl border p-8">
-            <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-6">Claimed per Month (last 12 months)</h3>
+            <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-6">Claimed per Month ({PERIODS.find(p => p[0] === period)?.[1] ?? 'Selected period'})</h3>
             <div className="flex items-end gap-2 md:gap-3 h-40">
               {months.map(m => (
                 <div key={m.key} className="flex-1 flex flex-col items-center gap-2 min-w-0" title={`${m.key}: ${m.count} claims, ${formatMoney(m.total)}`}>
@@ -175,9 +247,9 @@ const AdminExpenses: React.FC<AdminExpensesProps> = ({ claims, isLoading, error,
       <div className="bg-white rounded-3xl shadow-xl border overflow-hidden">
         <div className="px-5 py-5 border-b bg-slate-50 flex items-center justify-between">
           <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">All Claims ({claims.length})</h3>
-          {pendingClaims.length > 0 && (
+          {pendingAllCount > 0 && (
             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-blue-50 text-blue-700 border-blue-200">
-              {pendingClaims.length} pending
+              {pendingAllCount} pending
             </span>
           )}
         </div>
